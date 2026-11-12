@@ -34,9 +34,6 @@
       <Setter Property="BorderThickness" Value="2" />
       <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
-    <Style Selector="Image">
-      <Setter Property="RenderOptions.BitmapInterpolationMode" Value="HighQuality" />
-    </Style>
     <Style Selector="Rectangle.dropzone">
       <Setter Property="Stroke" Value="#3A4A6B" />
       <Setter Property="StrokeThickness" Value="2" />
