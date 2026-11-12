@@ -260,11 +260,7 @@
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Spacing="2">
           <TextBlock Classes="teal" FontSize="12" FontWeight="SemiBold" Text="{Binding QueueText}" />
-          <TextBlock Classes="muted" FontSize="12" Text="{Binding PhotoName, StringFormat='Photo: {0}'}" />
           <TextBlock Classes="muted" FontSize="12" Text="{Binding Counter}" />
-          <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="Bold" />
-          <TextBlock Text="{Binding Subtitle}" />
-          <TextBlock Classes="gold" Text="{Binding Extra}" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
           <Button Content="{Binding ZoomLabel}" Command="{Binding ToggleZoomCommand}" />
@@ -276,11 +272,20 @@
         <DockPanel Margin="0,0,10,0">
           <TextBlock DockPanel.Dock="Top" Classes="muted" FontSize="12" FontWeight="SemiBold" LetterSpacing="1"
                      Text="YOUR PHOTO" HorizontalAlignment="Center" Margin="0,0,0,6" />
+          <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,8,0,0" Spacing="2">
+            <TextBlock Text="{Binding PhotoName}" FontSize="14" Classes="muted" HorizontalAlignment="Center" />
+          </StackPanel>
           <Image Source="{Binding LeftShown}" Stretch="Uniform" />
         </DockPanel>
         <DockPanel Grid.Column="1" Margin="10,0,0,0">
           <TextBlock DockPanel.Dock="Top" Classes="teal" FontSize="12" FontWeight="SemiBold" LetterSpacing="1"
                      Text="CATALOG PRINTING" HorizontalAlignment="Center" Margin="0,0,0,6" />
+          <!-- Which printing this is, right under the picture -->
+          <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,8,0,0" Spacing="2">
+            <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" />
+            <TextBlock Text="{Binding Subtitle}" FontSize="16" HorizontalAlignment="Center" TextAlignment="Center" />
+            <TextBlock Classes="gold" Text="{Binding Extra}" FontSize="15" HorizontalAlignment="Center" TextAlignment="Center" />
+          </StackPanel>
           <Image Source="{Binding RightShown}" Stretch="Uniform" />
         </DockPanel>
       </Grid>
