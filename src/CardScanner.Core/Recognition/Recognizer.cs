@@ -34,6 +34,8 @@ public sealed class RecognitionResult
     public bool? FoilFromCollector => Collector.Foil;
     /// <summary>Name, set and collector number all agree: about as sure as it gets.</summary>
     public bool Pinned { get; init; }
+    /// <summary>What pinned it, in words (e.g. "name + set + number agree"), or null if not pinned.</summary>
+    public string? PinReason { get; init; }
     /// <summary>Needs a human look, and why.</summary>
     public bool Flagged => FlagReason is not null;
     public string? FlagReason { get; init; }
@@ -247,6 +249,7 @@ public sealed class Recognizer : IDisposable
                 flag = "The picture doesn't look much like the catalog image.";
         }
         bool pinned = best is { NameMatched: true, NumberMatched: true, SetMatched: true };
+        string? pinReason = pinned ? "name + set + number agree" : null;
         // Retro-frame cards print a number but no set code. If the name and number together point at
         // exactly one printing, that's as good as a set + number match.
         // When the number alone fits two printings (8th and 9th Edition Scathe Zombies are both #160),
@@ -254,14 +257,16 @@ public sealed class Recognizer : IDisposable
         if (!pinned && best is { NameMatched: true, NumberMatched: true } && collector.SetCodes.Count == 0)
         {
             var same = scored.Where(t => t.Name && t.Num && t.P.Name == best.Card.Name).ToList();
-            if (same.Count == 1 || (same.Count(t => t.Year) == 1 && same.First(t => t.P.Id == best.Card.Id).Year))
-                pinned = true;
+            if (same.Count == 1) { pinned = true; pinReason = "name + number (no set code printed)"; }
+            else if (same.Count(t => t.Year) == 1 && same.First(t => t.P.Id == best.Card.Id).Year)
+            { pinned = true; pinReason = "name + number + copyright year"; }
         }
         // Japanese printings: the name can't be read, but set code + number + the JP marker pin it down.
         if (!pinned && best is { NumberMatched: true, SetMatched: true }
             && scored.FirstOrDefault(t => t.P.Id == best.Card.Id).P?.Lang == "ja")
         {
             pinned = true;
+            pinReason = "set + number + JP marker (Japanese printing)";
             if (flag?.StartsWith("Couldn't read the card's name") == true) flag = null;
         }
 
@@ -289,6 +294,7 @@ public sealed class Recognizer : IDisposable
             Collector = collector,
             BorderColor = border,
             Pinned = pinned,
+            PinReason = pinReason,
             FlagReason = flag,
             Elapsed = sw.Elapsed,
         };

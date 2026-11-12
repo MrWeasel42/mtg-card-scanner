@@ -60,6 +60,9 @@ public partial class ResultItemViewModel : ObservableObject
     [ObservableProperty] private bool _isShown = true;
 
     public bool IsPinned => Result?.Pinned == true;
+    /// <summary>Pins that lean on more than a printed set code: worth a closer look when spot-checking.</summary>
+    public bool IsSoftPin => IsPinned && Result?.PinReason is { } r && !r.StartsWith("name + set");
+    public string PinText => IsSoftPin ? $"📌 Pinned by {Result!.PinReason}" : "📌 Pinned: name + set + number agree";
     public bool IsFlagged => Result?.Flagged == true;
     public string? FlagReason => Result?.FlagReason;
 

@@ -188,8 +188,12 @@
                   <StackPanel Spacing="6" IsVisible="{Binding HasResult}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                       <Border Classes="pill" Background="#1A22C55E" BorderBrush="#22C55E" IsVisible="{Binding IsPinned}"
-                              ToolTip.Tip="The name, set code and collector number on the card all match this printing">
-                        <TextBlock Text="📌 Pinned: name + set + number agree" FontSize="12" Foreground="#4ADE80" />
+                              ToolTip.Tip="What printed on the card pins this exact printing">
+                        <TextBlock Text="{Binding PinText}" FontSize="12" Foreground="#4ADE80" />
+                      </Border>
+                      <Border Classes="pill" Background="#1A2DD4BF" BorderBrush="#2DD4BF" IsVisible="{Binding IsSoftPin}"
+                              ToolTip.Tip="Pinned without a printed set code (older and retro frames, Japanese printings). Worth a glance when spot-checking.">
+                        <TextBlock Text="worth a glance" FontSize="12" Foreground="#5EEAD4" />
                       </Border>
                       <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding IsFlagged}">
                         <TextBlock Text="{Binding FlagReason, StringFormat='⚠ Needs a look: {0}'}" FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap" />
