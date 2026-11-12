@@ -301,6 +301,18 @@ public class CardIndexTests
     }
 }
 
+public class CardShapeTests
+{
+    [Fact]
+    public void Straight_card_outline_is_square()
+        => Assert.True(CardDetector.IsSquare([new(100, 100), new(600, 110), new(590, 800), new(95, 790)]));
+
+    [Fact]
+    public void Crooked_outline_is_rejected()
+        // The Bazaar Trader photo: one corner pulled in by a rounded corner + glare.
+        => Assert.False(CardDetector.IsSquare([new(119, 365), new(610, 418), new(485, 1146), new(59, 1042)]));
+}
+
 public class CardBorderTests
 {
     private static Mat CardWithBorder(Scalar border, Scalar inside)

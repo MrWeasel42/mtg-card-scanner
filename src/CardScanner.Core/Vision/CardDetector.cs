@@ -120,8 +120,12 @@ public static class CardDetector
                     // The photo's own frame is roughly card-shaped too; never mistake it for the card.
                     if (area > img.Width * img.Height * 0.9) continue;
                     var quad = QuadFromContour(c, area);
-                    if (quad is null || TouchesEdge(quad, img.Width, img.Height)) continue;
-                    if (LooksLikeCard(quad)) return OrderCorners(quad);
+                    if (quad is null || TouchesEdge(quad, img.Width, img.Height) || !LooksLikeCard(quad)) continue;
+                    if (IsSquare(quad)) return OrderCorners(quad);
+                    // Crooked outline (rounded corners/glare pulled a corner in): try other four-corner
+                    // fits of the same shape and keep the one that hugs it best.
+                    var refit = RefitQuad(c, img.Width, img.Height);
+                    if (refit is not null) return OrderCorners(refit);
                 }
             }
             return null;
@@ -172,6 +176,59 @@ public static class CardDetector
         if (area / Math.Max(rect.Size.Width * rect.Size.Height, 1) > 0.85)
             return rect.Points();
         return null;
+    }
+
+    /// <summary>Phone photos are close to straight-on, so a real card outline has near-right-angle
+    /// corners and opposite sides of similar length.</summary>
+    public static bool IsSquare(Point2f[] quad, double maxAngleError = 8, double minSideRatio = 0.93)
+    {
+        var o = OrderCorners(quad);
+        for (int i = 0; i < 4; i++)
+        {
+            Point2f a = o[(i + 3) % 4], b = o[i], c = o[(i + 1) % 4];
+            double v1x = a.X - b.X, v1y = a.Y - b.Y, v2x = c.X - b.X, v2y = c.Y - b.Y;
+            double cos = (v1x * v2x + v1y * v2y) / (Math.Sqrt(v1x * v1x + v1y * v1y) * Math.Sqrt(v2x * v2x + v2y * v2y) + 1e-9);
+            double angle = Math.Acos(Math.Clamp(cos, -1, 1)) * 180 / Math.PI;
+            if (Math.Abs(angle - 90) > maxAngleError) return false;
+        }
+        double s0 = Dist(o[0], o[1]), s1 = Dist(o[1], o[2]), s2 = Dist(o[2], o[3]), s3 = Dist(o[3], o[0]);
+        return Math.Min(s0, s2) / Math.Max(s0, s2) >= minSideRatio && Math.Min(s1, s3) / Math.Max(s1, s3) >= minSideRatio;
+    }
+
+    private static Point2f[]? RefitQuad(Point[] contour, int w, int h)
+    {
+        var hull = Cv2.ConvexHull(contour);
+        double peri = Cv2.ArcLength(hull, true);
+        var options = new List<Point2f[]>();
+        foreach (var eps in new[] { 0.01, 0.02, 0.03, 0.05 })
+        {
+            var approx = Cv2.ApproxPolyDP(hull, eps * peri, true);
+            if (approx.Length == 4) options.Add(approx.Select(p => new Point2f(p.X, p.Y)).ToArray());
+        }
+        options.Add(Cv2.MinAreaRect(contour).Points());
+
+        Point2f[]? best = null;
+        double bestFit = 0.95; // must cover at least 95% of the shape (intersection over union)
+        foreach (var q in options)
+        {
+            if (TouchesEdge(q, w, h) || !LooksLikeCard(q) || !IsSquare(q)) continue;
+            double fit = Overlap(q, hull, w, h);
+            if (fit > bestFit) { bestFit = fit; best = q; }
+        }
+        return best;
+    }
+
+    private static double Overlap(Point2f[] quad, Point[] hull, int w, int h)
+    {
+        using var a = new Mat(h, w, MatType.CV_8UC1, Scalar.All(0));
+        using var b = new Mat(h, w, MatType.CV_8UC1, Scalar.All(0));
+        Cv2.FillPoly(a, [quad.Select(p => new Point((int)p.X, (int)p.Y)).ToArray()], Scalar.All(1));
+        Cv2.FillPoly(b, [hull], Scalar.All(1));
+        using var inter = new Mat();
+        using var union = new Mat();
+        Cv2.BitwiseAnd(a, b, inter);
+        Cv2.BitwiseOr(a, b, union);
+        return Cv2.CountNonZero(inter) / (double)Math.Max(Cv2.CountNonZero(union), 1);
     }
 
     private static bool TouchesEdge(Point2f[] quad, int w, int h)
