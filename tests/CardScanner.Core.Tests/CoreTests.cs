@@ -267,6 +267,23 @@ public class CollectorLineTests
         Assert.Equal(year, c.CopyrightYear);
     }
 
+    [Theory]
+    [InlineData("Callia, Hyrax Tower scou M296 R BRIAN VALEZA THBIEN", "296", "thb")]   // dot read as I
+    [InlineData("rucie Jaazis R0340 LIGA SMILSHKALNE SOSTEN", "340", "sos")]            // dot read as T
+    [InlineData("RO126 XABI GAZTELUA HOBIEN", "126", "hob")]
+    [InlineData("L0275 ODEYEN RUE LTR-★EN T", "275", "ltr")]                            // stray dash
+    [InlineData("M L.0278 DEYEN RUE .EN LTR", "278", null)]                             // stray dot in the number
+    public void Tolerates_common_misreads(string raw, string number, string? set)
+    {
+        var c = CollectorLine.Parse(raw);
+        Assert.Contains(number, c.Numbers);
+        if (set is not null) Assert.Contains(set, c.SetCodes);
+    }
+
+    [Fact]
+    public void Old_number_with_lost_slash_still_offers_the_number()
+        => Assert.Contains("179", CollectorLine.Empty.WithCopyrightNumbers("Wayne England M&a93-2007Wizardso1the Coast nc17930").Numbers);
+
     [Fact]
     public void Reads_japanese_showcase_collector_line()
     {

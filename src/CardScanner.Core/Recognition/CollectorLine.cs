@@ -30,6 +30,13 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
             var mark = m.Groups[2].Value;
             if (mark is "★" or "*") foil = true;
             else if (mark is "·" or "•" or "." && foil is null) foil = false;
+            // The dot is often read as a letter ("THBIEN", "SOSTEN"): the set might be "THB" (dot read as
+            // I) or a 4-letter code ending in that letter. Keep both; a wrong code just matches nothing.
+            if (mark is "I" or "T" or "1" or "L" or "|")
+            {
+                if (s.Length + 1 <= 5) sets.Add((s + mark).ToLowerInvariant());
+                if (foil is null) foil = false;
+            }
         }
         // Old cards print a copyright year ("©1995", "1993-2005"): the latest year is the print year.
         int? year = null;
@@ -46,6 +53,8 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
         {
             var n = m.Groups[1].Value.Replace('O', '0').TrimStart('0');
             if (n.Length > 0) nums.Add(n);
+            // "Inc. 179/301" read as "17930" (slash lost): the number is one of the leading digits.
+            for (int len = 2; len < n.Length && len <= 3; len++) nums.Add(n[..len]);
         }
         int? year = CopyrightYear;
         foreach (Match m in Year().Matches(copyrightLine))
@@ -58,12 +67,12 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
     private static partial Regex AfterCoast();
 
     // "R0381", "RO325", "0015", "147/269R", "C 0198", "MC360" (OCR noise before the number)
-    [GeneratedRegex(@"(?<![A-Z0-9])[A-Z]{0,2}\s?([0-9O]*[0-9][0-9O]*)(?:\s*/\s*[0-9O]{1,4})?\s?[CURMLSTPB]?(?![0-9])")]
+    [GeneratedRegex(@"(?<![A-Z0-9])[A-Z]{0,2}[.,\-]?\s?([0-9O]*[0-9][0-9O]*)(?:\s*/\s*[0-9O]{1,4})?\s?[CURMLSTPB]?(?![0-9])")]
     private static partial Regex Number();
 
     // "DSK • EN", "ECL★EN", "SLDEN", "LTR·EN", "LTCENCALDER" (artist name glued on), "SOA*JP" (Japanese
     // showcase printings found in English boosters)
-    [GeneratedRegex(@"(?<![A-Z0-9])([A-Z0-9]{3,5}?)\s*([·•★*.]?)\s*(?:EN|JP)(?![A-Z0-9]*[·•★])")]
+    [GeneratedRegex(@"(?<![A-Z0-9])([A-Z0-9]{3,5}?)\s*[\-–]?\s*([·•★*.|]|[IT1L](?=EN|JP)|)\s*[\-–]?\s*(?:EN|JP)(?![A-Z0-9]*[·•★])")]
     private static partial Regex SetAndLanguage();
 
     [GeneratedRegex(@"(?<![0-9])(19|20)[0-9]{2}(?![0-9])")]

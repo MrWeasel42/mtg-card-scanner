@@ -74,6 +74,7 @@ public sealed class Recognizer : IDisposable
     private const double BothBonus = 0.50; // set AND number both read: near-decisive
     private const double UnlikelyPenalty = 0.20;    // collector-only reprints, Summer Magic, 90s boxed reprints
     private const int PictureCandidates = 5;        // nearest pictures always considered
+    private const float MinPinSimilarity = 0.80f;   // picture match needed to pin without a readable name
     private const double BorderPenalty = 0.40;      // clearly white border vs a black-bordered printing, or vice versa
     private const double YearBonus = 0.25;          // copyright year printed on the card = the printing's release year
     private const double MinNameScore = 0.85;
@@ -178,6 +179,23 @@ public sealed class Recognizer : IDisposable
 
         // 3. Collector line (bottom-left small print) and border colour.
         var collector = ReadCollector(hi[view]);
+        // Set code read but no printing has any of the numbers read ("HOB★EN" with the number row missed,
+        // "L.0278"): read the small print again from a sharper, 2x-resolution straightening.
+        if (detected.Found && collector.SetCodes.Count > 0
+            && !collector.SetCodes.Any(sc => collector.Numbers.Any(n => _cards.PrintingsAt(sc, n).Count > 0)))
+        {
+            using var sharp2 = CardDetector.Warp(photo, detected.Corners, HiW * 2, HiH * 2);
+            using var turned2 = new Mat();
+            if (view == 1) Cv2.Rotate(sharp2, turned2, RotateFlags.Rotate180);
+            var again = ReadCollector(view == 1 ? turned2 : sharp2, upscale: 1);
+            collector = collector with
+            {
+                Raw = collector.Raw + " | " + again.Raw,
+                Numbers = [.. collector.Numbers, .. again.Numbers],
+                SetCodes = [.. collector.SetCodes, .. again.SetCodes],
+                Foil = collector.Foil ?? again.Foil,
+            };
+        }
         // Older frames (1997, 2003-2014) and retro reprints have no set code: their number follows the
         // copyright line, further right. Read that from a sharper, 2x-resolution straightening of the photo.
         if (detected.Found && collector.SetCodes.Count == 0)
@@ -270,6 +288,26 @@ public sealed class Recognizer : IDisposable
             if (same.Count == 1) { pinned = true; pinReason = "name + number (no set code printed)"; }
             else if (same.Count(t => t.Year) == 1 && same.First(t => t.P.Id == best.Card.Id).Year)
             { pinned = true; pinReason = "name + number + copyright year"; }
+        }
+        // Old cards with no number: if the measured border rules out every printing of this card but one
+        // (a white-bordered Nicol Bolas can only be Chronicles), that's the answer.
+        if (!pinned && border is not null && best is { NameMatched: true })
+        {
+            var possible = scored.Where(t => t.Name && t.P.Name == best.Card.Name && !t.BorderMismatch && !t.P.IsUnlikely
+                                             && t.P.BorderColor is "white" or "black").ToList();
+            if (possible.Count == 1 && possible[0].P.Id == best.Card.Id)
+            {
+                pinned = true;
+                pinReason = $"name + {border} border (the only {border}-bordered printing)";
+            }
+        }
+        // Name unreadable (hand-lettered Secret Lair names, Room cards, tokens) but the printed set code and
+        // number point at this exact printing and the photo clearly looks like it: two independent proofs.
+        if (!pinned && best is { NumberMatched: true, SetMatched: true, NameMatched: false } && best.ImageSimilarity >= MinPinSimilarity)
+        {
+            pinned = true;
+            pinReason = "set + number + picture (name not readable)";
+            if (flag?.StartsWith("Couldn't read the card's name") == true) flag = null;
         }
         // Japanese printings: the name can't be read, but set code + number + the JP marker pin it down.
         if (!pinned && best is { NumberMatched: true, SetMatched: true }
@@ -365,12 +403,13 @@ public sealed class Recognizer : IDisposable
     }
 
     /// <summary>Modern collector line, bottom-left: "R 0381 DSK • EN", "147/269 R / ELD • EN".</summary>
-    private CollectorLine ReadCollector(Mat card)
+    private CollectorLine ReadCollector(Mat card, double upscale = 2)
     {
         int y0 = (int)(card.Rows * 0.88);
         using var bottom = new Mat(card, new Rect(0, y0, (int)(card.Cols * 0.62), card.Rows - y0));
         using var big = new Mat();
-        Cv2.Resize(bottom, big, new Size(0, 0), 2, 2, InterpolationFlags.Cubic);
+        if (upscale > 1) Cv2.Resize(bottom, big, new Size(0, 0), upscale, upscale, InterpolationFlags.Cubic);
+        else bottom.CopyTo(big);
         var lines = _ocr.Read(big).OrderBy(l => l.Top).Select(l => l.Text);
         return CollectorLine.Parse(string.Join(" ", lines));
     }
