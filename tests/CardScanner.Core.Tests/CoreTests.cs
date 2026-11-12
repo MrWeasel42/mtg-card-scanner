@@ -285,22 +285,25 @@ public class CardIndexTests
 
 public class TextReaderTests(Xunit.Abstractions.ITestOutputHelper output)
 {
+    /// <summary>
+    /// Parity check: these images were rendered and read by the Python reference implementation
+    /// (the one measured on real card photos). The C# reader must read exactly the same text.
+    /// </summary>
     [Theory]
-    [InlineData("Lightning Bolt")]
-    [InlineData("Orcish Bowmasters")]
-    public void Reads_printed_text(string text)
+    [InlineData("name1")]
+    [InlineData("name2")]
+    [InlineData("name3")]
+    [InlineData("name4")]
+    [InlineData("collector")]
+    public void Reads_the_same_text_as_the_reference(string key)
     {
-        using var img = new Mat(160, 1100, MatType.CV_8UC3, new Scalar(225, 235, 240));
-        Cv2.PutText(img, text, new Point(30, 105), HersheyFonts.HersheyTriplex, 2.4, new Scalar(20, 20, 20), 4, LineTypes.AntiAlias);
+        var dir = Path.Combine(AppContext.BaseDirectory, "Fixtures", "ocr");
+        var expected = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string[]>>(
+            File.ReadAllText(Path.Combine(dir, "expected.json")))![key];
+        using var img = Cv2.ImRead(Path.Combine(dir, key + ".png"), ImreadModes.Color);
         using var reader = new CardScanner.Core.Ocr.CardTextReader(CardScanner.Core.Ocr.CardTextReader.DefaultModelDir);
-        foreach (var b in reader.Detect(img))
-        {
-            using var crop = new Mat();
-            output.WriteLine($"box {string.Join(" ", b.Select(p => $"({p.X:0},{p.Y:0})"))}");
-        }
-        var lines = reader.Read(img, minConfidence: 0f);
-        foreach (var l in lines) output.WriteLine($"line '{l.Text}' conf {l.Confidence:0.000}");
-        var all = string.Join(" ", lines.Where(l => l.Confidence >= 0.5f).Select(l => l.Text));
-        Assert.True(CardIndex.Similarity(CardIndex.Normalize(all), CardIndex.Normalize(text)) >= 0.85, $"read '{all}'");
+        var lines = reader.Read(img);
+        foreach (var l in lines) output.WriteLine($"'{l.Text}' {l.Confidence:0.000} at ({l.Left:0},{l.Top:0})");
+        Assert.Equal(expected, lines.Select(l => l.Text).ToArray());
     }
 }
