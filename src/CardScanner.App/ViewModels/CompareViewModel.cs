@@ -17,6 +17,7 @@ public partial class CompareViewModel : ObservableObject
     private const double BottomFraction = 0.30;
 
     private readonly Action _close;
+    private readonly Action<CompareViewModel> _advance;
     public ResultItemViewModel Item { get; }
 
     [ObservableProperty]
@@ -27,12 +28,22 @@ public partial class CompareViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(LeftShown), nameof(RightShown), nameof(ZoomLabel))]
     private bool _bottomOnly;
 
-    public CompareViewModel(ResultItemViewModel item, CandidateViewModel candidate, Action close)
+    /// <param name="advance">Called after the card is marked (or skipped): moves on to the next card
+    /// still waiting in the queue, or closes the view when there's none.</param>
+    public CompareViewModel(ResultItemViewModel item, CandidateViewModel candidate, Action close,
+        Action<CompareViewModel> advance, bool bottomOnly = false, string queueText = "")
     {
         Item = item;
         _candidate = candidate;
         _close = close;
+        _advance = advance;
+        _bottomOnly = bottomOnly;
+        QueueText = queueText;
     }
+
+    /// <summary>e.g. "12 cards left to verify".</summary>
+    public string QueueText { get; }
+    public string PhotoName => Item.Photo;
 
     public string Title => Candidate.Name;
     public string Subtitle => Candidate.SetLabel;
@@ -71,8 +82,27 @@ public partial class CompareViewModel : ObservableObject
     private void PickThis()
     {
         Item.Choose(Candidate);
-        _close();
+        _advance(this);
     }
+
+    /// <summary>Right card, but none of the listed printings is the one.</summary>
+    [RelayCommand]
+    private void NameOnly()
+    {
+        Item.Choose(null, Verdict.NameOnly);
+        _advance(this);
+    }
+
+    [RelayCommand]
+    private void WrongCard()
+    {
+        Item.Choose(null);
+        _advance(this);
+    }
+
+    /// <summary>Leave this card unmarked and look at the next one.</summary>
+    [RelayCommand]
+    private void Skip() => _advance(this);
 
     [RelayCommand]
     private void Close() => _close();

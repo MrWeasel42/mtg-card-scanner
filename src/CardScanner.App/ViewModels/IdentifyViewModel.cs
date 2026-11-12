@@ -178,8 +178,31 @@ public partial class IdentifyViewModel : ObservableObject
 
     public bool IsComparing => Compare is not null;
 
-    internal void OpenCompare(ResultItemViewModel item, CandidateViewModel candidate) =>
-        Compare = new CompareViewModel(item, candidate, () => Compare = null);
+    internal void OpenCompare(ResultItemViewModel item, CandidateViewModel candidate, bool bottomOnly = false) =>
+        Compare = new CompareViewModel(item, candidate, () => Compare = null, AdvanceCompare, bottomOnly, QueueText(item));
+
+    private static bool Waiting(ResultItemViewModel r) => r.IsShown && r.Verdict == Verdict.None && r.Top is not null;
+
+    private string QueueText(ResultItemViewModel current)
+    {
+        int left = Results.Count(r => Waiting(r) || r == current && r.Verdict == Verdict.None);
+        return left == 1 ? "Last card to check" : $"{left} cards left to check";
+    }
+
+    /// <summary>After marking (or skipping) a card in the big view, go straight to the next card
+    /// still waiting in this tab, keeping the zoom setting. Closes when nothing's left.</summary>
+    private void AdvanceCompare(CompareViewModel from)
+    {
+        int start = Results.IndexOf(from.Item);
+        for (int k = 1; k <= Results.Count; k++)
+        {
+            var next = Results[(start + k + Results.Count) % Results.Count];
+            if (next == from.Item || !Waiting(next)) continue;
+            OpenCompare(next, next.Top!, from.BottomOnly);
+            return;
+        }
+        Compare = null;
+    }
 
     [RelayCommand]
     private void CloseCompare() => Compare = null;

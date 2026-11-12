@@ -259,6 +259,8 @@
     <Grid DataContext="{Binding Compare}" RowDefinitions="Auto,*,Auto" Margin="28,18">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Spacing="2">
+          <TextBlock Classes="teal" FontSize="12" FontWeight="SemiBold" Text="{Binding QueueText}" />
+          <TextBlock Classes="muted" FontSize="12" Text="{Binding PhotoName, StringFormat='Photo: {0}'}" />
           <TextBlock Classes="muted" FontSize="12" Text="{Binding Counter}" />
           <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="Bold" />
           <TextBlock Text="{Binding Subtitle}" />
@@ -283,10 +285,19 @@
         </DockPanel>
       </Grid>
 
-      <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-        <Button Content="◀ Previous option" Command="{Binding PreviousCommand}" />
-        <Button Classes="accent" Content="✓ This is the one" Command="{Binding PickThisCommand}" Padding="22,8" />
-        <Button Content="Next option ▶" Command="{Binding NextCommand}" />
+      <StackPanel Grid.Row="2" Spacing="10" HorizontalAlignment="Center">
+        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+          <Button Content="◀ Previous option" Command="{Binding PreviousCommand}" />
+          <Button Classes="accent" Content="✓ This is the one" Command="{Binding PickThisCommand}" Padding="22,8"
+                  ToolTip.Tip="Marks this printing and moves to the next card (Enter)" />
+          <Button Content="Next option ▶" Command="{Binding NextCommand}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+          <Button Content="≈ Right card, printing not listed" Command="{Binding NameOnlyCommand}" FontSize="12" />
+          <Button Content="✗ Wrong card" Command="{Binding WrongCardCommand}" FontSize="12" />
+          <Button Content="Skip card ⏭" Command="{Binding SkipCommand}" FontSize="12"
+                  ToolTip.Tip="Leave this one for later and look at the next card (S)" />
+        </StackPanel>
       </StackPanel>
     </Grid>
   </Grid>
