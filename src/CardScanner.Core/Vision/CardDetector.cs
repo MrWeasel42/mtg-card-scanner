@@ -56,13 +56,14 @@ public static class CardDetector
 
     private static Point2f[]? FindCardQuad(Mat img)
     {
+        using var blurred = new Mat();
+        Cv2.GaussianBlur(img, blurred, new Size(5, 5), 0);
         using var gray = new Mat();
-        Cv2.CvtColor(img, gray, ColorConversionCodes.BGR2GRAY);
-        Cv2.GaussianBlur(gray, gray, new Size(5, 5), 0);
+        Cv2.CvtColor(blurred, gray, ColorConversionCodes.BGR2GRAY);
         double minArea = img.Width * img.Height * 0.08;
 
         // Try a few ways of finding edges: Canny edges, then a brightness threshold (both polarities).
-        var masks = EdgeMasks(gray);
+        var masks = EdgeMasks(blurred, gray);
         try
         {
             foreach (var mask in masks)
@@ -87,10 +88,21 @@ public static class CardDetector
         }
     }
 
-    private static List<Mat> EdgeMasks(Mat gray)
+    private static List<Mat> EdgeMasks(Mat color, Mat gray)
     {
-        var edges = new Mat();
-        Cv2.Canny(gray, edges, 40, 120);
+        // Edges from each colour channel separately, so a border that differs from the
+        // table only in colour (not brightness) still shows up.
+        var edges = new Mat(gray.Size(), MatType.CV_8UC1, Scalar.All(0));
+        Cv2.Split(color, out Mat[] channels);
+        foreach (var ch in channels)
+        {
+            using (ch)
+            using (var e = new Mat())
+            {
+                Cv2.Canny(ch, e, 30, 90);
+                Cv2.BitwiseOr(edges, e, edges);
+            }
+        }
         using (var k = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(5, 5)))
             Cv2.MorphologyEx(edges, edges, MorphTypes.Close, k, iterations: 2);
 
