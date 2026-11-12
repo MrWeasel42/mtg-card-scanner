@@ -4,7 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
-    <Version>0.2.4</Version>
+    <Version>0.2.5</Version>
     <Company>MTG Card Scanner</Company>
     <Product>MTG Card Scanner</Product>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>

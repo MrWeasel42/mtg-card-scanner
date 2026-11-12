@@ -60,7 +60,10 @@ public sealed class CatalogUpdater
     }
 
     /// <summary>Downloads whatever is missing or out of date. Safe to call anytime.</summary>
-    public async Task<CatalogManifest> UpdateAsync(IProgress<DownloadProgress>? progress = null, CancellationToken ct = default)
+    /// <param name="beforeSwap">Called after everything downloaded and checked out, right before the new files
+    /// replace the old ones: close anything that has the catalog open (Windows won't replace an open file).</param>
+    public async Task<CatalogManifest> UpdateAsync(IProgress<DownloadProgress>? progress = null, CancellationToken ct = default,
+        Func<Task>? beforeSwap = null)
     {
         var remote = await FetchRemoteManifestAsync(ct);
         var staging = Path.Combine(_paths.CatalogDir, "staging");
@@ -87,11 +90,26 @@ public sealed class CatalogUpdater
         }
 
         // Everything verified: swap the new files in.
+        if (jobs.Count > 0 && beforeSwap is not null) await beforeSwap();
         foreach (var job in jobs)
-            File.Move(Path.Combine(staging, job.Name), _paths.CatalogFile(job.Name), overwrite: true);
+            await MoveWithRetryAsync(Path.Combine(staging, job.Name), _paths.CatalogFile(job.Name), ct);
         await File.WriteAllTextAsync(_paths.Manifest, System.Text.Json.JsonSerializer.Serialize(remote), ct);
         progress?.Report(new DownloadProgress("Catalog ready", total, total));
         return remote;
+    }
+
+    /// <summary>Antivirus and Windows search briefly lock freshly written files; give them a moment.</summary>
+    private static async Task MoveWithRetryAsync(string from, string to, CancellationToken ct)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            try { File.Move(from, to, overwrite: true); return; }
+            catch (Exception ex) when (attempt < 10 && ex is IOException or UnauthorizedAccessException)
+            {
+                GC.Collect(); GC.WaitForPendingFinalizers();   // let go of any handles still being finalized
+                await Task.Delay(500, ct);
+            }
+        }
     }
 
     private static string Friendly(string file) => file switch

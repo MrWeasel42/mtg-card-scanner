@@ -412,6 +412,7 @@ public sealed class Recognizer : IDisposable
     {
         _fingerprinter.Dispose();
         _catalog.Dispose();
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         _ocr.Dispose();
         _clahe.Dispose();
     }

@@ -53,7 +53,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             var progress = new Progress<DownloadProgress>(p => Setup.Report(p));
-            await Task.Run(() => _updater.UpdateAsync(progress));
+            await Task.Run(() => _updater.UpdateAsync(progress, beforeSwap: ReleaseCatalogAsync));
             UpdateAvailable = false;
             await LoadAndShowMainAsync();
         }
@@ -62,6 +62,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Log.Error("Catalog download", ex);
             Setup.Fail("Couldn't download the card catalog. Check your internet connection and try again.\n\n" + ex.Message);
         }
+    }
+
+    /// <summary>Close the catalog files so the updater can replace them (the main page is reloaded afterwards).</summary>
+    private Task ReleaseCatalogAsync()
+    {
+        var old = _recognizer;
+        _recognizer = null;
+        old?.Dispose();
+        return Task.CompletedTask;
     }
 
     private async Task LoadAndShowMainAsync()
