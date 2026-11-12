@@ -101,6 +101,57 @@ public partial class IdentifyViewModel : ObservableObject
         ApplyFilter();
     }
 
+    public async Task AddFilesAsync(IEnumerable<string> paths)
+    {
+        var files = Expand(paths).ToList();
+        if (files.Count == 0) return;
+
+        await _gate.WaitAsync();
+        try
+        {
+            IsBusy = true;
+            for (int i = 0; i < files.Count; i++)
+            {
+                BusyText = $"Identifying {i + 1} of {files.Count}: {Path.GetFileName(files[i])}";
+                var file = files[i];
+                ResultItemViewModel item;
+                try
+                {
+                    var result = await Task.Run(() => _recognizer.IdentifyFile(file));
+                    item = new ResultItemViewModel(result, this);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"Identify {file}", ex);
+                    item = ResultItemViewModel.Failed(Path.GetFileName(file), ex.Message, this);
+                }
+                Results.Insert(0, item);
+                _ = item.LoadThumbnailsAsync(_thumbs);
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+            _gate.Release();
+        }
+    }
+
+    private static IEnumerable<string> Expand(IEnumerable<string> paths)
+    {
+        foreach (var p in paths)
+        {
+            if (Directory.Exists(p))
+            {
+                foreach (var f in Directory.EnumerateFiles(p).Order())
+                    if (ImageExtensions.Contains(Path.GetExtension(f).ToLowerInvariant())) yield return f;
+            }
+            else if (File.Exists(p))
+            {
+                yield return p;
+            }
+        }
+    }
+
     /// <summary>Re-identifies a photo with the card turned the other way up, replacing its result.</summary>
     internal async Task FlipAsync(ResultItemViewModel item)
     {
