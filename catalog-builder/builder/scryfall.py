@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gzip
 import json
 import time
 import unicodedata
@@ -48,6 +49,12 @@ def _session(user_agent: str) -> requests.Session:
     return s
 
 
+def _download_url(item: dict) -> str | None:
+    """Scryfall has offered the file as one JSON array (download_uri) and, more recently,
+    as JSON Lines (jsonl_download_uri). Either works; iter_raw_cards reads both."""
+    return item.get("download_uri") or item.get("jsonl_download_uri")
+
+
 def get_bulk_info(user_agent: str, bulk_type: str) -> dict:
     """Ask Scryfall where today's bulk file lives and when it was last updated."""
     s = _session(user_agent)
@@ -58,12 +65,12 @@ def get_bulk_info(user_agent: str, bulk_type: str) -> dict:
         items = [i for i in r.json().get("data", []) if i.get("type") == bulk_type]
         for item in items:
             last_seen = item
-            if not item.get("download_uri") and item.get("uri"):
+            if not _download_url(item) and item.get("uri"):
                 # Ask for the single bulk object directly; it may carry the full details.
                 detail = s.get(item["uri"], timeout=30)
                 if detail.ok:
                     item = {**item, **detail.json()}
-            if item.get("download_uri"):
+            if _download_url(item):
                 return item
         # The file may be mid-regeneration on Scryfall's side; wait and try again.
         print(f"Bulk file not ready yet (attempt {attempt + 1}); keys seen: {sorted(last_seen or {})}")
@@ -80,12 +87,13 @@ def download_bulk(user_agent: str, bulk_type: str, dest: Path) -> tuple[Path, st
         print(f"Card data already up to date ({updated_at}).")
         return dest, updated_at
 
-    print(f"Downloading Scryfall card data ({info.get('size', 0) / 1e6:.0f} MB)...")
+    size = info.get("size") or info.get("compressed_size") or 0
+    print(f"Downloading Scryfall card data ({size / 1e6:.0f} MB)...")
     tmp = dest.with_suffix(".part")
     s = _session(user_agent)
     for attempt in range(3):
         try:
-            with s.get(info["download_uri"], stream=True, timeout=60) as r:
+            with s.get(_download_url(info), stream=True, timeout=60) as r:
                 r.raise_for_status()
                 total = int(r.headers.get("content-length", 0)) or None
                 with open(tmp, "wb") as f, tqdm(total=total, unit="B", unit_scale=True) as bar:
@@ -103,16 +111,33 @@ def download_bulk(user_agent: str, bulk_type: str, dest: Path) -> tuple[Path, st
     return dest, updated_at
 
 
-def iter_raw_cards(bulk_path: Path) -> Iterator[dict]:
-    """Stream cards out of the (large) bulk file without loading it all into memory."""
-    try:
-        import ijson
+def _open_maybe_gzip(path: Path):
+    with open(path, "rb") as f:
+        magic = f.read(2)
+    if magic == b"\x1f\x8b":
+        return gzip.open(path, "rb")
+    return open(path, "rb")
 
-        with open(bulk_path, "rb") as f:
+
+def iter_raw_cards(bulk_path: Path) -> Iterator[dict]:
+    """Stream cards out of the (large) bulk file without loading it all into memory.
+    Handles a JSON array or JSON Lines, plain or gzip-compressed."""
+    with _open_maybe_gzip(bulk_path) as f:
+        first = b""
+        while not first.strip():
+            first = f.read(1)
+            if not first:
+                return
+    with _open_maybe_gzip(bulk_path) as f:
+        if first.strip() == b"[":
+            import ijson
+
             yield from ijson.items(f, "item", use_float=True)
-    except ImportError:  # pragma: no cover - fallback if ijson is missing
-        with open(bulk_path, "r", encoding="utf-8") as f:
-            yield from json.load(f)
+        else:
+            for line in f:
+                line = line.strip().rstrip(b",")
+                if line and line not in (b"[", b"]"):
+                    yield json.loads(line)
 
 
 def sort_name(name: str) -> str:
