@@ -72,8 +72,11 @@ public static class CardDetector
                 {
                     double area = Cv2.ContourArea(c);
                     if (area < minArea) break;
+                    // The photo's own frame is roughly card-shaped too; never mistake it for the card.
+                    if (area > img.Width * img.Height * 0.9) continue;
                     var quad = QuadFromContour(c, area);
-                    if (quad is not null && LooksLikeCard(quad)) return OrderCorners(quad);
+                    if (quad is null || TouchesEdge(quad, img.Width, img.Height)) continue;
+                    if (LooksLikeCard(quad)) return OrderCorners(quad);
                 }
             }
             return null;
@@ -113,6 +116,12 @@ public static class CardDetector
         if (area / Math.Max(rect.Size.Width * rect.Size.Height, 1) > 0.85)
             return rect.Points();
         return null;
+    }
+
+    private static bool TouchesEdge(Point2f[] quad, int w, int h)
+    {
+        const float m = 3;
+        return quad.Count(p => p.X <= m || p.Y <= m || p.X >= w - 1 - m || p.Y >= h - 1 - m) >= 2;
     }
 
     private static bool LooksLikeCard(Point2f[] quad)
