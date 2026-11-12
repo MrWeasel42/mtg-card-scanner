@@ -68,6 +68,7 @@ public sealed class Recognizer : IDisposable
     private const double NumberBonus = 0.30;
     private const double SetBonus = 0.20;
     private const double BothBonus = 0.50; // set AND number both read: near-decisive
+    private const double MemorabiliaPenalty = 0.20; // gold-bordered / collector-only reprints
     private const double MinNameScore = 0.85;
     private const double MinFallbackNameScore = 0.90;
     private const float MinImageSimilarity = 0.50f;
@@ -188,7 +189,8 @@ public sealed class Recognizer : IDisposable
                 .Select(k => nameScore.GetValueOrDefault(k)).Max();
             bool num = collector.Numbers.Contains(p.Number.ToLowerInvariant().TrimStart('0'));
             bool set = collector.SetCodes.Contains(p.SetCode.ToLowerInvariant());
-            double score = ImageWeight * sim + ns + (num ? NumberBonus : 0) + (set ? SetBonus : 0) + (num && set ? BothBonus : 0);
+            double score = ImageWeight * sim + ns + (num ? NumberBonus : 0) + (set ? SetBonus : 0) + (num && set ? BothBonus : 0)
+                - (p.IsMemorabilia && !(num && set) ? MemorabiliaPenalty : 0);
             scored.Add((p, score, sim, ns > 0, num, set));
         }
 

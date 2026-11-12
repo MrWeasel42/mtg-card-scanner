@@ -5,7 +5,12 @@ using Microsoft.Data.Sqlite;
 namespace CardScanner.Core.Recognition;
 
 /// <summary>Lightweight in-memory facts about every printing, for fast lookups while scanning.</summary>
-public sealed record PrintingKey(string Id, string Name, string SetCode, string Number, string Layout);
+public sealed record PrintingKey(string Id, string Name, string SetCode, string Number, string Layout, string SetType = "")
+{
+    /// <summary>Collector-only reprints (Collectors' Edition, World Championship decks, Pro Tour
+    /// collector sets, oversized cards): rarely what's being scanned.</summary>
+    public bool IsMemorabilia => SetType == "memorabilia";
+}
 
 /// <summary>
 /// In-memory index of every printing: by (normalised) card name, and by set code + collector number.
@@ -27,12 +32,12 @@ public sealed partial class CardIndex
         using var con = new SqliteConnection($"Data Source={dbPath};Mode=ReadOnly;Pooling=False");
         con.Open();
         using var cmd = con.CreateCommand();
-        cmd.CommandText = "SELECT id, name, set_code, collector_number, layout FROM cards";
+        cmd.CommandText = "SELECT id, name, set_code, collector_number, layout, set_type FROM cards";
         using var r = cmd.ExecuteReader();
         int n = 0;
         while (r.Read())
         {
-            var p = new PrintingKey(r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3), r.IsDBNull(4) ? "" : r.GetString(4));
+            var p = new PrintingKey(r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3), r.IsDBNull(4) ? "" : r.GetString(4), r.IsDBNull(5) ? "" : r.GetString(5));
             n++;
             if (!NotRealCards.Contains(p.Layout))
             {

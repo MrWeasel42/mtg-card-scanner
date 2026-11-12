@@ -238,6 +238,8 @@ public class CollectorLineTests
     [InlineData("015 TM OLENA RICHARDS SLDEN", "15", "sld", null)]
     [InlineData("U0334 CM LTREN NINO IS TM", "334", "ltr", null)]
     [InlineData("R0149 ANNA PAYLEEYA TDM★EN", "149", "tdm", true)]
+    [InlineData("MC360 NSEANYO LTC★EN", "360", "ltc", true)]
+    [InlineData("LTCENCALDER MOORE M0358", "358", "ltc", null)]
     public void Parses_number_set_and_foil(string raw, string number, string set, bool? foil)
     {
         var c = CollectorLine.Parse(raw);

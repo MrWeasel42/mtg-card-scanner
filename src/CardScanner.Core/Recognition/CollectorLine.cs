@@ -26,7 +26,6 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
         foreach (Match m in SetAndLanguage().Matches(up))
         {
             var s = m.Groups[1].Value;
-            if (s.EndsWith("EN") && s.Length > 4) s = s[..^2]; // "LTREN" -> "LTR"
             if (s.Length >= 3 && !s.All(char.IsDigit)) sets.Add(s.ToLowerInvariant());
             var mark = m.Groups[2].Value;
             if (mark is "★" or "*") foil = true;
@@ -35,11 +34,11 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
         return new CollectorLine(raw, numbers, sets, foil);
     }
 
-    // "R0381", "RO325", "0015", "147/269R", "C 0198"
-    [GeneratedRegex(@"(?<![A-Z0-9])[CURMLSTPB]?\s?([0-9O]{1,4})(?:\s*/\s*[0-9O]{1,4})?\s?[CURMLSTPB]?(?![0-9])")]
+    // "R0381", "RO325", "0015", "147/269R", "C 0198", "MC360" (OCR noise before the number)
+    [GeneratedRegex(@"(?<![A-Z0-9])[A-Z]{0,2}\s?([0-9O]*[0-9][0-9O]*)(?:\s*/\s*[0-9O]{1,4})?\s?[CURMLSTPB]?(?![0-9])")]
     private static partial Regex Number();
 
-    // "DSK • EN", "ECL★EN", "SLDEN", "LTR·EN"
-    [GeneratedRegex(@"([A-Z0-9]{3,5})\s*([·•★*.]?)\s*EN\b")]
+    // "DSK • EN", "ECL★EN", "SLDEN", "LTR·EN", "LTCENCALDER" (artist name glued on)
+    [GeneratedRegex(@"(?<![A-Z0-9])([A-Z0-9]{3,5}?)\s*([·•★*.]?)\s*EN(?![A-Z0-9]*[·•★])")]
     private static partial Regex SetAndLanguage();
 }
