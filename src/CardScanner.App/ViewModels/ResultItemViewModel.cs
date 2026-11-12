@@ -135,7 +135,21 @@ public partial class ResultItemViewModel : ObservableObject
     [RelayCommand] private void MarkNameOnly() => Choose(null, Verdict.NameOnly);
     [RelayCommand] private void MarkNotListed() => Choose(null);
     [RelayCommand] private void Compare() { if (Top is { } t) OpenCompare(t); }
-    [RelayCommand] private Task Flip() => _owner.FlipAsync(this);
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FlipLabel))]
+    private bool _isFlipping;
+
+    public string FlipLabel => IsFlipping ? "↻ Flipping…" : "↻ Flip";
+
+    /// <summary>Re-identify turned around. Takes a few seconds, so show it's working and ignore extra clicks.</summary>
+    [RelayCommand]
+    private async Task Flip()
+    {
+        if (IsFlipping) return;
+        IsFlipping = true;
+        try { await _owner.FlipAsync(this); }
+        finally { IsFlipping = false; }
+    }
 
     /// <summary>True if the user turned this card around with the Flip button.</summary>
     public bool WasFlipped { get; init; }

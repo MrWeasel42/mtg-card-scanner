@@ -361,6 +361,24 @@ public class CardBorderTests
         Assert.Equal("black", CardBorder.Classify(black));
         Assert.Null(CardBorder.Classify(red));
     }
+
+    [Fact]
+    public void Sees_white_border_inside_a_dark_sleeve_edge()
+    {
+        // Cropped at the sleeve: a dark 2% rim, then the card's white border, then a red frame.
+        using var card = new Mat(1360, 976, MatType.CV_8UC3, new Scalar(30, 30, 30));
+        card[new Rect(20, 20, 976 - 40, 1360 - 40)].SetTo(new Scalar(225, 228, 230));
+        card[new Rect(70, 70, 976 - 140, 1360 - 140)].SetTo(new Scalar(40, 60, 200));
+        Assert.Equal("white", CardBorder.Classify(card));
+    }
+
+    [Fact]
+    public void Sleeved_black_border_stays_black()
+    {
+        using var card = new Mat(1360, 976, MatType.CV_8UC3, new Scalar(20, 20, 20));
+        card[new Rect(80, 80, 976 - 160, 1360 - 160)].SetTo(new Scalar(230, 230, 230));
+        Assert.Equal("black", CardBorder.Classify(card));
+    }
 }
 
 public class TextReaderTests(Xunit.Abstractions.ITestOutputHelper output)

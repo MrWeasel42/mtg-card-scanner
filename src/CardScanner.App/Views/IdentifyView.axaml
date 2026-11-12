@@ -150,7 +150,7 @@
                     </Border>
                   </Button>
                   <TextBlock Classes="muted" FontSize="11" Text="{Binding Photo}" TextTrimming="CharacterEllipsis" />
-                  <Button Content="↻ Flip" FontSize="12" Padding="10,4" IsVisible="{Binding CanFlip}"
+                  <Button Content="{Binding FlipLabel}" FontSize="12" Padding="10,4" IsVisible="{Binding CanFlip}"
                           Command="{Binding FlipCommand}"
                           ToolTip.Tip="Card upside down? Turn it around and identify it again" />
                 </StackPanel>

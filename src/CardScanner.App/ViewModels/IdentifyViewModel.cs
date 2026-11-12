@@ -159,6 +159,8 @@ public partial class IdentifyViewModel : ObservableObject
         int index = Results.IndexOf(item);
         if (index < 0) return null;
         bool nowUpsideDown = !item.Result.UpsideDown;
+        // The recognizer handles one photo at a time: wait for any batch that's still running.
+        await _gate.WaitAsync();
         try
         {
             var result = await Task.Run(() => _recognizer.IdentifyFile(file, forceUpsideDown: nowUpsideDown));
@@ -169,6 +171,7 @@ public partial class IdentifyViewModel : ObservableObject
             return replacement;
         }
         catch (Exception ex) { Log.Error($"Flip {file}", ex); return null; }
+        finally { _gate.Release(); }
     }
 
     /// <summary>Flip from the big compare view: re-identify upside down and stay in the compare view.</summary>
