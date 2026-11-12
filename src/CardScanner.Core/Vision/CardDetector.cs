@@ -44,6 +44,50 @@ public static class CardDetector
         return new DetectedCard { Card = Warp(photo, corners), Corners = corners };
     }
 
+    /// <summary>
+    /// Card-shaped rectangles *inside* an already-straightened image, largest first. For a sleeved card
+    /// the first straightening finds the sleeve's edge; the real card is one of these. A raw card's own
+    /// printed frame can show up here too, so callers should try each crop and keep the best match
+    /// rather than trusting these blindly.
+    /// </summary>
+    public static List<Point2f[]> InnerCardQuads(Mat straightened, int max = 2)
+    {
+        double full = straightened.Width * straightened.Height;
+        var found = new List<(Point2f[] Quad, double Area)>();
+        using var blurred = new Mat();
+        Cv2.GaussianBlur(straightened, blurred, new Size(5, 5), 0);
+        using var gray = new Mat();
+        Cv2.CvtColor(blurred, gray, ColorConversionCodes.BGR2GRAY);
+        var masks = EdgeMasks(blurred, gray);
+        try
+        {
+            foreach (var mask in masks)
+            {
+                Cv2.FindContours(mask, out Point[][] contours, out _, RetrievalModes.List, ContourApproximationModes.ApproxSimple);
+                foreach (var c in contours)
+                {
+                    double area = Cv2.ContourArea(c);
+                    // Card inside a perfect fit is ~97% of the sleeve; inside two sleeves ~85%.
+                    if (area < full * 0.78 || area > full * 0.985) continue;
+                    var quad = QuadFromContour(c, area);
+                    if (quad is null || TouchesEdge(quad, straightened.Width, straightened.Height) || !LooksLikeCard(quad)) continue;
+                    var o = OrderCorners(quad);
+                    float cx = o.Average(p => p.X), cy = o.Average(p => p.Y);
+                    if (Math.Abs(cx - straightened.Width / 2f) > straightened.Width * 0.05 ||
+                        Math.Abs(cy - straightened.Height / 2f) > straightened.Height * 0.05) continue;
+                    // Skip near-duplicates of a rectangle we already have.
+                    if (found.Any(f => Math.Abs(f.Area - area) < full * 0.01)) continue;
+                    found.Add((o, area));
+                }
+            }
+        }
+        finally
+        {
+            foreach (var m in masks) m.Dispose();
+        }
+        return found.OrderByDescending(f => f.Area).Take(max).Select(f => f.Quad).ToList();
+    }
+
     /// <summary>Straightens the area inside the four corners (TL, TR, BR, BL) into a flat card image.</summary>
     public static Mat Warp(Mat photo, Point2f[] corners)
     {

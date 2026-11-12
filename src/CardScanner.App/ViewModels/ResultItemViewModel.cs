@@ -32,6 +32,7 @@ public partial class ResultItemViewModel : ObservableObject
             var notes = new List<string>();
             if (!Result.CardOutlineFound) notes.Add("Couldn't find the card's edges — used the whole photo. Try a plain, contrasting background.");
             if (Result.UpsideDown) notes.Add("Card was upside down (handled).");
+            if (Result.UsedInnerOutline) notes.Add("Looked like a sleeve — used the card inside it.");
             notes.Add($"{Result.Elapsed.TotalMilliseconds:0} ms");
             return string.Join("  ·  ", notes);
         }

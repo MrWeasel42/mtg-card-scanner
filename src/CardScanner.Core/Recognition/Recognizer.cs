@@ -15,6 +15,8 @@ public sealed class RecognitionResult
     public required byte[] CardImagePng { get; init; }
     public required bool CardOutlineFound { get; init; }
     public required bool UpsideDown { get; init; }
+    /// <summary>True if the best match came from a rectangle inside the outline (e.g. the card inside a sleeve).</summary>
+    public bool UsedInnerOutline { get; init; }
     public required TimeSpan Elapsed { get; init; }
 
     public Candidate? Best => Candidates.FirstOrDefault();
@@ -72,29 +74,56 @@ public sealed class Recognizer : IDisposable
         var sw = Stopwatch.StartNew();
         using var detected = CardDetector.Detect(photo);
 
-        // The card might be upside down: try both ways and keep whichever matches better.
-        using var flipped = new Mat();
-        Cv2.Rotate(detected.Card, flipped, RotateFlags.Rotate180);
-        var vecs = _fingerprinter.EmbedBatch([detected.Card, flipped]);
-        var upright = _index.Search(vecs[0], topK);
-        var rotated = _index.Search(vecs[1], topK);
-        bool upsideDown = rotated[0].Score > upright[0].Score;
-        var hits = upsideDown ? rotated : upright;
-
-        var cards = _catalog.GetMany(hits.Select(h => h.Id).ToList());
-        var candidates = hits.Where(h => cards.ContainsKey(h.Id))
-                             .Select(h => new Candidate(cards[h.Id], h.Score)).ToList();
-
-        Cv2.ImEncode(".png", upsideDown ? flipped : detected.Card, out var png);
-        return new RecognitionResult
+        // Crops to try: the outline we found, plus any card-shaped rectangle inside it
+        // (the real card, if the outline was a sleeve). Each is tried upright and upside down.
+        var crops = new List<Mat> { detected.Card };
+        foreach (var inner in CardDetector.InnerCardQuads(detected.Card))
+            crops.Add(CardDetector.Warp(detected.Card, inner));
+        var views = new List<Mat>();
+        foreach (var crop in crops)
         {
-            Source = source,
-            Candidates = candidates,
-            CardImagePng = png,
-            CardOutlineFound = detected.Found,
-            UpsideDown = upsideDown,
-            Elapsed = sw.Elapsed,
-        };
+            views.Add(crop);
+            var flipped = new Mat();
+            Cv2.Rotate(crop, flipped, RotateFlags.Rotate180);
+            views.Add(flipped);
+        }
+
+        try
+        {
+            var vecs = _fingerprinter.EmbedBatch(views);
+            var searches = vecs.Select(v => _index.Search(v, topK)).ToList();
+
+            // Prefer the outer crop unless an inner one is clearly better (a raw card's own
+            // printed frame can look like an inner rectangle; it should not win by a hair).
+            int best = 0;
+            for (int i = 1; i < searches.Count; i++)
+            {
+                float margin = i >= 2 ? 0.01f : 0f;
+                if (searches[i][0].Score > searches[best][0].Score + margin) best = i;
+            }
+            var hits = searches[best];
+
+            var cards = _catalog.GetMany(hits.Select(h => h.Id).ToList());
+            var candidates = hits.Where(h => cards.ContainsKey(h.Id))
+                                 .Select(h => new Candidate(cards[h.Id], h.Score)).ToList();
+
+            Cv2.ImEncode(".png", views[best], out var png);
+            return new RecognitionResult
+            {
+                Source = source,
+                Candidates = candidates,
+                CardImagePng = png,
+                CardOutlineFound = detected.Found,
+                UpsideDown = best % 2 == 1,
+                UsedInnerOutline = best >= 2,
+                Elapsed = sw.Elapsed,
+            };
+        }
+        finally
+        {
+            // views[0] is detected.Card, disposed by its own using.
+            foreach (var v in views.Skip(1)) v.Dispose();
+        }
     }
 
     public void Dispose()

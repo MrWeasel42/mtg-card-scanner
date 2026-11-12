@@ -156,6 +156,35 @@ public class RecognizerTests
         }
     }
 
+    /// <summary>A card inside a clear sleeve: a slightly bigger, see-through rectangle with a visible edge.</summary>
+    private static Mat Sleeve(Mat card, double grow)
+    {
+        int w = (int)(card.Width * grow), h = (int)(card.Height * (1 + (grow - 1) * 0.7));
+        var sleeve = new Mat(h, w, MatType.CV_8UC3, new Scalar(150, 142, 135)); // table seen through clear plastic
+        Cv2.Rectangle(sleeve, new Rect(0, 0, w, h), new Scalar(225, 225, 225), 3); // sleeve edge catching light
+        card.CopyTo(sleeve[new Rect((w - card.Width) / 2, (h - card.Height) / 2, card.Width, card.Height)]);
+        return sleeve;
+    }
+
+    [Theory]
+    [InlineData(1.04)] // perfect fit / standard sleeve
+    [InlineData(1.10)] // double sleeved
+    public void Identifies_sleeved_cards(double grow)
+    {
+        var paths = FixturePaths();
+        using var rec = Recognizer.Load(paths);
+        int right = 0;
+        for (int i = 0; i < 8; i++)
+        {
+            using var card = CardDetectorTests.LoadFixtureCard(i);
+            using var sleeved = Sleeve(card, grow);
+            using var photo = CardDetectorTests.FakePhoto(sleeved, 6);
+            var result = rec.Identify(photo, $"sleeved{i}");
+            if (result.Best?.Card.Name == $"Test Card {i}") right++;
+        }
+        Assert.True(right >= 7, $"only {right}/8 sleeved cards identified");
+    }
+
     [Fact]
     public void Identifies_an_upside_down_card()
     {
