@@ -53,7 +53,7 @@ public partial class IdentifyViewModel : ObservableObject
     public bool IsAll => Filter == ReviewFilter.All;
 
     [ObservableProperty] private string _queueLabel = "To verify";
-    [ObservableProperty] private string _goodLabel = "📌 Good";
+    [ObservableProperty] private string _goodLabel = "📌 Pinned";
     [ObservableProperty] private string _doneLabel = "✓ Done";
     [ObservableProperty] private string _allLabel = "All";
     [ObservableProperty] private string _emptyFilterText = "";
@@ -79,14 +79,14 @@ public partial class IdentifyViewModel : ObservableObject
         int Count(ReviewFilter f) => Results.Count(r => Matches(r, f));
         int q = Count(ReviewFilter.Queue);
         QueueLabel = $"To verify ({q})";
-        GoodLabel = $"📌 Good ({Count(ReviewFilter.Good)})";
+        GoodLabel = $"📌 Pinned ({Count(ReviewFilter.Good)})";
         DoneLabel = $"✓ Done ({Count(ReviewFilter.Done)})";
         AllLabel = $"All ({Results.Count})";
         CanAcceptGood = Count(ReviewFilter.Good) > 0;
         EmptyFilterText = !HasResults || Count(Filter) > 0 ? "" : Filter switch
         {
-            ReviewFilter.Queue => "Queue's clear, nothing left to verify. 🎉 Peek at the Good tab if you want to double-check those.",
-            ReviewFilter.Good => "No unmarked good cards left.",
+            ReviewFilter.Queue => "Queue's clear, nothing left to verify. 🎉 Peek at the Pinned tab if you want to double-check those.",
+            ReviewFilter.Good => "No unmarked pinned cards left.",
             ReviewFilter.Done => "Nothing marked yet.",
             _ => "",
         };

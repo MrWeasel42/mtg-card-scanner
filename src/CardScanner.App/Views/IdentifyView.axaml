@@ -114,9 +114,9 @@
                 ToolTip.Tip="Cards you've already marked. Change your answer here if you need to." />
         <Button Classes="tab" Classes.on="{Binding IsAll}" Content="{Binding AllLabel}" Margin="0,0,8,6"
                 Command="{Binding SetFilterCommand}" CommandParameter="All" />
-        <Button Content="✓ Mark all good cards correct" Margin="12,0,0,6" Padding="12,6" FontSize="13"
+        <Button Content="✓ Mark all pinned correct" Margin="12,0,0,6" Padding="12,6" FontSize="13"
                 Command="{Binding AcceptGoodCommand}" IsEnabled="{Binding CanAcceptGood}"
-                ToolTip.Tip="Marks every card in the Good tab as the correct printing, so they're logged too." />
+                ToolTip.Tip="Marks every card in the Pinned tab as the correct printing, so they're logged too." />
       </WrapPanel>
       <TextBlock Classes="muted" Text="{Binding EmptyFilterText}" TextWrapping="Wrap"
                  IsVisible="{Binding EmptyFilterText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
