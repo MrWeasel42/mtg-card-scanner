@@ -67,6 +67,7 @@ public sealed class Recognizer : IDisposable
     private const double ImageWeight = 2.0;
     private const double NumberBonus = 0.30;
     private const double SetBonus = 0.20;
+    private const double BothBonus = 0.50; // set AND number both read: near-decisive
     private const double MinNameScore = 0.85;
     private const double MinFallbackNameScore = 0.90;
     private const float MinImageSimilarity = 0.50f;
@@ -77,13 +78,13 @@ public sealed class Recognizer : IDisposable
     private readonly FingerprintIndex _index;
     private readonly Fingerprinter _fingerprinter;
     private readonly CardIndex _cards;
-    private readonly TextReader _ocr;
+    private readonly CardTextReader _ocr;
     private readonly CLAHE _clahe = Cv2.CreateCLAHE(2.5, new Size(8, 8));
 
     public CatalogManifest Manifest { get; }
     public CardCatalog Catalog => _catalog;
 
-    private Recognizer(CatalogManifest manifest, CardCatalog catalog, FingerprintIndex index, Fingerprinter fp, CardIndex cards, TextReader ocr)
+    private Recognizer(CatalogManifest manifest, CardCatalog catalog, FingerprintIndex index, Fingerprinter fp, CardIndex cards, CardTextReader ocr)
     {
         Manifest = manifest;
         _catalog = catalog;
@@ -101,7 +102,7 @@ public sealed class Recognizer : IDisposable
         var catalog = new CardCatalog(paths.Database);
         var fp = new Fingerprinter(paths.Model, manifest.Model);
         var cards = new CardIndex(paths.Database);
-        var ocr = new TextReader(ocrModelDir ?? TextReader.DefaultModelDir);
+        var ocr = new CardTextReader(ocrModelDir ?? CardTextReader.DefaultModelDir);
         return new Recognizer(manifest, catalog, index, fp, cards, ocr);
     }
 
@@ -187,7 +188,7 @@ public sealed class Recognizer : IDisposable
                 .Select(k => nameScore.GetValueOrDefault(k)).Max();
             bool num = collector.Numbers.Contains(p.Number.ToLowerInvariant().TrimStart('0'));
             bool set = collector.SetCodes.Contains(p.SetCode.ToLowerInvariant());
-            double score = ImageWeight * sim + ns + (num ? NumberBonus : 0) + (set ? SetBonus : 0);
+            double score = ImageWeight * sim + ns + (num ? NumberBonus : 0) + (set ? SetBonus : 0) + (num && set ? BothBonus : 0);
             scored.Add((p, score, sim, ns > 0, num, set));
         }
 
@@ -211,10 +212,21 @@ public sealed class Recognizer : IDisposable
         {
             if (!best.NameMatched && !(best.NumberMatched && best.SetMatched))
                 flag = "Couldn't read the card's name — matched by collector line and picture.";
-            else if (best.ImageSimilarity < MinImageSimilarity)
+            else if (best.ImageSimilarity < MinImageSimilarity && !(best.NameMatched && best.NumberMatched && best.SetMatched))
                 flag = "The picture doesn't look much like the catalog image.";
         }
         bool pinned = best is { NameMatched: true, NumberMatched: true, SetMatched: true };
+
+        // Look-alike printings with very different prices (e.g. Alpha/Beta/Unlimited/Revised duals,
+        // which have no collector line): the picture alone shouldn't decide. Ask a human.
+        if (flag is null && best is not null && !pinned)
+        {
+            var rival = candidates.Skip(1).FirstOrDefault(c => c.Card.Name == best.Card.Name);
+            decimal p1 = Price(best.Card), p2 = rival is null ? 0 : Price(rival.Card);
+            decimal hiP = Math.Max(p1, p2), loP = Math.Max(Math.Min(p1, p2), 0.01m);
+            if (rival is not null && hiP >= 20 && hiP / loP >= 2 && best.Score - rival.Score < 0.15f)
+                flag = $"Look-alike printings with very different prices ({best.Card.SetCode.ToUpperInvariant()} ${p1:0.##} vs {rival.Card.SetCode.ToUpperInvariant()} ${p2:0.##}) — double-check the edition.";
+        }
 
         Cv2.ImEncode(".jpg", hi[view], out var jpeg, new ImageEncodingParam(ImwriteFlags.JpegQuality, 92));
         return new RecognitionResult
@@ -232,6 +244,8 @@ public sealed class Recognizer : IDisposable
             Elapsed = sw.Elapsed,
         };
     }
+
+    private static decimal Price(CardInfo c) => c.PriceUsd ?? c.PriceUsdFoil ?? c.PriceUsdEtched ?? 0m;
 
     private double BestSimilarity(string nameKey, float[] vec)
     {

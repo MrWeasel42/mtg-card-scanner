@@ -292,7 +292,7 @@ public class TextReaderTests
     {
         using var img = new Mat(160, 1100, MatType.CV_8UC3, new Scalar(225, 235, 240));
         Cv2.PutText(img, text, new Point(30, 105), HersheyFonts.HersheyTriplex, 2.4, new Scalar(20, 20, 20), 4, LineTypes.AntiAlias);
-        using var reader = new CardScanner.Core.Ocr.TextReader(CardScanner.Core.Ocr.TextReader.DefaultModelDir);
+        using var reader = new CardScanner.Core.Ocr.CardTextReader(CardScanner.Core.Ocr.CardTextReader.DefaultModelDir);
         var lines = reader.Read(img);
         var all = string.Join(" ", lines.Select(l => l.Text));
         Assert.True(CardIndex.Similarity(CardIndex.Normalize(all), CardIndex.Normalize(text)) >= 0.85, $"read '{all}'");

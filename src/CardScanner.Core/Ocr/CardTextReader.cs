@@ -16,7 +16,7 @@ public sealed record TextLine(string Text, float Confidence, Point2f[] Box)
 /// Step 1 finds text lines (a "DB" text detector), step 2 reads each line (a CTC recognizer).
 /// Mirrors the reference Python implementation used to validate it on real card photos.
 /// </summary>
-public sealed class TextReader : IDisposable
+public sealed class CardTextReader : IDisposable
 {
     private static readonly float[] Mean = [0.485f, 0.456f, 0.406f];
     private static readonly float[] Std = [0.229f, 0.224f, 0.225f];
@@ -26,7 +26,7 @@ public sealed class TextReader : IDisposable
     private readonly string _detInput, _recInput;
     private readonly string[] _chars;
 
-    public TextReader(string modelDir)
+    public CardTextReader(string modelDir)
     {
         var opts = new SessionOptions
         {
