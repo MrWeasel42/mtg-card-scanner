@@ -57,6 +57,14 @@ Sort mode with name-only rules (e.g. alphabetical) needs name-level recognition 
    - `none`: lighting check only; flagged until the rig exists.
 5. Combine evidence; below-threshold or conflicting results go to review. Expensive look-alikes (e.g. Unlimited vs Revised) are always reviewed.
 6. Special foils (surge, etched, galaxy...) come from the exact printing, which the collector number pins down.
+7. **Marker checks** for reprints that share art *and* collector line with the original. Each check looks at a fixed
+   spot on the straightened card and is calibrated in the cloud build against Scryfall images, with its accuracy reported:
+   - **The List** (`plst`, also `ulst`): small planeswalker symbol in the bottom-left corner. Scryfall stores these as
+     separate printings (e.g. Citanul Hierophants USG #244 ≈ $2.87 vs PLST USG-244 ≈ $0.46).
+   - Later: promo stamps (P, date stamps, planeswalker stamp), other set-specific marks. Sets that may share the List
+     symbol (e.g. Mystery Booster 2) must be verified.
+   - Symbol clearly present → List printing; clearly absent → original; unsure → review, showing both candidates with
+     the corner zoomed in. Pairs with a big price gap need a confident result or go to review.
 
 ## Architecture
 - **App**: C# (.NET), Windows first, also runs on Raspberry Pi 5 (Linux ARM64). Installer built by GitHub Actions; self-updating.
