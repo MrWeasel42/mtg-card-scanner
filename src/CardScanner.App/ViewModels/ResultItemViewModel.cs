@@ -51,7 +51,8 @@ public partial class ResultItemViewModel : ObservableObject
             var name = Result.NameRead is { Length: > 0 } n ? $"“{n}”" : "couldn't read";
             var coll = Result.Collector.Raw is { Length: > 0 } c ? $"“{c}”" : "couldn't read";
             var foil = Result.FoilFromCollector switch { true => " · ★ foil", false => " · • non-foil", _ => "" };
-            return $"Read name: {name}   ·   Collector line: {coll}{foil}";
+            var border = Result.BorderColor is { } b ? $"   ·   Border: {b}" : "";
+            return $"Read name: {name}   ·   Collector line: {coll}{foil}{border}";
         }
     }
 

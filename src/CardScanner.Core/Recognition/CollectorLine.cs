@@ -6,7 +6,7 @@ namespace CardScanner.Core.Recognition;
 /// What we could read from the small print at the bottom-left of a card, e.g.
 /// "R 0381 DSK • EN" or "147/269 R ELD EN". Older cards have no collector line.
 /// </summary>
-public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, HashSet<string> SetCodes, bool? Foil)
+public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, HashSet<string> SetCodes, bool? Foil, int? CopyrightYear = null)
 {
     public static readonly CollectorLine Empty = new("", [], [], null);
 
@@ -31,7 +31,11 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
             if (mark is "★" or "*") foil = true;
             else if (mark is "·" or "•" or "." && foil is null) foil = false;
         }
-        return new CollectorLine(raw, numbers, sets, foil);
+        // Old cards print a copyright year ("©1995", "1993-2005"): the latest year is the print year.
+        int? year = null;
+        foreach (Match m in Year().Matches(up))
+            if (int.TryParse(m.Value, out var y) && y is >= 1993 and <= 2030) year = Math.Max(year ?? 0, y);
+        return new CollectorLine(raw, numbers, sets, foil, year);
     }
 
     // "R0381", "RO325", "0015", "147/269R", "C 0198", "MC360" (OCR noise before the number)
@@ -41,4 +45,7 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
     // "DSK • EN", "ECL★EN", "SLDEN", "LTR·EN", "LTCENCALDER" (artist name glued on)
     [GeneratedRegex(@"(?<![A-Z0-9])([A-Z0-9]{3,5}?)\s*([·•★*.]?)\s*EN(?![A-Z0-9]*[·•★])")]
     private static partial Regex SetAndLanguage();
+
+    [GeneratedRegex(@"(?<![0-9])(19|20)[0-9]{2}(?![0-9])")]
+    private static partial Regex Year();
 }

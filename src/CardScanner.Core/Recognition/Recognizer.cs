@@ -26,6 +26,8 @@ public sealed class RecognitionResult
 
     /// <summary>The card name as read from the card (OCR), if it could be read.</summary>
     public string? NameRead { get; init; }
+    /// <summary>Border colour measured on the photo ("white", "black"), or null if unclear.</summary>
+    public string? BorderColor { get; init; }
     /// <summary>The collector line as read from the card, if any.</summary>
     public CollectorLine Collector { get; init; } = CollectorLine.Empty;
     /// <summary>Foil according to the ★/• in the collector line (null = couldn't tell).</summary>
@@ -68,7 +70,9 @@ public sealed class Recognizer : IDisposable
     private const double NumberBonus = 0.30;
     private const double SetBonus = 0.20;
     private const double BothBonus = 0.50; // set AND number both read: near-decisive
-    private const double MemorabiliaPenalty = 0.20; // gold-bordered / collector-only reprints
+    private const double UnlikelyPenalty = 0.20;    // collector-only reprints, Summer Magic
+    private const double BorderPenalty = 0.40;      // clearly white border vs a black-bordered printing, or vice versa
+    private const double YearBonus = 0.25;          // copyright year on old cards matches the printing's year
     private const double MinNameScore = 0.85;
     private const double MinFallbackNameScore = 0.90;
     private const float MinImageSimilarity = 0.50f;
@@ -166,8 +170,9 @@ public sealed class Recognizer : IDisposable
         var vec = vecs[view];
         var viewHits = hits.Where(h => h.View == view).ToList();
 
-        // 3. Collector line (bottom-left small print).
+        // 3. Collector line (bottom-left small print) and border colour.
         var collector = ReadCollector(hi[view]);
+        var border = detected.Found ? CardBorder.Classify(hi[view]) : null;
 
         // 4. Score every printing that the name or the collector line points at.
         var nameScore = new Dictionary<string, double>();
@@ -189,8 +194,18 @@ public sealed class Recognizer : IDisposable
                 .Select(k => nameScore.GetValueOrDefault(k)).Max();
             bool num = collector.Numbers.Contains(p.Number.ToLowerInvariant().TrimStart('0'));
             bool set = collector.SetCodes.Contains(p.SetCode.ToLowerInvariant());
-            double score = ImageWeight * sim + ns + (num ? NumberBonus : 0) + (set ? SetBonus : 0) + (num && set ? BothBonus : 0)
-                - (p.IsMemorabilia && !(num && set) ? MemorabiliaPenalty : 0);
+            bool pinnedByCollector = num && set;
+            bool borderMismatch = border switch
+            {
+                "white" => p.BorderColor is "black" or "gold",
+                "black" => p.BorderColor == "white",
+                _ => false,
+            };
+            bool yearMatch = collector.CopyrightYear is { } cy && p.ReleaseYear is var ry && (ry == cy || ry == cy + 1);
+            double score = ImageWeight * sim + ns + (num ? NumberBonus : 0) + (set ? SetBonus : 0) + (pinnedByCollector ? BothBonus : 0)
+                + (yearMatch && !pinnedByCollector ? YearBonus : 0)
+                - (p.IsUnlikely && !pinnedByCollector ? UnlikelyPenalty : 0)
+                - (borderMismatch && !pinnedByCollector ? BorderPenalty : 0);
             scored.Add((p, score, sim, ns > 0, num, set));
         }
 
@@ -241,6 +256,7 @@ public sealed class Recognizer : IDisposable
             OrientationForced = forceUpsideDown is not null,
             NameRead = viewHits.OrderByDescending(h => h.Score).FirstOrDefault()?.Raw,
             Collector = collector,
+            BorderColor = border,
             Pinned = pinned,
             FlagReason = flag,
             Elapsed = sw.Elapsed,

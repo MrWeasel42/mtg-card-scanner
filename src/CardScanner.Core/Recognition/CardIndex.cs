@@ -5,11 +5,13 @@ using Microsoft.Data.Sqlite;
 namespace CardScanner.Core.Recognition;
 
 /// <summary>Lightweight in-memory facts about every printing, for fast lookups while scanning.</summary>
-public sealed record PrintingKey(string Id, string Name, string SetCode, string Number, string Layout, string SetType = "")
+public sealed record PrintingKey(string Id, string Name, string SetCode, string Number, string Layout,
+    string SetType = "", string BorderColor = "", int ReleaseYear = 0)
 {
-    /// <summary>Collector-only reprints (Collectors' Edition, World Championship decks, Pro Tour
-    /// collector sets, oversized cards): rarely what's being scanned.</summary>
-    public bool IsMemorabilia => SetType == "memorabilia";
+    /// <summary>Printings that are rarely what's being scanned: collector-only reprints (Collectors'
+    /// Edition, World Championship decks, Pro Tour collector sets, oversized cards) and the tiny
+    /// Summer Magic print run, which looks just like Revised.</summary>
+    public bool IsUnlikely => SetType == "memorabilia" || SetCode == "sum";
 }
 
 /// <summary>
@@ -32,12 +34,15 @@ public sealed partial class CardIndex
         using var con = new SqliteConnection($"Data Source={dbPath};Mode=ReadOnly;Pooling=False");
         con.Open();
         using var cmd = con.CreateCommand();
-        cmd.CommandText = "SELECT id, name, set_code, collector_number, layout, set_type FROM cards";
+        cmd.CommandText = "SELECT id, name, set_code, collector_number, layout, set_type, border_color, released_at FROM cards";
         using var r = cmd.ExecuteReader();
         int n = 0;
         while (r.Read())
         {
-            var p = new PrintingKey(r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3), r.IsDBNull(4) ? "" : r.GetString(4), r.IsDBNull(5) ? "" : r.GetString(5));
+            var released = r.IsDBNull(7) ? "" : r.GetString(7);
+            var p = new PrintingKey(r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3),
+                r.IsDBNull(4) ? "" : r.GetString(4), r.IsDBNull(5) ? "" : r.GetString(5), r.IsDBNull(6) ? "" : r.GetString(6),
+                released.Length >= 4 && int.TryParse(released[..4], out var y) ? y : 0);
             n++;
             if (!NotRealCards.Contains(p.Layout))
             {

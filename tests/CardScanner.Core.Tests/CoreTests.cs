@@ -248,6 +248,12 @@ public class CollectorLineTests
         Assert.Equal(foil, c.Foil);
     }
 
+    [Theory]
+    [InlineData("Illus. Christopher Rush 1995wizardsofbe Coas", 1995)]
+    [InlineData("Dermot Power TM&C1993-2005WizardsoftheCoast,", 2005)]
+    [InlineData("Illus,  Rob Alexander", null)]
+    public void Reads_copyright_year(string raw, int? year) => Assert.Equal(year, CollectorLine.Parse(raw).CopyrightYear);
+
     [Fact]
     public void Old_cards_have_no_collector_line()
     {
@@ -282,6 +288,27 @@ public class CardIndexTests
         Assert.Equal("test card 3", index.MatchName("Tesl Card 3")!.Value.Name);
         Assert.Null(index.MatchName("completely different words"));
         Assert.NotEmpty(index.PrintingsAt("tst", "0004"));
+    }
+}
+
+public class CardBorderTests
+{
+    private static Mat CardWithBorder(Scalar border, Scalar inside)
+    {
+        var card = new Mat(1360, 976, MatType.CV_8UC3, border);
+        card[new Rect(60, 60, 976 - 120, 1360 - 120)].SetTo(inside);
+        return card;
+    }
+
+    [Fact]
+    public void Tells_white_from_black_borders()
+    {
+        using var white = CardWithBorder(new Scalar(235, 238, 240), new Scalar(40, 60, 200));
+        using var black = CardWithBorder(new Scalar(20, 18, 16), new Scalar(40, 60, 200));
+        using var red = CardWithBorder(new Scalar(40, 50, 210), new Scalar(40, 60, 200));
+        Assert.Equal("white", CardBorder.Classify(white));
+        Assert.Equal("black", CardBorder.Classify(black));
+        Assert.Null(CardBorder.Classify(red));
     }
 }
 
