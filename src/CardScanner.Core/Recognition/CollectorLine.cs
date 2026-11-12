@@ -49,8 +49,8 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
         return new string(tail.Replace('O', '0').Where(char.IsDigit).ToArray());
     }
 
-    // "COAST", "C0AST", "COASR", "COAS1", then optionally ", INC." / "LLC" read as "L1C", "LTO"
-    [GeneratedRegex(@"C[O0][A-Z]{1,3}[TRS1]|INC\b|LLC|L1C|LT[O0]")]
+    // "COAST", "C0AST", "COASR" (not followed by more letters), then optionally ", INC." / "LLC" read as "L1C", "LTO"
+    [GeneratedRegex(@"C[O0][A-Z]{1,3}[TRS](?![A-Z])|INC\b|LLC|L1C|LT[O0]")]
     private static partial Regex AfterCoastAnchor();
 
     public static CollectorLine Parse(string raw)
