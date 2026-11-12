@@ -147,8 +147,12 @@ public class RecognizerTests
             using var photo = CardDetectorTests.FakePhoto(card, 8 * (i % 3) - 8);
             var result = rec.Identify(photo, $"photo{i}");
             Assert.NotNull(result.Best);
-            Assert.Equal($"Test Card {i}", result.Best!.Card.Name);
-            Assert.False(result.UpsideDown);
+            using var detected = CardDetector.Detect(photo);
+            var why = $"card {i}: outline={result.CardOutlineFound} upsideDown={result.UpsideDown} " +
+                      $"corners=[{string.Join(" ", detected.Corners.Select(c => $"({c.X:0},{c.Y:0})"))}] " +
+                      $"sim={CardDetectorTests.Similarity(detected.Card, card):0.00} " +
+                      string.Join(", ", result.Candidates.Select(c => $"{c.Card.Name}={c.Score:0.000}"));
+            Assert.True($"Test Card {i}" == result.Best!.Card.Name && !result.UpsideDown, why);
         }
     }
 
