@@ -61,10 +61,11 @@ public static class CardDetector
         Cv2.GaussianBlur(gray, gray, new Size(5, 5), 0);
         double minArea = img.Width * img.Height * 0.08;
 
-        // Try two ways of finding edges: Canny edges, then a brightness threshold.
-        foreach (var mask in EdgeMasks(gray))
+        // Try a few ways of finding edges: Canny edges, then a brightness threshold (both polarities).
+        var masks = EdgeMasks(gray);
+        try
         {
-            using (mask)
+            foreach (var mask in masks)
             {
                 Cv2.FindContours(mask, out Point[][] contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
                 foreach (var c in contours.OrderByDescending(c => Cv2.ContourArea(c)))
@@ -75,25 +76,27 @@ public static class CardDetector
                     if (quad is not null && LooksLikeCard(quad)) return OrderCorners(quad);
                 }
             }
+            return null;
         }
-        return null;
+        finally
+        {
+            foreach (var m in masks) m.Dispose();
+        }
     }
 
-    private static IEnumerable<Mat> EdgeMasks(Mat gray)
+    private static List<Mat> EdgeMasks(Mat gray)
     {
         var edges = new Mat();
         Cv2.Canny(gray, edges, 40, 120);
         using (var k = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(5, 5)))
             Cv2.MorphologyEx(edges, edges, MorphTypes.Close, k, iterations: 2);
-        yield return edges;
 
         var bin = new Mat();
         Cv2.Threshold(gray, bin, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
-        yield return bin;
 
         var inv = new Mat();
         Cv2.BitwiseNot(bin, inv);
-        yield return inv;
+        return [edges, bin, inv];
     }
 
     private static Point2f[]? QuadFromContour(Point[] contour, double area)
