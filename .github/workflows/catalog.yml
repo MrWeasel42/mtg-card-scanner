@@ -1,0 +1,76 @@
+name: Build card catalog
+
+# Builds the offline card catalog (card data, prices, foil rules, fingerprints) and publishes
+# it to the "catalog-latest" release, where the app downloads it from.
+on:
+  schedule:
+    - cron: "17 8 * * 1"   # every Monday, 08:17 UTC
+  workflow_dispatch:
+    inputs:
+      full_rebuild:
+        description: "Ignore the previous catalog and fingerprint everything again"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: catalog
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      GH_TOKEN: ${{ github.token }}
+    defaults:
+      run:
+        working-directory: catalog-builder
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Get the AI model (export it once if this is the first run)
+        run: |
+          mkdir -p model
+          if gh release download model-v1 -p model.onnx -D model; then
+            echo "Using published model-v1"
+          else
+            echo "No published model yet; exporting it"
+            pip install torch --index-url https://download.pytorch.org/whl/cpu
+            pip install -r requirements-export.txt
+            python export_model.py --out model/model.onnx
+            gh release create model-v1 model/model.onnx --latest=false \
+              --title "AI model v1" \
+              --notes "Card fingerprint model (DINOv2 ViT-S/14, 224x308, ONNX). Used by the app and the catalog builds."
+          fi
+
+      - name: Get the previous catalog (so only new cards get processed)
+        if: ${{ !inputs.full_rebuild }}
+        run: |
+          mkdir -p prev
+          gh release download catalog-latest -D prev || echo "No previous catalog; building from scratch"
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Build catalog
+        run: python build.py --model model/model.onnx --out pack --previous prev --work work
+
+      - name: Accuracy check
+        run: python check.py --pack pack --model model/model.onnx --count 300
+
+      - name: Publish
+        run: |
+          gh release view catalog-latest >/dev/null 2>&1 || \
+            gh release create catalog-latest --latest=false --title "Card catalog" \
+              --notes "Automatically rebuilt every week. The app downloads these files; no need to grab them by hand."
+          # Data files first, manifest last, so the app never sees a manifest pointing at old files.
+          gh release upload catalog-latest pack/catalog.sqlite pack/fingerprints.bin pack/fingerprint_ids.txt --clobber
+          gh release upload catalog-latest pack/manifest.json --clobber
+          echo "Published catalog $(python -c "import json;print(json.load(open('pack/manifest.json'))['catalog_version'])")" >> "$GITHUB_STEP_SUMMARY"

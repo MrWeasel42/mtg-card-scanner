@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+catalog-builder/work/
+catalog-builder/pack/
+catalog-builder/prev/
+catalog-builder/model/
+*.onnx
+
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,11 @@
+# Hand-checked foil rules. Anything listed here beats the automatic guess.
+# Use the 3-letter set code (lowercase), and one of these indicators:
+#   nonfoil_only, foil_only, separate_printings, shooting_star, collector_star, none
+#
+# Example:
+# sets:
+#   7ed:
+#     indicator: separate_printings
+#     note: "Foils are black-bordered with a shooting star; non-foils are white-bordered."
+
+sets: {}
