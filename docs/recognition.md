@@ -24,8 +24,8 @@ to tip it to a different card. The crops themselves were fine.
    Old-card rules (skipped when set and number both match):
    - **Border colour** (`Vision/CardBorder`): a clearly white border rules out black/gold-bordered printings
      (−0.40) and vice versa. Tells 4th Edition/Revised from Alpha/Beta.
-   - **Copyright year** (e.g. `©1995`): +0.25 for printings released that year or the next.
-   - **Unlikely printings** (collector-only reprints, Summer Magic): −0.20.
+   - **Copyright year** (e.g. `©1995`): +0.25 for printings released that year.
+   - **Unlikely printings** (collector-only reprints, Summer Magic, Anthologies/Battle Royale/Beatdown/Deckmasters): −0.20.
 
 6. **Confidence**
    - *Pinned*: name, set and number all agree.

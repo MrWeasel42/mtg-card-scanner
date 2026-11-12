@@ -70,9 +70,9 @@ public sealed class Recognizer : IDisposable
     private const double NumberBonus = 0.30;
     private const double SetBonus = 0.20;
     private const double BothBonus = 0.50; // set AND number both read: near-decisive
-    private const double UnlikelyPenalty = 0.20;    // collector-only reprints, Summer Magic
+    private const double UnlikelyPenalty = 0.20;    // collector-only reprints, Summer Magic, 90s boxed reprints
     private const double BorderPenalty = 0.40;      // clearly white border vs a black-bordered printing, or vice versa
-    private const double YearBonus = 0.25;          // copyright year on old cards matches the printing's year
+    private const double YearBonus = 0.25;          // copyright year printed on the card = the printing's release year
     private const double MinNameScore = 0.85;
     private const double MinFallbackNameScore = 0.90;
     private const float MinImageSimilarity = 0.50f;
@@ -210,7 +210,7 @@ public sealed class Recognizer : IDisposable
                 "black" => p.BorderColor == "white",
                 _ => false,
             };
-            bool yearMatch = collector.CopyrightYear is { } cy && p.ReleaseYear is var ry && (ry == cy || ry == cy + 1);
+            bool yearMatch = collector.CopyrightYear is { } cy && p.ReleaseYear == cy;
             double score = ImageWeight * sim + ns + (num ? NumberBonus : 0) + (set ? SetBonus : 0) + (pinnedByCollector ? BothBonus : 0)
                 + (yearMatch && !pinnedByCollector ? YearBonus : 0)
                 - (p.IsUnlikely && !pinnedByCollector ? UnlikelyPenalty : 0)

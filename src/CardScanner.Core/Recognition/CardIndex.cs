@@ -9,9 +9,12 @@ public sealed record PrintingKey(string Id, string Name, string SetCode, string 
     string SetType = "", string BorderColor = "", int ReleaseYear = 0)
 {
     /// <summary>Printings that are rarely what's being scanned: collector-only reprints (Collectors'
-    /// Edition, World Championship decks, Pro Tour collector sets, oversized cards) and the tiny
-    /// Summer Magic print run, which looks just like Revised.</summary>
-    public bool IsUnlikely => SetType == "memorabilia" || SetCode == "sum";
+    /// Edition, World Championship decks, Pro Tour collector sets, oversized cards), the tiny Summer
+    /// Magic print run (looks just like Revised) and the 1990s boxed reprints that copy core-set cards
+    /// exactly (Anthologies, Battle Royale, Beatdown, Deckmasters).</summary>
+    public bool IsUnlikely => SetType == "memorabilia" || UnlikelySets.Contains(SetCode);
+
+    private static readonly HashSet<string> UnlikelySets = ["sum", "ath", "brb", "btd", "dkm"];
 }
 
 /// <summary>
