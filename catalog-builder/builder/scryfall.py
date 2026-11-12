@@ -50,12 +50,25 @@ def _session(user_agent: str) -> requests.Session:
 
 def get_bulk_info(user_agent: str, bulk_type: str) -> dict:
     """Ask Scryfall where today's bulk file lives and when it was last updated."""
-    r = _session(user_agent).get(BULK_INDEX_URL, timeout=30)
-    r.raise_for_status()
-    for item in r.json()["data"]:
-        if item["type"] == bulk_type:
-            return item
-    raise RuntimeError(f"Scryfall bulk type '{bulk_type}' not found")
+    s = _session(user_agent)
+    last_seen = None
+    for attempt in range(6):
+        r = s.get(BULK_INDEX_URL, timeout=30)
+        r.raise_for_status()
+        items = [i for i in r.json().get("data", []) if i.get("type") == bulk_type]
+        for item in items:
+            last_seen = item
+            if not item.get("download_uri") and item.get("uri"):
+                # Ask for the single bulk object directly; it may carry the full details.
+                detail = s.get(item["uri"], timeout=30)
+                if detail.ok:
+                    item = {**item, **detail.json()}
+            if item.get("download_uri"):
+                return item
+        # The file may be mid-regeneration on Scryfall's side; wait and try again.
+        print(f"Bulk file not ready yet (attempt {attempt + 1}); keys seen: {sorted(last_seen or {})}")
+        time.sleep(60)
+    raise RuntimeError(f"Scryfall bulk type '{bulk_type}' has no download link right now: {last_seen}")
 
 
 def download_bulk(user_agent: str, bulk_type: str, dest: Path) -> tuple[Path, str]:
