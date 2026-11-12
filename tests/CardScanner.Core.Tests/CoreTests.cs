@@ -255,6 +255,16 @@ public class CollectorLineTests
     public void Reads_copyright_year(string raw, int? year) => Assert.Equal(year, CollectorLine.Parse(raw).CopyrightYear);
 
     [Fact]
+    public void Reads_retro_frame_number_after_copyright()
+    {
+        // MH2-style retro reprints: no set code, the number follows the copyright.
+        var c = CollectorLine.Parse("Illus. Anastasia Ovchinnikova TM &  2024 Wizards of the Coast 14");
+        Assert.Contains("14", c.Numbers);
+        Assert.Empty(c.SetCodes);
+        Assert.Equal(2024, c.CopyrightYear);
+    }
+
+    [Fact]
     public void Old_cards_have_no_collector_line()
     {
         var c = CollectorLine.Parse("Illus. Christopher Rush");

@@ -233,6 +233,11 @@ public sealed class Recognizer : IDisposable
                 flag = "The picture doesn't look much like the catalog image.";
         }
         bool pinned = best is { NameMatched: true, NumberMatched: true, SetMatched: true };
+        // Retro-frame cards print a number but no set code. If the name and number together point at
+        // exactly one printing, that's as good as a set + number match.
+        if (!pinned && best is { NameMatched: true, NumberMatched: true } && collector.SetCodes.Count == 0
+            && scored.Count(t => t.Name && t.Num && t.P.Name == best.Card.Name) == 1)
+            pinned = true;
 
         // Look-alike printings with very different prices (e.g. Alpha/Beta/Unlimited/Revised duals,
         // which have no collector line): the picture alone shouldn't decide. Ask a human.
@@ -310,10 +315,15 @@ public sealed class Recognizer : IDisposable
 
     private CollectorLine ReadCollector(Mat card)
     {
-        using var bottom = new Mat(card, new Rect(0, (int)(card.Rows * 0.88), (int)(card.Cols * 0.62), card.Rows - (int)(card.Rows * 0.88)));
+        // Modern cards print the collector line bottom-left. Retro-frame reprints (MH2/MH3 "timeshifts" etc.)
+        // put the number bottom-centre, after "Wizards of the Coast", so read 85% of the width but only keep
+        // lines that start in the left 62%: that drops the power/toughness box on the right.
+        int y0 = (int)(card.Rows * 0.88);
+        using var bottom = new Mat(card, new Rect(0, y0, (int)(card.Cols * 0.85), card.Rows - y0));
         using var big = new Mat();
         Cv2.Resize(bottom, big, new Size(0, 0), 2, 2, InterpolationFlags.Cubic);
-        var lines = _ocr.Read(big).OrderBy(l => l.Top).Select(l => l.Text);
+        float maxLeft = card.Cols * 0.62f * 2;
+        var lines = _ocr.Read(big).Where(l => l.Box.Min(pt => pt.X) < maxLeft).OrderBy(l => l.Top).Select(l => l.Text);
         return CollectorLine.Parse(string.Join(" ", lines));
     }
 
