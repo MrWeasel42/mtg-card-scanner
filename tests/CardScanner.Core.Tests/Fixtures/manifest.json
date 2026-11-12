@@ -1,0 +1,44 @@
+{
+  "format": 1,
+  "catalog_version": "2026.11.12.1235",
+  "built_at": "2026-11-12T12:35:52+00:00",
+  "scryfall_updated_at": "local",
+  "cards": 8,
+  "fingerprints": 8,
+  "model": {
+    "version": "dinov2s-224x308-v1",
+    "file": "model.onnx",
+    "sha256": "fd7c5a91199082ca3510b9337bfcdcf9407dd571020eba099b38ab8b195c42cf",
+    "size": 1685,
+    "input_name": "image",
+    "output_name": "fingerprint",
+    "width": 224,
+    "height": 308,
+    "mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "std": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "resize": "bicubic",
+    "dim": 192
+  },
+  "files": {
+    "catalog.sqlite": {
+      "size": 36864,
+      "sha256": "11d8504ce636d2ed53370eab1a580c39f64925213e936fdc59952eacee62a48d"
+    },
+    "fingerprints.bin": {
+      "size": 3072,
+      "sha256": "b2d056b17bb7a6121f6fe859c1b62dcabac720d4dc19d64a483ac483973f42cc"
+    },
+    "fingerprint_ids.txt": {
+      "size": 296,
+      "sha256": "629ae2693b253ebe175e772aaf643656186aad6ec91949f22189f5b2671b4d63"
+    }
+  }
+}

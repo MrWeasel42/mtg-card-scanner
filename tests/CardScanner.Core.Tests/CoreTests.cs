@@ -1,0 +1,195 @@
+using CardScanner.Core;
+using CardScanner.Core.Catalog;
+using CardScanner.Core.Recognition;
+using CardScanner.Core.Vision;
+using OpenCvSharp;
+using Xunit;
+
+namespace CardScanner.Core.Tests;
+
+public class FingerprintIndexTests
+{
+    [Fact]
+    public void Finds_nearest_vector()
+    {
+        var rng = new Random(1);
+        int n = 500, dim = 64;
+        var ids = Enumerable.Range(0, n).Select(i => $"card{i}").ToArray();
+        var vecs = new float[n * dim];
+        for (int i = 0; i < n; i++) Normalize(vecs.AsSpan(i * dim, dim), rng);
+        var index = new FingerprintIndex(ids, vecs, dim);
+
+        var query = vecs.AsSpan(37 * dim, dim).ToArray();
+        for (int d = 0; d < dim; d++) query[d] += (float)(rng.NextDouble() - 0.5) * 0.05f;
+
+        var top = index.Search(query, 5);
+        Assert.Equal("card37", top[0].Id);
+        Assert.Equal(5, top.Count);
+        Assert.True(top[0].Score >= top[1].Score && top[1].Score >= top[4].Score);
+    }
+
+    [Fact]
+    public void Loads_float16_file()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        var values = new Half[] { (Half)0.5f, (Half)(-0.25f), (Half)1f, (Half)0f };
+        File.WriteAllBytes(Path.Combine(dir, "f.bin"), values.SelectMany(h => BitConverter.GetBytes(h)).ToArray());
+        File.WriteAllLines(Path.Combine(dir, "ids.txt"), ["a", "b"]);
+        var index = FingerprintIndex.Load(Path.Combine(dir, "f.bin"), Path.Combine(dir, "ids.txt"), 2);
+        Assert.Equal(2, index.Count);
+        Assert.Equal("b", index.Search([1f, 0f], 1)[0].Id);
+    }
+
+    private static void Normalize(Span<float> v, Random rng)
+    {
+        float s = 0;
+        for (int i = 0; i < v.Length; i++) { v[i] = (float)(rng.NextDouble() * 2 - 1); s += v[i] * v[i]; }
+        s = MathF.Sqrt(s);
+        for (int i = 0; i < v.Length; i++) v[i] /= s;
+    }
+}
+
+public class CardDetectorTests
+{
+    /// <summary>Pastes a card image into a "photo" at an angle, like a phone picture on a table.</summary>
+    internal static Mat FakePhoto(Mat card, double angleDeg, int photoW = 1800, int photoH = 1400, bool sideways = false)
+    {
+        var photo = new Mat(photoH, photoW, MatType.CV_8UC3, new Scalar(120, 110, 100));
+        using (var noise = new Mat(photoH, photoW, MatType.CV_8UC3))
+        {
+            Cv2.Randn(noise, new Scalar(0, 0, 0), new Scalar(8, 8, 8));
+            Cv2.Add(photo, noise, photo);
+        }
+        float cw = 600, ch = cw * 88f / 63f;
+        if (sideways) (cw, ch) = (ch, cw);
+        var center = new Point2f(photoW / 2f, photoH / 2f);
+        var rect = new RotatedRect(center, new Size2f(cw, ch), (float)angleDeg);
+        var pts = CardDetector.OrderCorners(rect.Points());
+        var src = new[] { new Point2f(0, 0), new Point2f(card.Width - 1, 0), new Point2f(card.Width - 1, card.Height - 1), new Point2f(0, card.Height - 1) };
+        using var m = Cv2.GetPerspectiveTransform(src, pts);
+        using var mask = new Mat(card.Size(), MatType.CV_8UC1, Scalar.All(255));
+        using var warped = new Mat();
+        using var warpedMask = new Mat();
+        Cv2.WarpPerspective(card, warped, m, photo.Size(), InterpolationFlags.Cubic);
+        Cv2.WarpPerspective(mask, warpedMask, m, photo.Size());
+        warped.CopyTo(photo, warpedMask);
+        return photo;
+    }
+
+    internal static Mat LoadFixtureCard(int i)
+    {
+        var path = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cards"), "*.png").OrderBy(p => p).ElementAt(i);
+        return Cv2.ImRead(path, ImreadModes.Color);
+    }
+
+    internal static double Similarity(Mat a, Mat b)
+    {
+        using var r = new Mat();
+        Cv2.MatchTemplate(a, b, r, TemplateMatchModes.CCoeffNormed);
+        return r.Get<float>(0, 0);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(12)]
+    [InlineData(-25)]
+    public void Finds_and_straightens_a_tilted_card(double angle)
+    {
+        using var card = LoadFixtureCard(0);
+        using var photo = FakePhoto(card, angle);
+        using var found = CardDetector.Detect(photo);
+        Assert.True(found.Found, "card outline not found");
+        Assert.Equal(CardDetector.Width, found.Card.Width);
+        Assert.Equal(CardDetector.Height, found.Card.Height);
+        Assert.True(Similarity(found.Card, card) > 0.8, $"straightened card doesn't match ({Similarity(found.Card, card):0.00})");
+    }
+
+    [Fact]
+    public void Sideways_card_comes_out_portrait()
+    {
+        using var card = LoadFixtureCard(1);
+        using var photo = FakePhoto(card, 0, sideways: true);
+        using var found = CardDetector.Detect(photo);
+        Assert.True(found.Found);
+        Assert.Equal(CardDetector.Height, found.Card.Height);
+    }
+
+    [Fact]
+    public void Already_cropped_photo_is_used_as_is()
+    {
+        using var card = LoadFixtureCard(2);
+        using var found = CardDetector.Detect(card);
+        Assert.Equal(CardDetector.Width, found.Card.Width);
+        Assert.True(Similarity(found.Card, card) > 0.9);
+    }
+}
+
+public class RecognizerTests
+{
+    private static AppPaths FixturePaths()
+    {
+        // Copy the fixture pack into a temp app folder laid out like the real one.
+        var root = Directory.CreateTempSubdirectory().FullName;
+        var paths = new AppPaths(root);
+        foreach (var f in new[] { "manifest.json", "catalog.sqlite", "fingerprints.bin", "fingerprint_ids.txt", "model.onnx" })
+            File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", f), paths.CatalogFile(f));
+        return paths;
+    }
+
+    [Fact]
+    public void Identifies_every_fixture_card_from_a_tilted_photo()
+    {
+        var paths = FixturePaths();
+        using var rec = Recognizer.Load(paths);
+        for (int i = 0; i < 8; i++)
+        {
+            using var card = CardDetectorTests.LoadFixtureCard(i);
+            using var photo = CardDetectorTests.FakePhoto(card, 8 * (i % 3) - 8);
+            var result = rec.Identify(photo, $"photo{i}");
+            Assert.NotNull(result.Best);
+            Assert.Equal($"Test Card {i}", result.Best!.Card.Name);
+            Assert.False(result.UpsideDown);
+        }
+    }
+
+    [Fact]
+    public void Identifies_an_upside_down_card()
+    {
+        var paths = FixturePaths();
+        using var rec = Recognizer.Load(paths);
+        using var card = CardDetectorTests.LoadFixtureCard(3);
+        using var flipped = new Mat();
+        Cv2.Rotate(card, flipped, RotateFlags.Rotate180);
+        using var photo = CardDetectorTests.FakePhoto(flipped, 5);
+        var result = rec.Identify(photo, "flipped");
+        Assert.Equal("Test Card 3", result.Best!.Card.Name);
+        Assert.True(result.UpsideDown);
+    }
+
+    [Fact]
+    public void Catalog_lookup_returns_card_details()
+    {
+        var paths = FixturePaths();
+        using var catalog = new CardCatalog(paths.Database);
+        var ids = File.ReadAllLines(paths.FingerprintIds);
+        var card = catalog.Get(ids[0]);
+        Assert.NotNull(card);
+        Assert.Equal("tst", card!.SetCode);
+        Assert.Equal(0.10m, card.PriceUsd);
+    }
+}
+
+public class ManifestTests
+{
+    [Fact]
+    public void Parses_published_manifest()
+    {
+        var m = CatalogManifest.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "manifest.json")));
+        Assert.Equal(1, m.Format);
+        Assert.Equal(8, m.FingerprintCount);
+        Assert.Equal(192, m.Model.Dim);
+        Assert.Equal(224, m.Model.Width);
+        Assert.Contains("catalog.sqlite", m.Files.Keys);
+        Assert.Equal("model-v1", CatalogUpdater.ModelTag("dinov2s-224x308-v1"));
+    }
+}

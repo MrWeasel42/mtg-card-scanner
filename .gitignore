@@ -17,3 +17,6 @@ obj/
 # OS
 .DS_Store
 Thumbs.db
+
+# Test fixtures are small and needed by the C# tests
+!tests/**/*.onnx

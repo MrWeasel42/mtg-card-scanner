@@ -1,0 +1,130 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="CardScanner.App.Views.IdentifyView"
+             DragDrop.AllowDrop="True">
+  <UserControl.Styles>
+    <Style Selector="Button.choice">
+      <Setter Property="Padding" Value="6" />
+      <Setter Property="Margin" Value="0,0,8,8" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.choice.chosen">
+      <Setter Property="BorderBrush" Value="#2E9E5B" />
+    </Style>
+    <Style Selector="Border.dropzone">
+      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="18" />
+    </Style>
+    <Style Selector="Border.dropzone.hover">
+      <Setter Property="BorderBrush" Value="#2E7DD7" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="16">
+    <!-- Toolbar -->
+    <Grid ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="2">
+        <TextBlock Classes="h1" Text="Identify card photos" />
+        <TextBlock Classes="muted" Text="{Binding ScoreText}" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <Button Name="AddButton" Content="Add photos…" Classes="accent" />
+        <Button Content="Clear" Command="{Binding ClearCommand}" />
+        <Button Content="Open results log" Command="{Binding OpenLogFolderCommand}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- Drop zone -->
+    <Border Grid.Row="1" Name="DropZone" Classes="dropzone" Margin="0,14,0,10">
+      <StackPanel Spacing="4" HorizontalAlignment="Center">
+        <TextBlock Text="Drop card photos (or a whole folder) here" FontSize="16" HorizontalAlignment="Center" />
+        <TextBlock Classes="muted" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                   Text="One card per photo, on a plain background that contrasts with the card's border. JPG or PNG." />
+      </StackPanel>
+    </Border>
+
+    <!-- Busy -->
+    <StackPanel Grid.Row="2" Spacing="4" Margin="0,0,0,10" IsVisible="{Binding IsBusy}">
+      <ProgressBar IsIndeterminate="True" Height="4" />
+      <TextBlock Classes="muted" Text="{Binding BusyText}" />
+    </StackPanel>
+
+    <!-- Results -->
+    <ScrollViewer Grid.Row="3">
+      <ItemsControl ItemsSource="{Binding Results}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Spacing="12" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border Classes="card">
+              <Grid ColumnDefinitions="180,*">
+                <!-- What the camera saw, straightened -->
+                <StackPanel Spacing="6">
+                  <Image Source="{Binding CardImage}" Width="170" Stretch="Uniform" HorizontalAlignment="Left" />
+                  <TextBlock Classes="muted" FontSize="11" Text="{Binding Photo}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Spacing="10" Margin="12,0,0,0">
+                  <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="#C0392B" TextWrapping="Wrap" />
+
+                  <!-- Best match -->
+                  <Panel IsVisible="{Binding HasResult}">
+                  <Grid ColumnDefinitions="Auto,*" DataContext="{Binding Top}">
+                    <Image Source="{Binding Thumbnail}" Width="120" Stretch="Uniform" VerticalAlignment="Top" />
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="3">
+                      <TextBlock Classes="muted" Text="Best match" FontSize="11" />
+                      <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding SetLabel}" TextWrapping="Wrap" />
+                      <TextBlock Classes="muted" Text="{Binding Extra}" TextWrapping="Wrap" />
+                      <TextBlock Classes="muted" Text="{Binding ScoreText}" />
+                    </StackPanel>
+                  </Grid>
+                  </Panel>
+
+                  <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasResult}">
+                    <Button Content="✓ Correct" Classes="accent" Command="{Binding MarkTopCorrectCommand}" />
+                    <Button Content="None of these" Command="{Binding MarkNotListedCommand}" />
+                    <TextBlock Text="{Binding VerdictText}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                  </StackPanel>
+
+                  <!-- Other candidates -->
+                  <StackPanel Spacing="4" IsVisible="{Binding HasResult}">
+                    <TextBlock Classes="muted" FontSize="11" Text="Not it? Click the right one:" />
+                    <ItemsControl ItemsSource="{Binding Others}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <WrapPanel />
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Button Classes="choice" Classes.chosen="{Binding IsChosen}" Command="{Binding PickCommand}" Width="170">
+                            <StackPanel Spacing="3">
+                              <Image Source="{Binding Thumbnail}" Height="120" Stretch="Uniform" />
+                              <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Text="{Binding SetLabel}" FontSize="11" TextWrapping="Wrap" />
+                              <TextBlock Classes="muted" Text="{Binding Extra}" FontSize="11" TextWrapping="Wrap" />
+                            </StackPanel>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+
+                  <TextBlock Classes="muted" FontSize="11" Text="{Binding Notes}" TextWrapping="Wrap" />
+                </StackPanel>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

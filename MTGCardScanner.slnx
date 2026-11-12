@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CardScanner.Core/CardScanner.Core.csproj" />
+    <Project Path="src/CardScanner.App/CardScanner.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CardScanner.Core.Tests/CardScanner.Core.Tests.csproj" />
+  </Folder>
+</Solution>

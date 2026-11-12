@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CardScanner.App.ViewModels"
+        xmlns:views="using:CardScanner.App.Views"
+        x:Class="CardScanner.App.Views.MainWindow"
+        Title="MTG Card Scanner"
+        Width="1180" Height="820" MinWidth="820" MinHeight="560"
+        WindowStartupLocation="CenterScreen">
+  <Window.DataTemplates>
+    <DataTemplate DataType="{x:Type vm:SetupViewModel}">
+      <views:SetupView />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:IdentifyViewModel}">
+      <views:IdentifyView />
+    </DataTemplate>
+  </Window.DataTemplates>
+
+  <DockPanel>
+    <!-- Header -->
+    <Border DockPanel.Dock="Top" Padding="16,10" BorderThickness="0,0,0,1"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <TextBlock Text="MTG Card Scanner" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Classes="muted" VerticalAlignment="Center"
+                     Text="{Binding Source={x:Static vm:MainViewModel.AppVersion}, StringFormat='v{0}'}" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <TextBlock Classes="muted" VerticalAlignment="Center" Text="{Binding CatalogText}" />
+          <Button Content="New cards available — update catalog" IsVisible="{Binding UpdateAvailable}"
+                  Command="{Binding UpdateCatalogCommand}" />
+          <Button Classes="accent" Content="{Binding AppUpdateText}"
+                  IsVisible="{Binding AppUpdateText, Converter={x:Static ObjectConverters.IsNotNull}}"
+                  Command="{Binding InstallAppUpdateCommand}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <ContentControl Content="{Binding CurrentPage}" />
+  </DockPanel>
+</Window>

@@ -1,0 +1,79 @@
+name: Build app
+
+# Tests the app, builds the Windows installer, and (for version tags like v0.1.0)
+# publishes it as a GitHub release your friends can download.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "installer/**"
+      - "Directory.Build.props"
+      - ".github/workflows/app.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Work out version
+        id: ver
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") { $v = "${{ github.ref_name }}".TrimStart("v") }
+          else { $v = "0.1.0-dev.${{ github.run_number }}" }
+          "version=$v" >> $env:GITHUB_OUTPUT
+          Write-Host "Version: $v"
+
+      - name: Test
+        run: dotnet test tests/CardScanner.Core.Tests -c Release --logger "console;verbosity=normal"
+
+      - name: Publish app
+        run: >
+          dotnet publish src/CardScanner.App -c Release -r win-x64 --self-contained true
+          -p:Version=${{ steps.ver.outputs.version }} -o publish
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Null }
+          & $iscc "/DMyAppVersion=${{ steps.ver.outputs.version }}" installer\setup.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ steps.ver.outputs.version }}
+          path: dist/*.exe
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          $notes = @"
+          **Download ``MTGCardScanner_Setup_$v.exe`` below and double-click it.**
+
+          Windows may show "Windows protected your PC" because the app isn't code-signed yet.
+          Click **More info → Run anyway**.
+
+          The first launch downloads the card catalog (about 210 MB).
+          "@
+          gh release create "${{ github.ref_name }}" dist\*.exe --title "MTG Card Scanner $v" --notes $notes --latest
