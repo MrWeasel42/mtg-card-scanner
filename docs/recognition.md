@@ -21,6 +21,12 @@ to tip it to a different card. The crops themselves were fine.
 
    `2 × picture similarity + name score + 0.30 (number matches) + 0.20 (set matches) + 0.50 (both match)`
 
+   Old-card rules (skipped when set and number both match):
+   - **Border colour** (`Vision/CardBorder`): a clearly white border rules out black/gold-bordered printings
+     (−0.40) and vice versa. Tells 4th Edition/Revised from Alpha/Beta.
+   - **Copyright year** (e.g. `©1995`): +0.25 for printings released that year or the next.
+   - **Unlikely printings** (collector-only reprints, Summer Magic): −0.20.
+
 6. **Confidence**
    - *Pinned*: name, set and number all agree.
    - *Flagged* (needs a look): name and collector line unreadable; picture disagrees with an unpinned match;
@@ -28,7 +34,8 @@ to tip it to a different card. The crops themselves were fine.
      duals, which have no collector line).
 
 ## Measured on real photos (336 phone photos: raw, single and double sleeved)
-See the release notes for the latest numbers.
+Name read: 98%. Exact printing pinned by set + number: 72% (raw 67%, single 71%, double 82%).
+Only 5 cards flagged. Older cards with no collector line rely on picture + border + year.
 
 ## Known limits
 - Non-English cards aren't in the catalog (English only by design); they get flagged.
