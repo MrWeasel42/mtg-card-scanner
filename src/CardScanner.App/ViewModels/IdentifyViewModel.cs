@@ -33,7 +33,7 @@ public partial class IdentifyViewModel : ObservableObject
         _recognizer = recognizer;
         _paths = paths;
         _thumbs = new ThumbnailCache(paths);
-        _logPath = Path.Combine(paths.LogsDir, "identify_results.csv");
+        _logPath = Path.Combine(paths.LogsDir, "identify_results_v2.csv");
         Results.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasResults));
     }
 
@@ -132,7 +132,7 @@ public partial class IdentifyViewModel : ObservableObject
             bool newFile = !File.Exists(_logPath);
             using var w = new StreamWriter(_logPath, append: true);
             if (newFile)
-                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,used_inner_outline,ms");
+                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms");
             var top = item.Result?.Best;
             var right = rank > 0 ? item.Result!.Candidates[rank - 1] : null;
             string rightName = right?.Card.Name ?? (rank == -1 ? top?.Card.Name ?? "" : "");
@@ -144,7 +144,8 @@ public partial class IdentifyViewModel : ObservableObject
                 (top?.Score ?? 0).ToString("0.0000", CultureInfo.InvariantCulture),
                 (item.Result?.NameMargin ?? 0).ToString("0.0000", CultureInfo.InvariantCulture),
                 (item.Result?.CardOutlineFound ?? false).ToString(), (item.Result?.UpsideDown ?? false).ToString(),
-                item.WasFlipped.ToString(), (item.Result?.UsedInnerOutline ?? false).ToString(),
+                item.WasFlipped.ToString(), (item.Result?.Pinned ?? false).ToString(), item.Result?.FlagReason ?? "",
+                item.Result?.NameRead ?? "", item.Result?.Collector.Raw ?? "", item.Result?.FoilFromCollector?.ToString() ?? "",
                 ((int)(item.Result?.Elapsed.TotalMilliseconds ?? 0)).ToString(),
             ];
             w.WriteLine(string.Join(",", cols.Select(Csv)));

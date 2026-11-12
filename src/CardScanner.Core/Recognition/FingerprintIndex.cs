@@ -13,6 +13,7 @@ public sealed class FingerprintIndex
     public int Count => _ids.Length;
     private readonly string[] _ids;
     private readonly float[] _vectors; // Count x Dim, row-major
+    private readonly Dictionary<string, int> _rowOf;
 
     public FingerprintIndex(string[] ids, float[] vectors, int dim)
     {
@@ -21,6 +22,8 @@ public sealed class FingerprintIndex
         _ids = ids;
         _vectors = vectors;
         Dim = dim;
+        _rowOf = new Dictionary<string, int>(ids.Length);
+        for (int i = 0; i < ids.Length; i++) _rowOf[ids[i]] = i;
     }
 
     /// <summary>Loads fingerprints.bin (float16, little-endian) and fingerprint_ids.txt.</summary>
@@ -35,6 +38,12 @@ public sealed class FingerprintIndex
     }
 
     public string IdAt(int row) => _ids[row];
+
+    public bool Contains(string id) => _rowOf.ContainsKey(id);
+
+    /// <summary>Similarity between a query fingerprint and one catalog printing (0 if unknown).</summary>
+    public float Similarity(ReadOnlySpan<float> query, string id) =>
+        _rowOf.TryGetValue(id, out var row) ? Dot(query, _vectors.AsSpan(row * Dim, Dim)) : 0f;
 
     /// <summary>Top-k most similar catalog cards, best first.</summary>
     public List<(string Id, float Score)> Search(ReadOnlySpan<float> query, int k = 5)

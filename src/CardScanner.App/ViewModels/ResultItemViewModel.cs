@@ -37,11 +37,27 @@ public partial class ResultItemViewModel : ObservableObject
             var notes = new List<string>();
             if (!Result.CardOutlineFound) notes.Add("Couldn't find the card's edges — used the whole photo. Try a plain, contrasting background.");
             if (Result.UpsideDown) notes.Add("Card was upside down (handled).");
-            if (Result.UsedInnerOutline) notes.Add("Looked like a sleeve — used the card inside it.");
-            notes.Add($"{Result.Elapsed.TotalMilliseconds:0} ms");
+            notes.Add($"{Result.Elapsed.TotalSeconds:0.0} s");
             return string.Join("  ·  ", notes);
         }
     }
+
+    /// <summary>What the scanner read off the card, shown so you can see why it chose what it chose.</summary>
+    public string ReadText
+    {
+        get
+        {
+            if (Result is null) return "";
+            var name = Result.NameRead is { Length: > 0 } n ? $"“{n}”" : "couldn't read";
+            var coll = Result.Collector.Raw is { Length: > 0 } c ? $"“{c}”" : "couldn't read";
+            var foil = Result.FoilFromCollector switch { true => " · ★ foil", false => " · • non-foil", _ => "" };
+            return $"Read name: {name}   ·   Collector line: {coll}{foil}";
+        }
+    }
+
+    public bool IsPinned => Result?.Pinned == true;
+    public bool IsFlagged => Result?.Flagged == true;
+    public string? FlagReason => Result?.FlagReason;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(VerdictText), nameof(IsReviewed), nameof(VerdictBrush))]
@@ -144,7 +160,18 @@ public partial class CandidateViewModel(Candidate candidate, int rank, ResultIte
             return string.Join(" · ", parts);
         }
     }
-    public string ScoreText => $"{candidate.Score * 100:0.0}% match";
+    public string ScoreText
+    {
+        get
+        {
+            var why = new List<string>();
+            if (candidate.NameMatched) why.Add("name");
+            if (candidate.SetMatched) why.Add("set");
+            if (candidate.NumberMatched) why.Add("number");
+            var matched = why.Count > 0 ? $"matched {string.Join(" + ", why)} · " : "";
+            return $"{matched}picture {candidate.ImageSimilarity * 100:0}%";
+        }
+    }
 
     public string? ImagePath { get; set; }
     public Bitmap? FullImage => _fullImage ??= Images.FullFromFile(ImagePath);

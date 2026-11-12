@@ -5,6 +5,10 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Text-reading models (PaddleOCR, Apache-2.0), shipped with the app. -->
+    <None Include="OcrModels\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="OcrModels" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.*" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.*" />
     <PackageReference Include="OpenCvSharp4" Version="4.*" />

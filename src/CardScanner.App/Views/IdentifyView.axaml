@@ -107,7 +107,13 @@
                 <StackPanel Spacing="8">
                   <TextBlock Classes="muted" FontSize="11" Text="YOUR PHOTO" FontWeight="SemiBold" LetterSpacing="1" />
                   <Button Classes="imgbtn" Command="{Binding CompareCommand}" HorizontalAlignment="Left"
-                          ToolTip.Tip="Click to compare big, side by side">
+                          ToolTip.ShowDelay="250" ToolTip.Placement="Right">
+                    <ToolTip.Tip>
+                      <StackPanel Spacing="4">
+                        <Image Source="{Binding FullImage}" Width="440" Stretch="Uniform" />
+                        <TextBlock FontSize="11" Text="Click to compare side by side, full window" HorizontalAlignment="Center" />
+                      </StackPanel>
+                    </ToolTip.Tip>
                     <Border Classes="pic" CornerRadius="10" ClipToBounds="True" Width="176" BoxShadow="0 4 12 0 #60000000">
                       <Image Source="{Binding CardImage}" Stretch="Uniform" />
                     </Border>
@@ -125,7 +131,13 @@
                   <Panel IsVisible="{Binding HasResult}">
                     <Grid ColumnDefinitions="Auto,*" DataContext="{Binding Top}">
                       <Button Classes="imgbtn" Command="{Binding CompareCommand}" VerticalAlignment="Top"
-                              ToolTip.Tip="Click to compare big, side by side">
+                              ToolTip.ShowDelay="250" ToolTip.Placement="Right">
+                        <ToolTip.Tip>
+                      <StackPanel Spacing="4">
+                        <Image Source="{Binding FullImage}" Width="440" Stretch="Uniform" />
+                        <TextBlock FontSize="11" Text="Click to compare side by side, full window" HorizontalAlignment="Center" />
+                      </StackPanel>
+                    </ToolTip.Tip>
                         <Border Classes="pic" CornerRadius="9" ClipToBounds="True" Width="132" BoxShadow="0 4 12 0 #60000000">
                           <Image Source="{Binding Thumbnail}" Stretch="Uniform" />
                         </Border>
@@ -141,6 +153,19 @@
                       </StackPanel>
                     </Grid>
                   </Panel>
+
+                  <StackPanel Spacing="6" IsVisible="{Binding HasResult}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Border Classes="pill" Background="#1A22C55E" BorderBrush="#22C55E" IsVisible="{Binding IsPinned}"
+                              ToolTip.Tip="The name, set code and collector number on the card all match this printing">
+                        <TextBlock Text="📌 Pinned: name + set + number agree" FontSize="12" Foreground="#4ADE80" />
+                      </Border>
+                      <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding IsFlagged}">
+                        <TextBlock Text="{Binding FlagReason, StringFormat='⚠ Needs a look: {0}'}" FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap" />
+                      </Border>
+                    </StackPanel>
+                    <TextBlock Classes="muted" FontSize="12" Text="{Binding ReadText}" TextWrapping="Wrap" />
+                  </StackPanel>
 
                   <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasResult}">
                     <Button Classes="accent" Content="✓ Correct printing" Command="{Binding MarkTopCorrectCommand}" />
@@ -165,7 +190,13 @@
                           <Border Classes="choice" Classes.chosen="{Binding IsChosen}" Width="180">
                             <StackPanel Spacing="4">
                               <Button Classes="imgbtn" Command="{Binding CompareCommand}" HorizontalAlignment="Center"
-                                      ToolTip.Tip="Click to compare big, side by side">
+                                      ToolTip.ShowDelay="250" ToolTip.Placement="Top">
+                                <ToolTip.Tip>
+                      <StackPanel Spacing="4">
+                        <Image Source="{Binding FullImage}" Width="440" Stretch="Uniform" />
+                        <TextBlock FontSize="11" Text="Click to compare side by side, full window" HorizontalAlignment="Center" />
+                      </StackPanel>
+                    </ToolTip.Tip>
                                 <Border Classes="pic" CornerRadius="7" ClipToBounds="True" Height="150">
                                   <Image Source="{Binding Thumbnail}" Stretch="Uniform" />
                                 </Border>

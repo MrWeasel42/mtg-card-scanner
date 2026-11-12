@@ -1,11 +1,12 @@
 using System.Diagnostics;
 using CardScanner.Core.Catalog;
+using CardScanner.Core.Ocr;
 using CardScanner.Core.Vision;
 using OpenCvSharp;
 
 namespace CardScanner.Core.Recognition;
 
-public sealed record Candidate(CardInfo Card, float Score);
+public sealed record Candidate(CardInfo Card, float Score, float ImageSimilarity, bool NameMatched, bool NumberMatched, bool SetMatched);
 
 public sealed class RecognitionResult
 {
@@ -17,15 +18,23 @@ public sealed class RecognitionResult
     /// <summary>True if the orientation was chosen by the user rather than automatically.</summary>
     public bool OrientationForced { get; init; }
     public required List<Candidate> Candidates { get; init; }
-    /// <summary>The straightened card as JPEG bytes for showing in the app. When the card's outline
-    /// was found this is made straight from the photo at twice the matching size, so small print
-    /// like the collector line stays readable.</summary>
+    /// <summary>The straightened card (high resolution) as JPEG bytes, for showing in the app.</summary>
     public required byte[] CardImageJpeg { get; init; }
     public required bool CardOutlineFound { get; init; }
     public required bool UpsideDown { get; init; }
-    /// <summary>True if the best match came from a rectangle inside the outline (e.g. the card inside a sleeve).</summary>
-    public bool UsedInnerOutline { get; init; }
     public required TimeSpan Elapsed { get; init; }
+
+    /// <summary>The card name as read from the card (OCR), if it could be read.</summary>
+    public string? NameRead { get; init; }
+    /// <summary>The collector line as read from the card, if any.</summary>
+    public CollectorLine Collector { get; init; } = CollectorLine.Empty;
+    /// <summary>Foil according to the ★/• in the collector line (null = couldn't tell).</summary>
+    public bool? FoilFromCollector => Collector.Foil;
+    /// <summary>Name, set and collector number all agree: about as sure as it gets.</summary>
+    public bool Pinned { get; init; }
+    /// <summary>Needs a human look, and why.</summary>
+    public bool Flagged => FlagReason is not null;
+    public string? FlagReason { get; init; }
 
     public Candidate? Best => Candidates.FirstOrDefault();
 
@@ -41,36 +50,63 @@ public sealed class RecognitionResult
     }
 }
 
-/// <summary>Photo in, ranked catalog printings out.</summary>
+/// <summary>
+/// Photo in, ranked catalog printings out.
+///
+///   1. Find the card in the photo and straighten it.
+///   2. Read the card's name (OCR). That decides which card it is.
+///   3. Read the collector line (set code + number + ★/•). That pins down the printing.
+///   4. Compare the picture against every printing of that card to break remaining ties.
+///
+/// If the name can't be read, it falls back to the collector line, then to the picture alone,
+/// and flags the card for review.
+/// </summary>
 public sealed class Recognizer : IDisposable
 {
+    // Scoring weights, tuned on real phone photos (see docs/recognition.md).
+    private const double ImageWeight = 2.0;
+    private const double NumberBonus = 0.30;
+    private const double SetBonus = 0.20;
+    private const double MinNameScore = 0.85;
+    private const double MinFallbackNameScore = 0.90;
+    private const float MinImageSimilarity = 0.50f;
+
+    private const int HiW = CardDetector.Width * 2, HiH = CardDetector.Height * 2;
+
     private readonly CardCatalog _catalog;
     private readonly FingerprintIndex _index;
     private readonly Fingerprinter _fingerprinter;
+    private readonly CardIndex _cards;
+    private readonly TextReader _ocr;
+    private readonly CLAHE _clahe = Cv2.CreateCLAHE(2.5, new Size(8, 8));
 
     public CatalogManifest Manifest { get; }
     public CardCatalog Catalog => _catalog;
 
-    private Recognizer(CatalogManifest manifest, CardCatalog catalog, FingerprintIndex index, Fingerprinter fp)
+    private Recognizer(CatalogManifest manifest, CardCatalog catalog, FingerprintIndex index, Fingerprinter fp, CardIndex cards, TextReader ocr)
     {
         Manifest = manifest;
         _catalog = catalog;
         _index = index;
         _fingerprinter = fp;
+        _cards = cards;
+        _ocr = ocr;
     }
 
-    public static Recognizer Load(AppPaths paths)
+    public static Recognizer Load(AppPaths paths, string? ocrModelDir = null)
     {
         var manifest = CatalogManifest.TryLoad(paths.Manifest)
             ?? throw new FileNotFoundException("The card catalog hasn't been downloaded yet.");
         var index = FingerprintIndex.Load(paths.Fingerprints, paths.FingerprintIds, manifest.Model.Dim);
         var catalog = new CardCatalog(paths.Database);
         var fp = new Fingerprinter(paths.Model, manifest.Model);
-        return new Recognizer(manifest, catalog, index, fp);
+        var cards = new CardIndex(paths.Database);
+        var ocr = new TextReader(ocrModelDir ?? TextReader.DefaultModelDir);
+        return new Recognizer(manifest, catalog, index, fp, cards, ocr);
     }
 
     /// <param name="forceUpsideDown">null = decide automatically; true/false = the user says which way up it is.</param>
-    public RecognitionResult IdentifyFile(string path, int topK = 5, bool? forceUpsideDown = null)
+    public RecognitionResult IdentifyFile(string path, int topK = 8, bool? forceUpsideDown = null)
     {
         using var photo = Cv2.ImRead(path, ImreadModes.Color); // applies phone rotation (EXIF)
         if (photo.Empty())
@@ -81,82 +117,197 @@ public sealed class Recognizer : IDisposable
         return result;
     }
 
-    public RecognitionResult Identify(Mat photo, string source, int topK = 5, bool? forceUpsideDown = null)
+    private sealed record NameHit(string Key, double Score, string Raw, int View);
+
+    public RecognitionResult Identify(Mat photo, string source, int topK = 8, bool? forceUpsideDown = null)
     {
         var sw = Stopwatch.StartNew();
         using var detected = CardDetector.Detect(photo);
 
-        // Crops to try: the outline we found, plus any card-shaped rectangle inside it
-        // (the real card, if the outline was a sleeve). Each is tried upright and upside down.
-        var crops = new List<Mat> { detected.Card };
-        foreach (var inner in CardDetector.InnerCardQuads(detected.Card))
-            crops.Add(CardDetector.Warp(detected.Card, inner));
-        var views = new List<Mat>();
-        foreach (var crop in crops)
+        // High-resolution straightened card for reading text; normal size for the picture match.
+        using var hiUp = detected.Found
+            ? CardDetector.Warp(photo, detected.Corners, HiW, HiH)
+            : Resize(photo, HiW, HiH);
+        using var hiDown = new Mat();
+        Cv2.Rotate(hiUp, hiDown, RotateFlags.Rotate180);
+        var hi = new[] { hiUp, hiDown };
+        using var smallUp = Resize(hiUp, CardDetector.Width, CardDetector.Height);
+        using var smallDown = Resize(hiDown, CardDetector.Width, CardDetector.Height);
+        var vecs = _fingerprinter.EmbedBatch([smallUp, smallDown]);
+
+        int[] views = forceUpsideDown switch { true => [1], false => [0], null => [0, 1] };
+
+        // 1. Read the name from the top of the card, both ways up.
+        var hits = new List<NameHit>();
+        foreach (var v in views) hits.AddRange(ReadNames(hi[v], v, topOnly: true, minScore: MinNameScore));
+        if (!hits.Any(h => h.Score >= 0.9))
+            foreach (var v in views) hits.AddRange(ReadNames(Enhance(hi[v]), v, topOnly: true, minScore: MinNameScore));
+        // Borderless / showcase cards can have the name somewhere else: read the whole card.
+        if (hits.Count == 0)
+            foreach (var v in views)
+            {
+                using var whole = Resize(hi[v], 732, 1020);
+                hits.AddRange(ReadNames(whole, v, topOnly: false, minScore: MinFallbackNameScore)
+                    .Where(h => h.Key.Length >= 5));
+            }
+
+        // 2. Which way up? Whichever view has the name reading the picture agrees with best.
+        int view = views[0];
+        if (views.Length == 2)
         {
-            views.Add(crop);
-            var flipped = new Mat();
-            Cv2.Rotate(crop, flipped, RotateFlags.Rotate180);
-            views.Add(flipped);
+            double Best(int v) => hits.Where(h => h.View == v)
+                .Select(h => h.Score + ImageWeight * BestSimilarity(h.Key, vecs[v]))
+                .DefaultIfEmpty(ImageWeight * _index.Search(vecs[v], 1)[0].Score)
+                .Max();
+            view = Best(1) > Best(0) ? 1 : 0;
+        }
+        var vec = vecs[view];
+        var viewHits = hits.Where(h => h.View == view).ToList();
+
+        // 3. Collector line (bottom-left small print).
+        var collector = ReadCollector(hi[view]);
+
+        // 4. Score every printing that the name or the collector line points at.
+        var nameScore = new Dictionary<string, double>();
+        foreach (var h in viewHits)
+            nameScore[h.Key] = Math.Max(nameScore.GetValueOrDefault(h.Key), h.Score);
+        var pool = new Dictionary<string, PrintingKey>();
+        foreach (var key in nameScore.Keys)
+            foreach (var p in _cards.PrintingsOfName(key)) pool[p.Id] = p;
+        foreach (var set in collector.SetCodes)
+            foreach (var num in collector.Numbers)
+                foreach (var p in _cards.PrintingsAt(set, num)) pool[p.Id] = p;
+
+        var scored = new List<(PrintingKey P, double Score, float Sim, bool Name, bool Num, bool Set)>();
+        foreach (var p in pool.Values)
+        {
+            if (!_index.Contains(p.Id)) continue;
+            float sim = _index.Similarity(vec, p.Id);
+            double ns = p.Name.Split(" // ").Append(p.Name).Select(CardIndex.Normalize)
+                .Select(k => nameScore.GetValueOrDefault(k)).Max();
+            bool num = collector.Numbers.Contains(p.Number.ToLowerInvariant().TrimStart('0'));
+            bool set = collector.SetCodes.Contains(p.SetCode.ToLowerInvariant());
+            double score = ImageWeight * sim + ns + (num ? NumberBonus : 0) + (set ? SetBonus : 0);
+            scored.Add((p, score, sim, ns > 0, num, set));
         }
 
+        string? flag = null;
+        if (scored.Count == 0)
+        {
+            // Nothing readable: picture only.
+            foreach (var (id, s) in _index.Search(vec, topK))
+                scored.Add((new PrintingKey(id, "", "", "", ""), ImageWeight * s, s, false, false, false));
+            flag = "Couldn't read the card's name or collector number — matched by picture only.";
+        }
+        scored.Sort((a, b) => b.Score.CompareTo(a.Score));
+        var top = scored.Take(topK).ToList();
+
+        var cards = _catalog.GetMany(top.Select(t => t.P.Id).ToList());
+        var candidates = top.Where(t => cards.ContainsKey(t.P.Id))
+            .Select(t => new Candidate(cards[t.P.Id], (float)t.Score, t.Sim, t.Name, t.Num, t.Set)).ToList();
+
+        var best = candidates.FirstOrDefault();
+        if (flag is null && best is not null)
+        {
+            if (!best.NameMatched && !(best.NumberMatched && best.SetMatched))
+                flag = "Couldn't read the card's name — matched by collector line and picture.";
+            else if (best.ImageSimilarity < MinImageSimilarity)
+                flag = "The picture doesn't look much like the catalog image.";
+        }
+        bool pinned = best is { NameMatched: true, NumberMatched: true, SetMatched: true };
+
+        Cv2.ImEncode(".jpg", hi[view], out var jpeg, new ImageEncodingParam(ImwriteFlags.JpegQuality, 92));
+        return new RecognitionResult
+        {
+            Source = source,
+            Candidates = candidates,
+            CardImageJpeg = jpeg,
+            CardOutlineFound = detected.Found,
+            UpsideDown = view == 1,
+            OrientationForced = forceUpsideDown is not null,
+            NameRead = viewHits.OrderByDescending(h => h.Score).FirstOrDefault()?.Raw,
+            Collector = collector,
+            Pinned = pinned,
+            FlagReason = flag,
+            Elapsed = sw.Elapsed,
+        };
+    }
+
+    private double BestSimilarity(string nameKey, float[] vec)
+    {
+        float best = 0;
+        foreach (var p in _cards.PrintingsOfName(nameKey))
+            best = Math.Max(best, _index.Similarity(vec, p.Id));
+        return best;
+    }
+
+    private IEnumerable<NameHit> ReadNames(Mat card, int view, bool topOnly, double minScore)
+    {
+        Mat region = topOnly
+            ? new Mat(card, new Rect(0, 0, (int)(card.Cols * 0.85), (int)(card.Rows * 0.20)))
+            : card;
         try
         {
-            var vecs = _fingerprinter.EmbedBatch(views);
-            var searches = vecs.Select(v => _index.Search(v, topK)).ToList();
-
-            // Prefer the outer crop unless an inner one is clearly better (a raw card's own
-            // printed frame can look like an inner rectangle; it should not win by a hair).
-            // Even indexes are upright views, odd are upside down. If the user said which way
-            // up the card is, only consider those views.
-            bool Allowed(int i) => forceUpsideDown is null || (i % 2 == 1) == forceUpsideDown;
-            int best = forceUpsideDown == true ? 1 : 0;
-            for (int i = 0; i < searches.Count; i++)
-            {
-                if (!Allowed(i) || i == best) continue;
-                float margin = i >= 2 && best < 2 ? 0.01f : 0f;
-                if (searches[i][0].Score > searches[best][0].Score + margin) best = i;
-            }
-            var hits = searches[best];
-
-            var cards = _catalog.GetMany(hits.Select(h => h.Id).ToList());
-            var candidates = hits.Where(h => cards.ContainsKey(h.Id))
-                                 .Select(h => new Candidate(cards[h.Id], h.Score)).ToList();
-
-            // Display image: re-straighten from the full photo at 2x when we can, for sharp detail.
-            byte[] jpeg;
-            if (detected.Found && best < 2)
-            {
-                using var hi = CardDetector.Warp(photo, detected.Corners, CardDetector.Width * 2, CardDetector.Height * 2);
-                if (best == 1) Cv2.Rotate(hi, hi, RotateFlags.Rotate180);
-                Cv2.ImEncode(".jpg", hi, out jpeg, new ImageEncodingParam(ImwriteFlags.JpegQuality, 92));
-            }
-            else
-            {
-                Cv2.ImEncode(".jpg", views[best], out jpeg, new ImageEncodingParam(ImwriteFlags.JpegQuality, 92));
-            }
-            return new RecognitionResult
-            {
-                Source = source,
-                Candidates = candidates,
-                CardImageJpeg = jpeg,
-                CardOutlineFound = detected.Found,
-                UpsideDown = best % 2 == 1,
-                UsedInnerOutline = best >= 2,
-                OrientationForced = forceUpsideDown is not null,
-                Elapsed = sw.Elapsed,
-            };
+            var found = new List<NameHit>();
+            foreach (var text in LineTexts(_ocr.Read(region)))
+                if (_cards.MatchName(text, minScore) is { } m)
+                    found.Add(new NameHit(m.Name, m.Score, text, view));
+            return found;
         }
         finally
         {
-            // views[0] is detected.Card, disposed by its own using.
-            foreach (var v in views.Skip(1)) v.Dispose();
+            if (topOnly) region.Dispose();
         }
+    }
+
+    /// <summary>Each OCR line on its own, plus words that sit on the same row joined together
+    /// (the reader sometimes splits "Lightning Bolt" into "Lightning" and "Bolt").</summary>
+    private static IEnumerable<string> LineTexts(List<TextLine> lines)
+    {
+        foreach (var l in lines) yield return l.Text;
+        var rows = new List<List<TextLine>>();
+        foreach (var l in lines.OrderBy(l => l.Top))
+        {
+            float h = l.Box.Max(p => p.Y) - l.Top;
+            var row = rows.FirstOrDefault(r => Math.Abs(r[0].Top - l.Top) < h * 0.5);
+            if (row is null) rows.Add([l]); else row.Add(l);
+        }
+        foreach (var row in rows.Where(r => r.Count > 1))
+            yield return string.Join(" ", row.OrderBy(l => l.Left).Select(l => l.Text));
+    }
+
+    private CollectorLine ReadCollector(Mat card)
+    {
+        using var bottom = new Mat(card, new Rect(0, (int)(card.Rows * 0.88), (int)(card.Cols * 0.62), card.Rows - (int)(card.Rows * 0.88)));
+        using var big = new Mat();
+        Cv2.Resize(bottom, big, new Size(0, 0), 2, 2, InterpolationFlags.Cubic);
+        var lines = _ocr.Read(big).OrderBy(l => l.Top).Select(l => l.Text);
+        return CollectorLine.Parse(string.Join(" ", lines));
+    }
+
+    private Mat Enhance(Mat bgr)
+    {
+        using var gray = new Mat();
+        Cv2.CvtColor(bgr, gray, ColorConversionCodes.BGR2GRAY);
+        using var eq = new Mat();
+        _clahe.Apply(gray, eq);
+        var outBgr = new Mat();
+        Cv2.CvtColor(eq, outBgr, ColorConversionCodes.GRAY2BGR);
+        return outBgr;
+    }
+
+    private static Mat Resize(Mat src, int w, int h)
+    {
+        var dst = new Mat();
+        Cv2.Resize(src, dst, new Size(w, h), 0, 0, src.Width > w ? InterpolationFlags.Area : InterpolationFlags.Cubic);
+        return dst;
     }
 
     public void Dispose()
     {
         _fingerprinter.Dispose();
         _catalog.Dispose();
+        _ocr.Dispose();
+        _clahe.Dispose();
     }
 }
