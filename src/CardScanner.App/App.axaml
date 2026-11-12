@@ -1,22 +1,84 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="CardScanner.App.App"
-             RequestedThemeVariant="Default">
+             RequestedThemeVariant="Dark">
+  <!-- "Card table at night": deep navy, teal scan-beam accent, gold highlights. -->
+  <Application.Resources>
+    <Color x:Key="NavyDeep">#0B1020</Color>
+    <Color x:Key="Navy">#111830</Color>
+    <Color x:Key="Panel">#18213A</Color>
+    <Color x:Key="PanelEdge">#28344F</Color>
+    <Color x:Key="Teal">#2DD4BF</Color>
+    <Color x:Key="Gold">#F5B942</Color>
+    <Color x:Key="Muted">#94A3B8</Color>
+    <SolidColorBrush x:Key="NavyBrush" Color="{StaticResource Navy}" />
+    <SolidColorBrush x:Key="PanelBrush" Color="{StaticResource Panel}" />
+    <SolidColorBrush x:Key="PanelEdgeBrush" Color="{StaticResource PanelEdge}" />
+    <SolidColorBrush x:Key="TealBrush" Color="{StaticResource Teal}" />
+    <SolidColorBrush x:Key="GoldBrush" Color="{StaticResource Gold}" />
+    <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource Muted}" />
+    <LinearGradientBrush x:Key="WindowBackground" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Color="#141C34" Offset="0" />
+      <GradientStop Color="#0B1020" Offset="1" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="HeaderBackground" StartPoint="0%,0%" EndPoint="100%,0%">
+      <GradientStop Color="#1B2547" Offset="0" />
+      <GradientStop Color="#121A33" Offset="0.6" />
+      <GradientStop Color="#0F2A33" Offset="1" />
+    </LinearGradientBrush>
+  </Application.Resources>
+
   <Application.Styles>
-    <FluentTheme />
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Dark" Accent="#2DD4BF" AltHigh="#0B1020" RegionColor="#111830" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
+
     <Style Selector="TextBlock.h1">
-      <Setter Property="FontSize" Value="24" />
-      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontSize" Value="26" />
+      <Setter Property="FontWeight" Value="Bold" />
     </Style>
     <Style Selector="TextBlock.muted">
-      <Setter Property="Opacity" Value="0.7" />
+      <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
     </Style>
+    <Style Selector="TextBlock.gold">
+      <Setter Property="Foreground" Value="{StaticResource GoldBrush}" />
+    </Style>
+    <Style Selector="TextBlock.teal">
+      <Setter Property="Foreground" Value="{StaticResource TealBrush}" />
+    </Style>
+
+    <!-- Panels -->
     <Style Selector="Border.card">
-      <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltHighBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+      <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource PanelEdgeBrush}" />
       <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Padding" Value="16" />
+      <Setter Property="BoxShadow" Value="0 6 18 0 #50000000" />
+    </Style>
+    <Style Selector="Border.pill">
+      <Setter Property="CornerRadius" Value="999" />
+      <Setter Property="Padding" Value="9,2" />
+      <Setter Property="Background" Value="#2228344F" />
+      <Setter Property="BorderBrush" Value="{StaticResource PanelEdgeBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <!-- Buttons: rounded, with a teal primary style -->
+    <Style Selector="Button">
       <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="Padding" Value="12" />
+      <Setter Property="Padding" Value="14,7" />
+    </Style>
+    <Style Selector="Button.accent">
+      <Setter Property="Foreground" Value="#06231F" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style Selector="ProgressBar">
+      <Setter Property="Foreground" Value="{StaticResource TealBrush}" />
+      <Setter Property="CornerRadius" Value="4" />
     </Style>
   </Application.Styles>
 </Application>

@@ -23,6 +23,7 @@ WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\MTGCardScanner.exe
+SetupIconFile=..\src\CardScanner.App\Assets\app.ico
 UninstallDisplayName=MTG Card Scanner
 
 [Tasks]

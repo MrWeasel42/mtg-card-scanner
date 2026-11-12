@@ -1,14 +1,15 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="CardScanner.App.Views.SetupView">
-  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="520" Spacing="16">
-    <TextBlock Classes="h1" Text="Getting your scanner ready" HorizontalAlignment="Center" />
+  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="540" Spacing="14">
+    <Image Source="/Assets/cards.png" Width="230" HorizontalAlignment="Center" />
+    <TextBlock Classes="h1" Text="Shuffling up your scanner" HorizontalAlignment="Center" />
     <TextBlock Text="{Binding Message}" TextWrapping="Wrap" TextAlignment="Center" />
-    <ProgressBar Minimum="0" Maximum="100" Height="8"
+    <ProgressBar Minimum="0" Maximum="100" Height="10" Margin="0,6,0,0"
                  Value="{Binding Percent}" IsIndeterminate="{Binding Indeterminate}"
                  IsVisible="{Binding !Failed}" />
     <TextBlock Classes="muted" Text="{Binding Detail}" HorizontalAlignment="Center" />
-    <Button Content="Retry" HorizontalAlignment="Center" Padding="24,8"
+    <Button Classes="accent" Content="Retry" HorizontalAlignment="Center" Padding="28,9"
             IsVisible="{Binding Failed}" Command="{Binding RetryCommand}" />
   </StackPanel>
 </UserControl>

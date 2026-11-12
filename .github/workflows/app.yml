@@ -76,6 +76,15 @@ jobs:
           $p = Start-Process -FilePath publish\MTGCardScanner.exe -PassThru
           Start-Sleep -Seconds 45
           if ($p.HasExited) { Write-Error "App exited early with code $($p.ExitCode)"; exit 1 }
+          try {
+            Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+            $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+            $bmp.Save("$PWD\screenshot.png")
+            "Screenshot saved ($($b.Width)x$($b.Height))"
+          } catch { "Screenshot failed: $_" }
           Stop-Process -Id $p.Id -Force
           $log = Join-Path $env:LOCALAPPDATA "MTGCardScanner\logs\errors.log"
           if (Test-Path $log) { Get-Content $log; Write-Error "App logged errors"; exit 1 }
@@ -86,6 +95,13 @@ jobs:
         with:
           name: installer-${{ steps.ver.outputs.version }}
           path: dist/*.exe
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshot-${{ steps.ver.outputs.version }}
+          path: screenshot.png
+          if-no-files-found: ignore
 
       - name: Publish release
         if: steps.ver.outputs.release == 'true'

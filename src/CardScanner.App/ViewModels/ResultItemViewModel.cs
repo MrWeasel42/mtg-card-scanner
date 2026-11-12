@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CardScanner.Core.Catalog;
 using CardScanner.Core.Recognition;
@@ -39,10 +40,18 @@ public partial class ResultItemViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(VerdictText), nameof(IsReviewed))]
+    [NotifyPropertyChangedFor(nameof(VerdictText), nameof(IsReviewed), nameof(VerdictBrush))]
     private Verdict _verdict;
 
     public bool IsReviewed => Verdict != Verdict.None;
+
+    public IBrush VerdictBrush => Verdict switch
+    {
+        Verdict.TopCorrect => new SolidColorBrush(Color.Parse("#22C55E")),
+        Verdict.LowerCorrect => new SolidColorBrush(Color.Parse("#F5B942")),
+        Verdict.NotListed => new SolidColorBrush(Color.Parse("#F87171")),
+        _ => Brushes.Transparent,
+    };
 
     public string VerdictText => Verdict switch
     {

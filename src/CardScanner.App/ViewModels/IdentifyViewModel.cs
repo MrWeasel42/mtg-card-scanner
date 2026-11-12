@@ -34,7 +34,10 @@ public partial class IdentifyViewModel : ObservableObject
         _paths = paths;
         _thumbs = new ThumbnailCache(paths);
         _logPath = Path.Combine(paths.LogsDir, "identify_results.csv");
+        Results.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasResults));
     }
+
+    public bool HasResults => Results.Count > 0;
 
     public async Task AddFilesAsync(IEnumerable<string> paths)
     {

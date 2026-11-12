@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- MTG Card Scanner logo: a fan of generic trading cards, a scan beam, and viewfinder corners.
+       Original artwork; no third-party card art or symbols. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1B2440"/>
+      <stop offset="1" stop-color="#0B1020"/>
+    </linearGradient>
+    <linearGradient id="back1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7C3AED"/>
+      <stop offset="1" stop-color="#3B1A80"/>
+    </linearGradient>
+    <linearGradient id="back2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F5B942"/>
+      <stop offset="1" stop-color="#B9741B"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#26324F"/>
+      <stop offset="1" stop-color="#151C30"/>
+    </linearGradient>
+    <linearGradient id="art" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#38BDF8"/>
+      <stop offset="1" stop-color="#1E3A8A"/>
+    </linearGradient>
+    <linearGradient id="beam" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2DD4BF" stop-opacity="0"/>
+      <stop offset="0.2" stop-color="#2DD4BF" stop-opacity="1"/>
+      <stop offset="0.8" stop-color="#2DD4BF" stop-opacity="1"/>
+      <stop offset="1" stop-color="#2DD4BF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2DD4BF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#2DD4BF" stop-opacity="0.35"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+    <clipPath id="faceClip">
+      <rect x="-90" y="-126" width="180" height="252" rx="14"/>
+    </clipPath>
+  </defs>
+
+  <!-- Rounded-square tile -->
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#bg)"/>
+
+  <!-- Back card 1 (purple), fanned left -->
+  <g transform="translate(206 262) rotate(-20)" filter="url(#shadow)">
+    <rect x="-90" y="-126" width="180" height="252" rx="14" fill="url(#back1)" stroke="#C4B5FD" stroke-width="4"/>
+    <rect x="-72" y="-108" width="144" height="216" rx="8" fill="none" stroke="#C4B5FD" stroke-opacity="0.5" stroke-width="3"/>
+    <path d="M0 -40 L28 0 L0 40 L-28 0 Z" fill="#C4B5FD" fill-opacity="0.75"/>
+  </g>
+
+  <!-- Back card 2 (gold), fanned slightly left -->
+  <g transform="translate(236 252) rotate(-7)" filter="url(#shadow)">
+    <rect x="-90" y="-126" width="180" height="252" rx="14" fill="url(#back2)" stroke="#FDE68A" stroke-width="4"/>
+    <rect x="-72" y="-108" width="144" height="216" rx="8" fill="none" stroke="#FFF7D6" stroke-opacity="0.55" stroke-width="3"/>
+    <circle cx="0" cy="0" r="30" fill="none" stroke="#FFF7D6" stroke-opacity="0.8" stroke-width="6"/>
+    <circle cx="0" cy="0" r="10" fill="#FFF7D6" fill-opacity="0.8"/>
+  </g>
+
+  <!-- Front card (face up), tilted right -->
+  <g transform="translate(286 260) rotate(8)" filter="url(#shadow)">
+    <rect x="-90" y="-126" width="180" height="252" rx="14" fill="url(#face)" stroke="#E2E8F0" stroke-width="5"/>
+    <g clip-path="url(#faceClip)">
+      <!-- name bar -->
+      <rect x="-74" y="-110" width="148" height="20" rx="5" fill="#334155"/>
+      <rect x="-66" y="-104" width="70" height="8" rx="4" fill="#CBD5E1"/>
+      <circle cx="60" cy="-100" r="6" fill="#F5B942"/>
+      <!-- art box: abstract landscape -->
+      <rect x="-74" y="-82" width="148" height="100" rx="5" fill="url(#art)"/>
+      <circle cx="38" cy="-56" r="14" fill="#FDE68A"/>
+      <path d="M-74 18 L-34 -26 L-8 2 L20 -32 L74 18 Z" fill="#0F172A" fill-opacity="0.85"/>
+      <!-- text box -->
+      <rect x="-74" y="28" width="148" height="80" rx="5" fill="#1E293B"/>
+      <rect x="-64" y="40" width="120" height="7" rx="3.5" fill="#64748B"/>
+      <rect x="-64" y="54" width="100" height="7" rx="3.5" fill="#64748B"/>
+      <rect x="-64" y="68" width="112" height="7" rx="3.5" fill="#64748B"/>
+      <rect x="-64" y="82" width="70" height="7" rx="3.5" fill="#64748B"/>
+      <!-- scan glow above the beam -->
+      <rect x="-90" y="-30" width="180" height="46" fill="url(#glow)"/>
+    </g>
+  </g>
+
+  <!-- Scan beam across the front card -->
+  <g transform="translate(286 260) rotate(8)">
+    <rect x="-118" y="14" width="236" height="7" rx="3.5" fill="url(#beam)"/>
+  </g>
+
+  <!-- Viewfinder corners -->
+  <g fill="none" stroke="#2DD4BF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M72 140 V96 H116"/>
+    <path d="M396 96 H440 V140"/>
+    <path d="M440 372 V416 H396"/>
+    <path d="M116 416 H72 V372"/>
+  </g>
+</svg>

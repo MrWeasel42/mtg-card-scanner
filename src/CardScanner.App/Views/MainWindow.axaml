@@ -4,7 +4,9 @@
         xmlns:views="using:CardScanner.App.Views"
         x:Class="CardScanner.App.Views.MainWindow"
         Title="MTG Card Scanner"
-        Width="1180" Height="820" MinWidth="820" MinHeight="560"
+        Icon="/Assets/app.ico"
+        Background="{StaticResource WindowBackground}"
+        Width="1200" Height="840" MinWidth="860" MinHeight="580"
         WindowStartupLocation="CenterScreen">
   <Window.DataTemplates>
     <DataTemplate DataType="{x:Type vm:SetupViewModel}">
@@ -17,17 +19,27 @@
 
   <DockPanel>
     <!-- Header -->
-    <Border DockPanel.Dock="Top" Padding="16,10" BorderThickness="0,0,0,1"
-            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-          <TextBlock Text="MTG Card Scanner" FontSize="18" FontWeight="SemiBold" />
-          <TextBlock Classes="muted" VerticalAlignment="Center"
-                     Text="{Binding Source={x:Static vm:MainViewModel.AppVersion}, StringFormat='v{0}'}" />
+    <Border DockPanel.Dock="Top" Padding="18,10" Background="{StaticResource HeaderBackground}"
+            BorderThickness="0,0,0,1" BorderBrush="{StaticResource PanelEdgeBrush}">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <Image Source="/Assets/logo.png" Width="40" Height="40" />
+          <StackPanel VerticalAlignment="Center" Spacing="0">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="MTG Card Scanner" FontSize="19" FontWeight="Bold" />
+              <Border Classes="pill" VerticalAlignment="Center">
+                <TextBlock Classes="teal" FontSize="11" FontWeight="SemiBold"
+                           Text="{Binding Source={x:Static vm:MainViewModel.AppVersion}, StringFormat='v{0}'}" />
+              </Border>
+            </StackPanel>
+            <TextBlock Classes="muted" FontSize="12" Text="Snap it. Scan it. Sort it." />
+          </StackPanel>
         </StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-          <TextBlock Classes="muted" VerticalAlignment="Center" Text="{Binding CatalogText}" />
-          <Button Content="New cards available — update catalog" IsVisible="{Binding UpdateAvailable}"
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Border Classes="pill" IsVisible="{Binding CatalogText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Classes="muted" FontSize="12" Text="{Binding CatalogText}" />
+          </Border>
+          <Button Content="✨ New cards available — update catalog" IsVisible="{Binding UpdateAvailable}"
                   Command="{Binding UpdateCatalogCommand}" />
           <Button Classes="accent" Content="{Binding AppUpdateText}"
                   IsVisible="{Binding AppUpdateText, Converter={x:Static ObjectConverters.IsNotNull}}"
