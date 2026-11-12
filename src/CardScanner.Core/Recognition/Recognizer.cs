@@ -337,14 +337,14 @@ public sealed class Recognizer : IDisposable
     /// The copyright line of older/retro frames, e.g. "©1993-1998 Wizards of the Coast, Inc. 128/350" or
     /// "TM & © 2024 Wizards of the Coast 14". Where the number sits (measured on ~290 Scryfall images,
     /// tools/collector_survey): x ~ 0.43-0.75 of the card width, up to ~0.90 on Time Spiral timeshifted and
-    /// Future Sight. Reads 95% of the width but keeps only lines that start in the left 62%: the copyright
+    /// Future Sight. Reads 95% of the width but keeps only lines that start in the left 70%: the copyright
     /// line always does, the power/toughness box never does.
     /// </summary>
     private string ReadCopyrightLine(Mat card)
     {
         int y0 = (int)(card.Rows * 0.88);
         using var bottom = new Mat(card, new Rect(0, y0, (int)(card.Cols * 0.95), card.Rows - y0));
-        float maxLeft = card.Cols * 0.62f;
+        float maxLeft = card.Cols * 0.70f;
         return string.Join(" ", _ocr.Read(bottom).Where(l => l.Box.Min(pt => pt.X) < maxLeft).OrderBy(l => l.Top).Select(l => l.Text));
     }
 
