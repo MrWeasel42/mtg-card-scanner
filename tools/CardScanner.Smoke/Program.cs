@@ -28,7 +28,7 @@ using (var con = new SqliteConnection($"Data Source={paths.Database};Mode=ReadOn
 
 using var http = CatalogUpdater.CreateHttpClient();
 var rng = new Random(7);
-int exact = 0, name = 0, n = 0;
+int exact = 0, name = 0, n = 0, read = 0, pinned = 0;
 long ms = 0;
 foreach (var (id, cardName, url) in picks)
 {
@@ -40,13 +40,16 @@ foreach (var (id, cardName, url) in picks)
     n++;
     ms += (long)res.Elapsed.TotalMilliseconds;
     if (res.Best?.Card.Id == id) exact++;
+    if (res.NameRead is { } nr && CardIndex.Similarity(CardIndex.Normalize(nr), CardIndex.Normalize(cardName.Split(" // ")[0])) >= 0.85) read++;
+    if (res.Pinned) pinned++;
+    Console.WriteLine($"  {cardName,-32} read='{res.NameRead}' coll='{res.Collector.Raw}' -> {res.Best?.Card.Name} {res.Best?.Card.SetCode} #{res.Best?.Card.CollectorNumber}{(res.Pinned ? " PIN" : "")}{(res.Flagged ? " FLAG" : "")}");
     if (res.Best?.Card.Name == cardName) name++;
     else Console.WriteLine($"  MISS: {cardName} -> {res.Best?.Card.Name} ({res.Best?.Card.SetLabel}) outline={res.CardOutlineFound}");
 }
-Console.WriteLine($"Right card: {name}/{n}  Exact printing: {exact}/{n}  Avg {ms / Math.Max(n, 1)} ms per photo");
+Console.WriteLine($"Right card: {name}/{n}  Exact printing: {exact}/{n}  Name read: {read}/{n}  Pinned: {pinned}/{n}  Avg {ms / Math.Max(n, 1)} ms per photo");
 var summary = Environment.GetEnvironmentVariable("GITHUB_STEP_SUMMARY");
 if (summary is not null)
-    File.AppendAllText(summary, $"### App end-to-end check\n- Right card: **{name}/{n}**\n- Exact printing: {exact}/{n}\n- Average {ms / Math.Max(n, 1)} ms per photo\n");
+    File.AppendAllText(summary, $"### App end-to-end check\n- Right card: **{name}/{n}**\n- Exact printing: {exact}/{n}\n- Name read by OCR: {read}/{n}\n- Pinned: {pinned}/{n}\n- Average {ms / Math.Max(n, 1)} ms per photo\n");
 return n > 0 && name >= n * 0.85 ? 0 : 1;
 
 static Mat FakePhoto(Mat card, double angle, bool lightTable)
