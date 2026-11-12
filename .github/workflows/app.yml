@@ -10,6 +10,7 @@ on:
       - "src/**"
       - "tests/**"
       - "installer/**"
+      - "tools/**"
       - "Directory.Build.props"
       - ".github/workflows/app.yml"
   workflow_dispatch:
@@ -44,6 +45,9 @@ jobs:
       - name: Test
         run: dotnet test tests/CardScanner.Core.Tests -c Release --logger "console;verbosity=normal"
 
+      - name: End-to-end check (real catalog, real model, real card images)
+        run: dotnet run --project tools/CardScanner.Smoke -c Release -- 40
+
       - name: Publish app
         run: >
           dotnet publish src/CardScanner.App -c Release -r win-x64 --self-contained true
@@ -57,6 +61,18 @@ jobs:
           & $iscc "/DMyAppVersion=${{ steps.ver.outputs.version }}" installer\setup.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Get-ChildItem dist
+
+      - name: Launch check (start the built app and make sure it stays open)
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath publish\MTGCardScanner.exe -PassThru
+          Start-Sleep -Seconds 45
+          if ($p.HasExited) { Write-Error "App exited early with code $($p.ExitCode)"; exit 1 }
+          Stop-Process -Id $p.Id -Force
+          $log = Join-Path $env:LOCALAPPDATA "MTGCardScanner\logs\errors.log"
+          if (Test-Path $log) { Get-Content $log; Write-Error "App logged errors"; exit 1 }
+          $manifest = Join-Path $env:LOCALAPPDATA "MTGCardScanner\catalog\manifest.json"
+          if (Test-Path $manifest) { "App downloaded the catalog on first launch" } else { "Note: catalog download still in progress after 45s" }
 
       - uses: actions/upload-artifact@v4
         with:
