@@ -254,14 +254,17 @@ public class CollectorLineTests
     [InlineData("Illus,  Rob Alexander", null)]
     public void Reads_copyright_year(string raw, int? year) => Assert.Equal(year, CollectorLine.Parse(raw).CopyrightYear);
 
-    [Fact]
-    public void Reads_retro_frame_number_after_copyright()
+    [Theory]
+    [InlineData("Illus. Anastasia Ovchinnikova TM &  2024 Wizards of the Coast 14", "14", 2024)]   // MH2 retro (H2R)
+    [InlineData("C1993-1998WizardsoftheCoast,Inc.128/350", "128", 1998)]                          // Urza's Saga
+    [InlineData("TM & C 2012 Wizards of the Coast 101/274", "101", 2012)]                         // Return to Ravnica
+    [InlineData("Dermot Power TM&C1993-2005WizardsoftheC0ast,Inc.136/350", "136", 2005)]          // 9th Edition, OCR 0 for O
+    public void Reads_number_after_copyright(string line, string number, int year)
     {
-        // MH2-style retro reprints: no set code, the number follows the copyright.
-        var c = CollectorLine.Parse("Illus. Anastasia Ovchinnikova TM &  2024 Wizards of the Coast 14");
-        Assert.Contains("14", c.Numbers);
+        var c = CollectorLine.Empty.WithCopyrightNumbers(line);
+        Assert.Contains(number, c.Numbers);
         Assert.Empty(c.SetCodes);
-        Assert.Equal(2024, c.CopyrightYear);
+        Assert.Equal(year, c.CopyrightYear);
     }
 
     [Fact]

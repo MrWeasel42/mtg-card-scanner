@@ -38,6 +38,25 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
         return new CollectorLine(raw, numbers, sets, foil, year);
     }
 
+    /// <summary>Adds the number printed after "Wizards of the Coast" on older and retro frames.</summary>
+    public CollectorLine WithCopyrightNumbers(string copyrightLine)
+    {
+        var nums = new HashSet<string>(Numbers);
+        foreach (Match m in AfterCoast().Matches(copyrightLine.ToUpperInvariant()))
+        {
+            var n = m.Groups[1].Value.Replace('O', '0').TrimStart('0');
+            if (n.Length > 0) nums.Add(n);
+        }
+        int? year = CopyrightYear;
+        foreach (Match m in Year().Matches(copyrightLine))
+            if (int.TryParse(m.Value, out var y) && y is >= 1993 and <= 2030) year = Math.Max(year ?? 0, y);
+        return this with { Raw = (Raw + " | " + copyrightLine).Trim(' ', '|'), Numbers = nums, CopyrightYear = year };
+    }
+
+    // "COAST, INC. 128/350", "COAST 14", "C0AST LLC 72/145"
+    [GeneratedRegex(@"C[O0][A-Z]{1,3}T[^0-9]{0,12}?([0-9O]{1,4})(?:\s*/\s*[0-9O]{1,4})?")]
+    private static partial Regex AfterCoast();
+
     // "R0381", "RO325", "0015", "147/269R", "C 0198", "MC360" (OCR noise before the number)
     [GeneratedRegex(@"(?<![A-Z0-9])[A-Z]{0,2}\s?([0-9O]*[0-9][0-9O]*)(?:\s*/\s*[0-9O]{1,4})?\s?[CURMLSTPB]?(?![0-9])")]
     private static partial Regex Number();
