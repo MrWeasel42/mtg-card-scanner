@@ -29,9 +29,9 @@ jobs:
       run:
         working-directory: catalog-builder
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -42,7 +42,7 @@ jobs:
             echo "Using published model-v1"
           else
             echo "No published model yet; exporting it"
-            pip install torch --index-url https://download.pytorch.org/whl/cpu
+            pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
             pip install -r requirements-export.txt
             python export_model.py --out model/model.onnx
             gh release create model-v1 model/model.onnx --latest=false \
