@@ -40,6 +40,9 @@ public static class CardDetector
             return new DetectedCard { Card = whole, Corners = [] };
         }
 
+        // White-bordered card on a light background? The outline may be the frame inside the border.
+        quad = WhiteBorder.Extend(small, quad) ?? quad;
+
         var corners = quad.Select(p => new Point2f((float)(p.X / scale), (float)(p.Y / scale))).ToArray();
         return new DetectedCard { Card = Warp(photo, corners), Corners = corners };
     }
@@ -236,6 +239,8 @@ public static class CardDetector
         const float m = 3;
         return quad.Count(p => p.X <= m || p.Y <= m || p.X >= w - 1 - m || p.Y >= h - 1 - m) >= 2;
     }
+
+    internal static bool LooksLikeCardPublic(Point2f[] quad) => LooksLikeCard(quad);
 
     private static bool LooksLikeCard(Point2f[] quad)
     {

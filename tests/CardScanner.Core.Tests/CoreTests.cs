@@ -313,6 +313,32 @@ public class CardShapeTests
         => Assert.False(CardDetector.IsSquare([new(119, 365), new(610, 418), new(485, 1146), new(59, 1042)]));
 }
 
+public class WhiteBorderTests
+{
+    [Fact]
+    public void Finds_white_border_edge_on_textured_light_background()
+    {
+        // Textured light-grey mat, a smooth white card (500x700) with a brown frame inset 25px.
+        using var img = new Mat(1000, 900, MatType.CV_8UC3);
+        Cv2.Randu(img, Scalar.All(120), Scalar.All(200));
+        Cv2.Rectangle(img, new Rect(200, 150, 500, 700), new Scalar(225, 230, 232), -1);
+        Cv2.Rectangle(img, new Rect(225, 175, 450, 650), new Scalar(40, 70, 120), -1);
+        var outer = WhiteBorder.Extend(img, [new(225, 175), new(675, 175), new(675, 825), new(225, 825)]);
+        Assert.NotNull(outer);
+        var o = CardDetector.OrderCorners(outer!);
+        Assert.InRange(o[0].X, 192, 210); Assert.InRange(o[0].Y, 142, 160);
+        Assert.InRange(o[2].X, 690, 708); Assert.InRange(o[2].Y, 840, 858);
+    }
+
+    [Fact]
+    public void Leaves_black_bordered_cards_alone()
+    {
+        using var img = new Mat(1000, 900, MatType.CV_8UC3, new Scalar(230, 230, 230));
+        Cv2.Rectangle(img, new Rect(200, 150, 500, 700), new Scalar(20, 20, 20), -1);
+        Assert.Null(WhiteBorder.Extend(img, [new(200, 150), new(700, 150), new(700, 850), new(200, 850)]));
+    }
+}
+
 public class CardBorderTests
 {
     private static Mat CardWithBorder(Scalar border, Scalar inside)
