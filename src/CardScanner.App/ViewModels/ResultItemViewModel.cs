@@ -56,6 +56,9 @@ public partial class ResultItemViewModel : ObservableObject
         }
     }
 
+    /// <summary>Whether the current filter tab shows this result.</summary>
+    [ObservableProperty] private bool _isShown = true;
+
     public bool IsPinned => Result?.Pinned == true;
     public bool IsFlagged => Result?.Flagged == true;
     public string? FlagReason => Result?.FlagReason;

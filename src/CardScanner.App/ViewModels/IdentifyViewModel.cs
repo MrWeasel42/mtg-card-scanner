@@ -8,6 +8,8 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace CardScanner.App.ViewModels;
 
+public enum ReviewFilter { Queue, Good, Done, All }
+
 /// <summary>
 /// "Identify photos" page: drop in photos, see the top matches, mark each one right or wrong.
 /// Every verdict is written to logs/identify_log.csv so accuracy can be measured on real cards.
@@ -34,60 +36,69 @@ public partial class IdentifyViewModel : ObservableObject
         _paths = paths;
         _thumbs = new ThumbnailCache(paths);
         _logPath = Path.Combine(paths.LogsDir, "identify_results_v2.csv");
-        Results.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasResults));
+        Results.CollectionChanged += (_, _) => { OnPropertyChanged(nameof(HasResults)); ApplyFilter(); };
     }
 
     public bool HasResults => Results.Count > 0;
 
-    public async Task AddFilesAsync(IEnumerable<string> paths)
-    {
-        var files = Expand(paths).ToList();
-        if (files.Count == 0) return;
+    // ---- Review queue: unsure cards show up, and drop off once verified ----
 
-        await _gate.WaitAsync();
-        try
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsQueue), nameof(IsGood), nameof(IsDone), nameof(IsAll))]
+    private ReviewFilter _filter = ReviewFilter.Queue;
+
+    public bool IsQueue => Filter == ReviewFilter.Queue;
+    public bool IsGood => Filter == ReviewFilter.Good;
+    public bool IsDone => Filter == ReviewFilter.Done;
+    public bool IsAll => Filter == ReviewFilter.All;
+
+    [ObservableProperty] private string _queueLabel = "To verify";
+    [ObservableProperty] private string _goodLabel = "📌 Good";
+    [ObservableProperty] private string _doneLabel = "✓ Done";
+    [ObservableProperty] private string _allLabel = "All";
+    [ObservableProperty] private string _emptyFilterText = "";
+    [ObservableProperty] private bool _canAcceptGood;
+
+    partial void OnFilterChanged(ReviewFilter value) => ApplyFilter();
+
+    [RelayCommand]
+    private void SetFilter(string name) => Filter = Enum.Parse<ReviewFilter>(name);
+
+    private static bool Matches(ResultItemViewModel r, ReviewFilter f) => f switch
+    {
+        // Anything the scanner couldn't pin down (flagged, unpinned, or failed), not yet marked.
+        ReviewFilter.Queue => r.Verdict == Verdict.None && !r.IsPinned,
+        ReviewFilter.Good => r.Verdict == Verdict.None && r.IsPinned,
+        ReviewFilter.Done => r.Verdict != Verdict.None,
+        _ => true,
+    };
+
+    internal void ApplyFilter()
+    {
+        foreach (var r in Results) r.IsShown = Matches(r, Filter);
+        int Count(ReviewFilter f) => Results.Count(r => Matches(r, f));
+        int q = Count(ReviewFilter.Queue);
+        QueueLabel = $"To verify ({q})";
+        GoodLabel = $"📌 Good ({Count(ReviewFilter.Good)})";
+        DoneLabel = $"✓ Done ({Count(ReviewFilter.Done)})";
+        AllLabel = $"All ({Results.Count})";
+        CanAcceptGood = Count(ReviewFilter.Good) > 0;
+        EmptyFilterText = !HasResults || Count(Filter) > 0 ? "" : Filter switch
         {
-            IsBusy = true;
-            for (int i = 0; i < files.Count; i++)
-            {
-                BusyText = $"Identifying {i + 1} of {files.Count}: {Path.GetFileName(files[i])}";
-                var file = files[i];
-                ResultItemViewModel item;
-                try
-                {
-                    var result = await Task.Run(() => _recognizer.IdentifyFile(file));
-                    item = new ResultItemViewModel(result, this);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error($"Identify {file}", ex);
-                    item = ResultItemViewModel.Failed(Path.GetFileName(file), ex.Message, this);
-                }
-                Results.Insert(0, item);
-                _ = item.LoadThumbnailsAsync(_thumbs);
-            }
-        }
-        finally
-        {
-            IsBusy = false;
-            _gate.Release();
-        }
+            ReviewFilter.Queue => "Queue's clear, nothing left to verify. 🎉 Peek at the Good tab if you want to double-check those.",
+            ReviewFilter.Good => "No unmarked good cards left.",
+            ReviewFilter.Done => "Nothing marked yet.",
+            _ => "",
+        };
     }
 
-    private static IEnumerable<string> Expand(IEnumerable<string> paths)
+    /// <summary>Marks every pinned card that isn't marked yet as correct, in one go.</summary>
+    [RelayCommand]
+    private void AcceptGood()
     {
-        foreach (var p in paths)
-        {
-            if (Directory.Exists(p))
-            {
-                foreach (var f in Directory.EnumerateFiles(p).Order())
-                    if (ImageExtensions.Contains(Path.GetExtension(f).ToLowerInvariant())) yield return f;
-            }
-            else if (File.Exists(p))
-            {
-                yield return p;
-            }
-        }
+        foreach (var r in Results.Where(r => Matches(r, ReviewFilter.Good) && r.Top is not null).ToList())
+            r.Choose(r.Top);
+        ApplyFilter();
     }
 
     /// <summary>Re-identifies a photo with the card turned the other way up, replacing its result.</summary>
@@ -127,6 +138,7 @@ public partial class IdentifyViewModel : ObservableObject
     internal void Record(ResultItemViewModel item, int rank)
     {
         UpdateScore();
+        ApplyFilter();
         try
         {
             bool newFile = !File.Exists(_logPath);
