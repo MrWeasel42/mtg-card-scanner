@@ -6,7 +6,7 @@ namespace CardScanner.Core.Recognition;
 
 /// <summary>Lightweight in-memory facts about every printing, for fast lookups while scanning.</summary>
 public sealed record PrintingKey(string Id, string Name, string SetCode, string Number, string Layout,
-    string SetType = "", string BorderColor = "", int ReleaseYear = 0)
+    string SetType = "", string BorderColor = "", int ReleaseYear = 0, string Lang = "en")
 {
     /// <summary>Printings that are rarely what's being scanned: collector-only reprints (Collectors'
     /// Edition, World Championship decks, Pro Tour collector sets, oversized cards), the tiny Summer
@@ -36,8 +36,15 @@ public sealed partial class CardIndex
     {
         using var con = new SqliteConnection($"Data Source={dbPath};Mode=ReadOnly;Pooling=False");
         con.Open();
+        bool hasLang;
+        using (var info = con.CreateCommand())
+        {
+            info.CommandText = "SELECT 1 FROM pragma_table_info('cards') WHERE name = 'lang'";
+            hasLang = info.ExecuteScalar() is not null;   // catalogs before Nov 2026 have no lang column
+        }
         using var cmd = con.CreateCommand();
-        cmd.CommandText = "SELECT id, name, set_code, collector_number, layout, set_type, border_color, released_at FROM cards";
+        cmd.CommandText = "SELECT id, name, set_code, collector_number, layout, set_type, border_color, released_at"
+            + (hasLang ? ", lang" : ", 'en'") + " FROM cards";
         using var r = cmd.ExecuteReader();
         int n = 0;
         while (r.Read())
@@ -45,9 +52,12 @@ public sealed partial class CardIndex
             var released = r.IsDBNull(7) ? "" : r.GetString(7);
             var p = new PrintingKey(r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3),
                 r.IsDBNull(4) ? "" : r.GetString(4), r.IsDBNull(5) ? "" : r.GetString(5), r.IsDBNull(6) ? "" : r.GetString(6),
-                released.Length >= 4 && int.TryParse(released[..4], out var y) ? y : 0);
+                released.Length >= 4 && int.TryParse(released[..4], out var y) ? y : 0,
+                r.IsDBNull(8) ? "en" : r.GetString(8));
             n++;
-            if (!NotRealCards.Contains(p.Layout))
+            // Japanese printings carry their English name, but what's printed on them is Japanese: they're
+            // found by collector line and picture, never by reading the name.
+            if (!NotRealCards.Contains(p.Layout) && p.Lang == "en")
             {
                 // A card can be found by its full name or by any of its faces ("A // B").
                 foreach (var face in p.Name.Split(" // ").Append(p.Name).Distinct())

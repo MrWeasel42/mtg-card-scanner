@@ -74,7 +74,8 @@ def main() -> int:
         for n in range(6):
             i += 1; cards.append(make_card(i, f"New {n}", "ltr", str(n + 1), "2023-06-23", imgs))
         i += 1; cards.append(make_card(i, "Island", "ltr", "715", "2023-06-23", imgs, finishes=("foil",), promo=("surgefoil",)))
-        i += 1; cards.append(make_card(i, "Island", "ltr", "274", "2023-06-23", imgs, lang="ja"))
+        i += 1; cards.append(make_card(i, "Island", "ltr", "274", "2023-06-23", imgs, lang="ja"))   # kept (Japanese-only printing)
+        i += 1; cards.append(make_card(i, "Island", "ltr", "275", "2023-06-23", imgs, lang="de"))   # skipped
         bulk = tmp / "bulk.json"
         bulk.write_text(json.dumps(cards))
 
@@ -89,7 +90,7 @@ def main() -> int:
         assert build.main(["--model", str(model), "--out", str(pack1), "--bulk-file", str(bulk),
                            "--work", str(tmp / "work")]) == 0
         m = json.loads((pack1 / "manifest.json").read_text())
-        assert m["cards"] == 13 and m["fingerprints"] == 13, m
+        assert m["cards"] == 14 and m["fingerprints"] == 14, m
         assert m["model"]["dim"] == DIM
 
         # Build 2: with one new card; everything else must be reused
@@ -99,7 +100,7 @@ def main() -> int:
         assert build.main(["--model", str(model), "--out", str(pack2), "--bulk-file", str(bulk),
                            "--previous", str(pack1), "--work", str(tmp / "work")]) == 0
         m2 = json.loads((pack2 / "manifest.json").read_text())
-        assert m2["fingerprints"] == 14
+        assert m2["fingerprints"] == 15
 
         # Reused fingerprints must equal the originals exactly
         ids1 = (pack1 / "fingerprint_ids.txt").read_text().split()

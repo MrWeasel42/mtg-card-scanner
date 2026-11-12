@@ -268,6 +268,15 @@ public class CollectorLineTests
     }
 
     [Fact]
+    public void Reads_japanese_showcase_collector_line()
+    {
+        var c = CollectorLine.Parse("M0165 TM 墨師「御歌頭/SUMIEOKAZU SOA*JP");
+        Assert.Contains("165", c.Numbers);
+        Assert.Contains("soa", c.SetCodes);
+        Assert.True(c.Foil);
+    }
+
+    [Fact]
     public void Old_cards_have_no_collector_line()
     {
         var c = CollectorLine.Parse("Illus. Christopher Rush");

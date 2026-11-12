@@ -157,9 +157,15 @@ def _price(prices: dict, key: str) -> float | None:
         return None
 
 
-def to_record(card: dict, language: str = "en") -> dict | None:
+# English cards, plus Japanese-only printings that come in English products (Strixhaven/SOA Mystical
+# Archive, War of the Spark alt-art planeswalkers...). Scryfall's default_cards only lists a Japanese
+# printing when there's no English one with the same set and number, so nothing is duplicated.
+LANGUAGES = {"en", "ja"}
+
+
+def to_record(card: dict, languages: set[str] = LANGUAGES) -> dict | None:
     """Convert a raw Scryfall card into the record we store. Returns None to skip it."""
-    if card.get("lang") != language:
+    if card.get("lang") not in languages:
         return None
     if card.get("digital") or "paper" not in (card.get("games") or []):
         return None
@@ -210,4 +216,5 @@ def to_record(card: dict, language: str = "en") -> dict | None:
         "price_usd_etched": _price(prices, "usd_etched"),
         "image_url": image_url,
         "image_status": card.get("image_status", ""),
+        "lang": card.get("lang", "en"),
     }

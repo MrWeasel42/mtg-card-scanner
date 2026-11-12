@@ -169,6 +169,9 @@ public sealed class Recognizer : IDisposable
         }
         var vec = vecs[view];
         var viewHits = hits.Where(h => h.View == view).ToList();
+        // "Dead" is a card name too (Dead // Gone), but if "Kjeldoran Dead" was read, it's part of that.
+        viewHits = viewHits.Where(h => !viewHits.Any(o => o.Key != h.Key && o.Score >= 0.9
+            && (" " + o.Key + " ").Contains(" " + h.Key + " "))).ToList();
 
         // 3. Collector line (bottom-left small print) and border colour.
         var collector = ReadCollector(hi[view]);
@@ -194,7 +197,7 @@ public sealed class Recognizer : IDisposable
             foreach (var num in collector.Numbers)
                 foreach (var p in _cards.PrintingsAt(set, num)) pool[p.Id] = p;
 
-        var scored = new List<(PrintingKey P, double Score, float Sim, bool Name, bool Num, bool Set)>();
+        var scored = new List<(PrintingKey P, double Score, float Sim, bool Name, bool Num, bool Set, bool BorderMismatch, bool Year)>();
         foreach (var p in pool.Values)
         {
             if (!_index.Contains(p.Id)) continue;
@@ -215,7 +218,7 @@ public sealed class Recognizer : IDisposable
                 + (yearMatch && !pinnedByCollector ? YearBonus : 0)
                 - (p.IsUnlikely && !pinnedByCollector ? UnlikelyPenalty : 0)
                 - (borderMismatch && !pinnedByCollector ? BorderPenalty : 0);
-            scored.Add((p, score, sim, ns > 0, num, set));
+            scored.Add((p, score, sim, ns > 0, num, set, borderMismatch && !pinnedByCollector, yearMatch));
         }
 
         string? flag = null;
@@ -223,11 +226,13 @@ public sealed class Recognizer : IDisposable
         {
             // Nothing readable: picture only.
             foreach (var (id, s) in _index.Search(vec, topK))
-                scored.Add((new PrintingKey(id, "", "", "", ""), ImageWeight * s, s, false, false, false));
+                scored.Add((new PrintingKey(id, "", "", "", ""), ImageWeight * s, s, false, false, false, false, false));
             flag = "Couldn't read the card's name or collector number — matched by picture only.";
         }
         scored.Sort((a, b) => b.Score.CompareTo(a.Score));
-        var top = scored.Take(topK).ToList();
+        // Don't offer printings whose border colour contradicts the card (a black-bordered Alpha card when
+        // the photo clearly shows a white border), unless that's all there is.
+        var top = scored.Where((t, i) => i == 0 || !t.BorderMismatch).Take(topK).ToList();
 
         var cards = _catalog.GetMany(top.Select(t => t.P.Id).ToList());
         var candidates = top.Where(t => cards.ContainsKey(t.P.Id))
@@ -244,9 +249,21 @@ public sealed class Recognizer : IDisposable
         bool pinned = best is { NameMatched: true, NumberMatched: true, SetMatched: true };
         // Retro-frame cards print a number but no set code. If the name and number together point at
         // exactly one printing, that's as good as a set + number match.
-        if (!pinned && best is { NameMatched: true, NumberMatched: true } && collector.SetCodes.Count == 0
-            && scored.Count(t => t.Name && t.Num && t.P.Name == best.Card.Name) == 1)
+        // When the number alone fits two printings (8th and 9th Edition Scathe Zombies are both #160),
+        // the printed copyright year (1993-2005) can settle it.
+        if (!pinned && best is { NameMatched: true, NumberMatched: true } && collector.SetCodes.Count == 0)
+        {
+            var same = scored.Where(t => t.Name && t.Num && t.P.Name == best.Card.Name).ToList();
+            if (same.Count == 1 || (same.Count(t => t.Year) == 1 && same.First(t => t.P.Id == best.Card.Id).Year))
+                pinned = true;
+        }
+        // Japanese printings: the name can't be read, but set code + number + the JP marker pin it down.
+        if (!pinned && best is { NumberMatched: true, SetMatched: true }
+            && scored.FirstOrDefault(t => t.P.Id == best.Card.Id).P?.Lang == "ja")
+        {
             pinned = true;
+            if (flag?.StartsWith("Couldn't read the card's name") == true) flag = null;
+        }
 
         // Look-alike printings with very different prices (e.g. Alpha/Beta/Unlimited/Revised duals,
         // which have no collector line): the picture alone shouldn't decide. Ask a human.
@@ -287,6 +304,15 @@ public sealed class Recognizer : IDisposable
         return best;
     }
 
+    /// <summary>Keywords printed in rules text that sit one letter away from a real card name
+    /// ("Flying" → Fling). Only a fuzzy match is ignored; a card actually named this still matches.</summary>
+    private static readonly HashSet<string> RulesWords =
+    [
+        "flying", "trample", "haste", "vigilance", "reach", "deathtouch", "lifelink", "first strike",
+        "double strike", "flash", "defender", "menace", "hexproof", "indestructible", "ward", "prowess",
+        "flanking", "banding", "shroud", "fear", "intimidate", "regenerate", "enchant creature", "equip",
+    ];
+
     private IEnumerable<NameHit> ReadNames(Mat card, int view, bool topOnly, double minScore)
     {
         Mat region = topOnly
@@ -296,7 +322,7 @@ public sealed class Recognizer : IDisposable
         {
             var found = new List<NameHit>();
             foreach (var text in LineTexts(_ocr.Read(region)))
-                if (_cards.MatchName(text, minScore) is { } m)
+                if (_cards.MatchName(text, minScore) is { } m && !(m.Score < 1 && RulesWords.Contains(CardIndex.Normalize(text))))
                     found.Add(new NameHit(m.Name, m.Score, text, view));
             return found;
         }

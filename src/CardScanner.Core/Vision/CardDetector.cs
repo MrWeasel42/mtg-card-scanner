@@ -31,7 +31,7 @@ public static class CardDetector
         using var small = new Mat();
         Cv2.Resize(photo, small, new Size(0, 0), scale, scale, InterpolationFlags.Area);
 
-        var quad = FindCardQuad(small);
+        var (quad, refit) = FindCardQuad(small);
         if (quad is null)
         {
             // No outline found: assume the photo is already cropped to the card.
@@ -40,6 +40,9 @@ public static class CardDetector
             return new DetectedCard { Card = whole, Corners = [] };
         }
 
+        // A refit outline hugs the outside of the edge band (and any shadow): slide each side onto the
+        // sharpest nearby edge.
+        if (refit) quad = SnapToEdges(small, quad);
         // White-bordered card on a light background? The outline may be the frame inside the border.
         quad = WhiteBorder.Extend(small, quad) ?? quad;
 
@@ -101,7 +104,7 @@ public static class CardDetector
         return card;
     }
 
-    private static Point2f[]? FindCardQuad(Mat img)
+    private static (Point2f[]? Quad, bool Refit) FindCardQuad(Mat img)
     {
         using var blurred = new Mat();
         Cv2.GaussianBlur(img, blurred, new Size(5, 5), 0);
@@ -123,15 +126,15 @@ public static class CardDetector
                     // The photo's own frame is roughly card-shaped too; never mistake it for the card.
                     if (area > img.Width * img.Height * 0.9) continue;
                     var quad = QuadFromContour(c, area);
-                    if (quad is null || TouchesEdge(quad, img.Width, img.Height) || !LooksLikeCard(quad)) continue;
-                    if (IsSquare(quad)) return OrderCorners(quad);
-                    // Crooked outline (rounded corners/glare pulled a corner in): try other four-corner
-                    // fits of the same shape and keep the one that hugs it best.
+                    if (quad is not null && (TouchesEdge(quad, img.Width, img.Height) || !LooksLikeCard(quad))) continue;
+                    if (quad is not null && IsSquare(quad)) return (OrderCorners(quad), false);
+                    // Crooked outline (rounded corners/glare pulled a corner in), or no clean four corners
+                    // at all (card merged with its shadow): fit a rectangle to the shape if one covers it well.
                     var refit = RefitQuad(c, img.Width, img.Height);
-                    if (refit is not null) return OrderCorners(refit);
+                    if (refit is not null) return (OrderCorners(refit), true);
                 }
             }
-            return null;
+            return (null, false);
         }
         finally
         {
@@ -180,6 +183,68 @@ public static class CardDetector
             return rect.Points();
         return null;
     }
+
+    /// <summary>
+    /// Slide each side of the outline along its normal to the strongest brightness edge between 6% of the
+    /// card width inside and 1.5% outside. Measured on the middle 60% of each side.
+    /// </summary>
+    internal static Point2f[] SnapToEdges(Mat img, Point2f[] quad, double inward = 0.06, double outward = 0.015)
+    {
+        var o = OrderCorners(quad);
+        double w = (Dist(o[0], o[1]) + Dist(o[3], o[2])) / 2, h = (Dist(o[0], o[3]) + Dist(o[1], o[2])) / 2;
+        double k = 1 + 2 * outward + 0.01, s = 600 / w;
+        int W = (int)(w * s * k), H = (int)(h * s * k);
+        var c = new Point2f(o.Average(p => p.X), o.Average(p => p.Y));
+        var big = o.Select(p => new Point2f((float)(c.X + (p.X - c.X) * k), (float)(c.Y + (p.Y - c.Y) * k))).ToArray();
+        using var m = Cv2.GetPerspectiveTransform(big, [new(0, 0), new(W - 1, 0), new(W - 1, H - 1), new(0, H - 1)]);
+        using var warp = new Mat();
+        Cv2.WarpPerspective(img, warp, m, new Size(W, H), InterpolationFlags.Area, BorderTypes.Replicate);
+        using var g8 = new Mat();
+        Cv2.CvtColor(warp, g8, ColorConversionCodes.BGR2GRAY);
+        using var g = new Mat();
+        g8.ConvertTo(g, MatType.CV_32F);
+        Cv2.GaussianBlur(g, g, new Size(3, 3), 0);
+        using var gx = new Mat(); using var gy = new Mat();
+        Cv2.Sobel(g, gx, MatType.CV_32F, 1, 0, 3); Cv2.Sobel(g, gy, MatType.CV_32F, 0, 1, 3);
+        gx.GetArray(out float[] ax); gy.GetArray(out float[] ay);
+        double ix0 = (W - w * s) / 2, iy0 = (H - h * s) / 2;
+        int lo = (int)(-inward * 600), hi = (int)(outward * 600);
+
+        double Shift(string side)
+        {
+            double best = -1; int bd = 0;
+            bool horiz = side is "top" or "bottom";
+            int a = (int)((horiz ? W : H) * 0.2), b = (int)((horiz ? W : H) * 0.8);
+            var vals = new float[b - a];
+            for (int d = lo; d <= hi; d++)
+            {
+                int line = side switch
+                {
+                    "top" => (int)iy0 - d, "bottom" => (int)(H - iy0) + d,
+                    "left" => (int)ix0 - d, _ => (int)(W - ix0) + d,
+                };
+                if (line < 0 || line >= (horiz ? H : W)) continue;
+                for (int j = a; j < b; j++) vals[j - a] = Math.Abs(horiz ? ay[line * W + j] : ax[j * W + line]);
+                Array.Sort(vals);
+                double med = vals[vals.Length / 2];
+                if (med > best) { best = med; bd = d; }
+            }
+            return bd / s;
+        }
+
+        float t = (float)Shift("top"), bt = (float)Shift("bottom"), l = (float)Shift("left"), r = (float)Shift("right");
+        var ux = Unit(new Point2f((o[1].X - o[0].X + o[2].X - o[3].X) / 2, (o[1].Y - o[0].Y + o[2].Y - o[3].Y) / 2));
+        var uy = Unit(new Point2f((o[3].X - o[0].X + o[2].X - o[1].X) / 2, (o[3].Y - o[0].Y + o[2].Y - o[1].Y) / 2));
+        return
+        [
+            new(o[0].X - ux.X * l - uy.X * t, o[0].Y - ux.Y * l - uy.Y * t),
+            new(o[1].X + ux.X * r - uy.X * t, o[1].Y + ux.Y * r - uy.Y * t),
+            new(o[2].X + ux.X * r + uy.X * bt, o[2].Y + ux.Y * r + uy.Y * bt),
+            new(o[3].X - ux.X * l + uy.X * bt, o[3].Y - ux.Y * l + uy.Y * bt),
+        ];
+    }
+
+    private static Point2f Unit(Point2f v) { var n = (float)Math.Sqrt(v.X * v.X + v.Y * v.Y); return new(v.X / n, v.Y / n); }
 
     /// <summary>Phone photos are close to straight-on, so a real card outline has near-right-angle
     /// corners and opposite sides of similar length.</summary>

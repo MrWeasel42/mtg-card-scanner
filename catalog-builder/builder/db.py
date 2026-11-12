@@ -11,7 +11,7 @@ CARD_COLUMNS = [
     "collector_number", "released_at", "rarity", "layout", "type_line", "colors",
     "color_identity", "frame", "border_color", "full_art", "finishes", "promo_types",
     "special_foil", "price_usd", "price_usd_foil", "price_usd_etched", "image_url",
-    "image_status",
+    "image_status", "lang",
 ]
 
 SCHEMA = f"""

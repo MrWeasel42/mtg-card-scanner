@@ -61,8 +61,9 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
     [GeneratedRegex(@"(?<![A-Z0-9])[A-Z]{0,2}\s?([0-9O]*[0-9][0-9O]*)(?:\s*/\s*[0-9O]{1,4})?\s?[CURMLSTPB]?(?![0-9])")]
     private static partial Regex Number();
 
-    // "DSK • EN", "ECL★EN", "SLDEN", "LTR·EN", "LTCENCALDER" (artist name glued on)
-    [GeneratedRegex(@"(?<![A-Z0-9])([A-Z0-9]{3,5}?)\s*([·•★*.]?)\s*EN(?![A-Z0-9]*[·•★])")]
+    // "DSK • EN", "ECL★EN", "SLDEN", "LTR·EN", "LTCENCALDER" (artist name glued on), "SOA*JP" (Japanese
+    // showcase printings found in English boosters)
+    [GeneratedRegex(@"(?<![A-Z0-9])([A-Z0-9]{3,5}?)\s*([·•★*.]?)\s*(?:EN|JP)(?![A-Z0-9]*[·•★])")]
     private static partial Regex SetAndLanguage();
 
     [GeneratedRegex(@"(?<![0-9])(19|20)[0-9]{2}(?![0-9])")]
