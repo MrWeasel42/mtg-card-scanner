@@ -315,11 +315,14 @@ public sealed class Recognizer : IDisposable
 
     private CollectorLine ReadCollector(Mat card)
     {
-        // Modern cards print the collector line bottom-left. Retro-frame reprints (MH2/MH3 "timeshifts" etc.)
-        // put the number bottom-centre, after "Wizards of the Coast", so read 85% of the width but only keep
-        // lines that start in the left 62%: that drops the power/toughness box on the right.
+        // Where the number is (measured on ~290 Scryfall images, tools/collector_survey):
+        //   2015+ frames: bottom-left with the set code (x ~ 0.09-0.12)
+        //   1997 frame, 2003 frame (8th-M14), retro reprints: after "Wizards of the Coast", no set code
+        //     (x ~ 0.43-0.75); Time Spiral timeshifted / Future Sight: up to x ~ 0.90
+        // So read 95% of the width but only keep lines that start in the left 62%: the copyright line always
+        // does, the power/toughness box never does.
         int y0 = (int)(card.Rows * 0.88);
-        using var bottom = new Mat(card, new Rect(0, y0, (int)(card.Cols * 0.85), card.Rows - y0));
+        using var bottom = new Mat(card, new Rect(0, y0, (int)(card.Cols * 0.95), card.Rows - y0));
         using var big = new Mat();
         Cv2.Resize(bottom, big, new Size(0, 0), 2, 2, InterpolationFlags.Cubic);
         float maxLeft = card.Cols * 0.62f * 2;
