@@ -171,7 +171,21 @@ public sealed class Recognizer : IDisposable
         var viewHits = hits.Where(h => h.View == view).ToList();
 
         // 3. Collector line (bottom-left small print) and border colour.
-        var collector = ReadCollector(hi[view]);
+        // The collector line is tiny: read it from a straightened copy at twice the resolution, taken
+        // straight from the photo (sharper than upscaling the normal-size card).
+        CollectorLine collector;
+        if (detected.Found)
+        {
+            using var sharp = CardDetector.Warp(photo, detected.Corners, HiW * 2, HiH * 2);
+            if (view == 1)
+            {
+                using var turned = new Mat();
+                Cv2.Rotate(sharp, turned, RotateFlags.Rotate180);
+                collector = ReadCollector(turned, upscale: 1);
+            }
+            else collector = ReadCollector(sharp, upscale: 1);
+        }
+        else collector = ReadCollector(hi[view], upscale: 2);
         var border = detected.Found ? CardBorder.Classify(hi[view]) : null;
 
         // 4. Score every printing that the name or the collector line points at.
@@ -313,7 +327,7 @@ public sealed class Recognizer : IDisposable
             yield return string.Join(" ", row.OrderBy(l => l.Left).Select(l => l.Text));
     }
 
-    private CollectorLine ReadCollector(Mat card)
+    private CollectorLine ReadCollector(Mat card, double upscale)
     {
         // Where the number is (measured on ~290 Scryfall images, tools/collector_survey):
         //   2015+ frames: bottom-left with the set code (x ~ 0.09-0.12)
@@ -324,8 +338,9 @@ public sealed class Recognizer : IDisposable
         int y0 = (int)(card.Rows * 0.88);
         using var bottom = new Mat(card, new Rect(0, y0, (int)(card.Cols * 0.95), card.Rows - y0));
         using var big = new Mat();
-        Cv2.Resize(bottom, big, new Size(0, 0), 2, 2, InterpolationFlags.Cubic);
-        float maxLeft = card.Cols * 0.62f * 2;
+        if (upscale > 1) Cv2.Resize(bottom, big, new Size(0, 0), upscale, upscale, InterpolationFlags.Cubic);
+        else bottom.CopyTo(big);
+        float maxLeft = (float)(card.Cols * 0.62 * upscale);
         var lines = _ocr.Read(big).Where(l => l.Box.Min(pt => pt.X) < maxLeft).OrderBy(l => l.Top).Select(l => l.Text);
         return CollectorLine.Parse(string.Join(" ", lines));
     }
