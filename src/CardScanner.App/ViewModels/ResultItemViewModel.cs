@@ -8,16 +8,20 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace CardScanner.App.ViewModels;
 
-public enum Verdict { None, TopCorrect, LowerCorrect, NotListed }
+public enum Verdict { None, TopCorrect, LowerCorrect, NameOnly, NotListed }
 
 /// <summary>One photo's result: the straightened card, the top matches, and the user's verdict.</summary>
 public partial class ResultItemViewModel : ObservableObject
 {
     private readonly IdentifyViewModel _owner;
+    private Bitmap? _fullImage;
 
     public RecognitionResult? Result { get; }
     public string Photo { get; }
+    /// <summary>Downsized copy for the list (saves memory).</summary>
     public Bitmap? CardImage { get; }
+    /// <summary>Full-resolution straightened photo, loaded the first time the compare view needs it.</summary>
+    public Bitmap? FullImage => _fullImage ??= Images.Full(Result?.CardImageJpeg);
     public string? Error { get; }
     public bool HasError => Error is not null;
     public bool HasResult => Result is not null;
@@ -49,24 +53,26 @@ public partial class ResultItemViewModel : ObservableObject
     {
         Verdict.TopCorrect => new SolidColorBrush(Color.Parse("#22C55E")),
         Verdict.LowerCorrect => new SolidColorBrush(Color.Parse("#F5B942")),
+        Verdict.NameOnly => new SolidColorBrush(Color.Parse("#FB923C")),
         Verdict.NotListed => new SolidColorBrush(Color.Parse("#F87171")),
         _ => Brushes.Transparent,
     };
 
     public string VerdictText => Verdict switch
     {
-        Verdict.TopCorrect => "✓ Top match was right",
-        Verdict.LowerCorrect => $"✓ Right card was #{Candidates.ToList().FindIndex(c => c.IsChosen) + 1}",
-        Verdict.NotListed => "✗ Right card wasn't in the list",
+        Verdict.TopCorrect => "✓ Exact printing was the top match",
+        Verdict.LowerCorrect => $"✓ Exact printing was #{Candidates.ToList().FindIndex(c => c.IsChosen) + 1}",
+        Verdict.NameOnly => "≈ Right card, wrong printing",
+        Verdict.NotListed => "✗ Wrong card",
         _ => "",
     };
 
-    public ResultItemViewModel(RecognitionResult result, Bitmap? image, IdentifyViewModel owner)
+    public ResultItemViewModel(RecognitionResult result, IdentifyViewModel owner)
     {
         _owner = owner;
         Result = result;
         Photo = string.IsNullOrEmpty(result.Folder) ? result.Source : $"{result.Folder} / {result.Source}";
-        CardImage = image;
+        CardImage = Images.Small(result.CardImageJpeg, 420);
         int rank = 1;
         foreach (var c in result.Candidates)
         {
@@ -88,23 +94,39 @@ public partial class ResultItemViewModel : ObservableObject
     public async Task LoadThumbnailsAsync(ThumbnailCache cache)
     {
         foreach (var c in Candidates)
-            c.Thumbnail = await cache.GetAsync(c.Card);
+        {
+            c.ImagePath = await cache.GetPathAsync(c.Card);
+            c.Thumbnail = Images.SmallFromFile(c.ImagePath, 360);
+        }
     }
 
-    internal void Choose(CandidateViewModel? chosen)
+    internal void Choose(CandidateViewModel? chosen, Verdict? verdict = null)
     {
         foreach (var c in Candidates) c.IsChosen = c == chosen;
-        Verdict = chosen is null ? Verdict.NotListed : chosen.Rank == 1 ? Verdict.TopCorrect : Verdict.LowerCorrect;
+        Verdict = verdict ?? (chosen is null ? Verdict.NotListed : chosen.Rank == 1 ? Verdict.TopCorrect : Verdict.LowerCorrect);
         OnPropertyChanged(nameof(VerdictText));
-        _owner.Record(this, chosen?.Rank ?? 0);
+        int rank = Verdict switch { Verdict.NameOnly => -1, _ => chosen?.Rank ?? 0 };
+        _owner.Record(this, rank);
     }
 
+    internal void OpenCompare(CandidateViewModel candidate) => _owner.OpenCompare(this, candidate);
+
     [RelayCommand] private void MarkTopCorrect() => Choose(Top);
+    [RelayCommand] private void MarkNameOnly() => Choose(null, Verdict.NameOnly);
     [RelayCommand] private void MarkNotListed() => Choose(null);
+    [RelayCommand] private void Compare() { if (Top is { } t) OpenCompare(t); }
+    [RelayCommand] private Task Flip() => _owner.FlipAsync(this);
+
+    /// <summary>True if the user turned this card around with the Flip button.</summary>
+    public bool WasFlipped { get; init; }
+    public bool CanFlip => Result?.FilePath is not null;
 }
 
 public partial class CandidateViewModel(Candidate candidate, int rank, ResultItemViewModel owner) : ObservableObject
 {
+    private Bitmap? _fullImage;
+
+    public ResultItemViewModel Owner { get; } = owner;
     public CardInfo Card { get; } = candidate.Card;
     public int Rank { get; } = rank;
     public string Name => Card.Name;
@@ -124,8 +146,42 @@ public partial class CandidateViewModel(Candidate candidate, int rank, ResultIte
     }
     public string ScoreText => $"{candidate.Score * 100:0.0}% match";
 
+    public string? ImagePath { get; set; }
+    public Bitmap? FullImage => _fullImage ??= Images.FullFromFile(ImagePath);
+
     [ObservableProperty] private Bitmap? _thumbnail;
     [ObservableProperty] private bool _isChosen;
 
-    [RelayCommand] private void Pick() => owner.Choose(this);
+    [RelayCommand] private void Pick() => Owner.Choose(this);
+    [RelayCommand] private void Compare() => Owner.OpenCompare(this);
+}
+
+/// <summary>Helpers for decoding images at the right size.</summary>
+internal static class Images
+{
+    public static Bitmap? Small(byte[]? bytes, int width)
+    {
+        if (bytes is null) return null;
+        try { return Bitmap.DecodeToWidth(new MemoryStream(bytes), width, BitmapInterpolationMode.HighQuality); }
+        catch { return null; }
+    }
+
+    public static Bitmap? Full(byte[]? bytes)
+    {
+        if (bytes is null) return null;
+        try { return new Bitmap(new MemoryStream(bytes)); } catch { return null; }
+    }
+
+    public static Bitmap? SmallFromFile(string? path, int width)
+    {
+        if (path is null) return null;
+        try { using var fs = File.OpenRead(path); return Bitmap.DecodeToWidth(fs, width, BitmapInterpolationMode.HighQuality); }
+        catch { return null; }
+    }
+
+    public static Bitmap? FullFromFile(string? path)
+    {
+        if (path is null) return null;
+        try { return new Bitmap(path); } catch { return null; }
+    }
 }

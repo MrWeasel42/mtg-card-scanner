@@ -56,7 +56,7 @@ public partial class IdentifyViewModel : ObservableObject
                 try
                 {
                     var result = await Task.Run(() => _recognizer.IdentifyFile(file));
-                    item = new ResultItemViewModel(result, LoadBitmap(result.CardImagePng), this);
+                    item = new ResultItemViewModel(result, this);
                 }
                 catch (Exception ex)
                 {
@@ -90,12 +90,40 @@ public partial class IdentifyViewModel : ObservableObject
         }
     }
 
-    private static Bitmap? LoadBitmap(byte[] png)
+    /// <summary>Re-identifies a photo with the card turned the other way up, replacing its result.</summary>
+    internal async Task FlipAsync(ResultItemViewModel item)
     {
-        try { return new Bitmap(new MemoryStream(png)); } catch { return null; }
+        if (item.Result?.FilePath is not { } file) return;
+        int index = Results.IndexOf(item);
+        if (index < 0) return;
+        bool nowUpsideDown = !item.Result.UpsideDown;
+        try
+        {
+            var result = await Task.Run(() => _recognizer.IdentifyFile(file, forceUpsideDown: nowUpsideDown));
+            var replacement = new ResultItemViewModel(result, this) { WasFlipped = true };
+            Results[index] = replacement;
+            _ = replacement.LoadThumbnailsAsync(_thumbs);
+            UpdateScore();
+        }
+        catch (Exception ex) { Log.Error($"Flip {file}", ex); }
     }
 
-    /// <summary>Called when the user marks a result. rank = 1-based position of the right card, 0 = not listed.</summary>
+    // ---- Compare view (big side-by-side) ----
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsComparing))]
+    private CompareViewModel? _compare;
+
+    public bool IsComparing => Compare is not null;
+
+    internal void OpenCompare(ResultItemViewModel item, CandidateViewModel candidate) =>
+        Compare = new CompareViewModel(item, candidate, () => Compare = null);
+
+    [RelayCommand]
+    private void CloseCompare() => Compare = null;
+
+    /// <summary>Called when the user marks a result. rank = 1-based position of the exact printing,
+    /// -1 = right card but the exact printing wasn't listed, 0 = wrong card.</summary>
     internal void Record(ResultItemViewModel item, int rank)
     {
         UpdateScore();
@@ -104,17 +132,19 @@ public partial class IdentifyViewModel : ObservableObject
             bool newFile = !File.Exists(_logPath);
             using var w = new StreamWriter(_logPath, append: true);
             if (newFile)
-                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,ms");
+                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,used_inner_outline,ms");
             var top = item.Result?.Best;
             var right = rank > 0 ? item.Result!.Candidates[rank - 1] : null;
+            string rightName = right?.Card.Name ?? (rank == -1 ? top?.Card.Name ?? "" : "");
             string[] cols =
             [
                 DateTime.Now.ToString("s"), item.Result?.Folder ?? "", item.Photo, rank.ToString(),
-                right?.Card.Id ?? "", right?.Card.Name ?? "", right?.Card.SetCode ?? "", right?.Card.CollectorNumber ?? "",
+                right?.Card.Id ?? "", rightName, right?.Card.SetCode ?? "", right?.Card.CollectorNumber ?? "",
                 top?.Card.Id ?? "", top?.Card.Name ?? "", top?.Card.SetCode ?? "", top?.Card.CollectorNumber ?? "",
                 (top?.Score ?? 0).ToString("0.0000", CultureInfo.InvariantCulture),
                 (item.Result?.NameMargin ?? 0).ToString("0.0000", CultureInfo.InvariantCulture),
                 (item.Result?.CardOutlineFound ?? false).ToString(), (item.Result?.UpsideDown ?? false).ToString(),
+                item.WasFlipped.ToString(), (item.Result?.UsedInnerOutline ?? false).ToString(),
                 ((int)(item.Result?.Elapsed.TotalMilliseconds ?? 0)).ToString(),
             ];
             w.WriteLine(string.Join(",", cols.Select(Csv)));
@@ -128,10 +158,12 @@ public partial class IdentifyViewModel : ObservableObject
     {
         var reviewed = Results.Where(r => r.Verdict != Verdict.None).ToList();
         if (reviewed.Count == 0) { ScoreText = "Mark each result ✓ or pick the right card to track accuracy."; return; }
+        int n = reviewed.Count;
         int top1 = reviewed.Count(r => r.Verdict == Verdict.TopCorrect);
         int top5 = reviewed.Count(r => r.Verdict is Verdict.TopCorrect or Verdict.LowerCorrect);
-        int n = reviewed.Count;
-        ScoreText = $"Top match right: {top1}/{n} ({100.0 * top1 / n:0}%)   ·   In top 5: {top5}/{n} ({100.0 * top5 / n:0}%)";
+        int name = reviewed.Count(r => r.Verdict != Verdict.NotListed);
+        string Pct(int k) => $"{k}/{n} ({100.0 * k / n:0}%)";
+        ScoreText = $"Exact printing on top: {Pct(top1)}   ·   In top 5: {Pct(top5)}   ·   Right card: {Pct(name)}";
     }
 
     [RelayCommand]

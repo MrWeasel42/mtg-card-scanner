@@ -17,6 +17,32 @@ public partial class IdentifyView : UserControl
         AddButton.Click += OnAddClicked;
     }
 
+    // Keyboard shortcuts in the compare view: Esc closes, arrows switch options, Enter picks.
+    protected override void OnAttachedToVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        TopLevel.GetTopLevel(this)?.AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
+    }
+
+    protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
+    {
+        TopLevel.GetTopLevel(this)?.RemoveHandler(KeyDownEvent, OnKeyDown);
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (Vm?.Compare is not { } c) return;
+        switch (e.Key)
+        {
+            case Key.Escape: c.CloseCommand.Execute(null); e.Handled = true; break;
+            case Key.Left: c.PreviousCommand.Execute(null); e.Handled = true; break;
+            case Key.Right: c.NextCommand.Execute(null); e.Handled = true; break;
+            case Key.Enter: c.PickThisCommand.Execute(null); e.Handled = true; break;
+            case Key.Z: c.ToggleZoomCommand.Execute(null); e.Handled = true; break;
+        }
+    }
+
     private IdentifyViewModel? Vm => DataContext as IdentifyViewModel;
 
     private void OnDragOver(object? sender, DragEventArgs e)

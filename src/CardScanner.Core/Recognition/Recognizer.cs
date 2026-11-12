@@ -12,9 +12,15 @@ public sealed class RecognitionResult
     public required string Source { get; init; }
     /// <summary>Name of the folder the photo came from (e.g. "raw", "single sleeve"), if any.</summary>
     public string Folder { get; set; } = "";
+    /// <summary>Full path of the photo file, when it came from a file.</summary>
+    public string? FilePath { get; set; }
+    /// <summary>True if the orientation was chosen by the user rather than automatically.</summary>
+    public bool OrientationForced { get; init; }
     public required List<Candidate> Candidates { get; init; }
-    /// <summary>The straightened card as PNG bytes (for showing in the app).</summary>
-    public required byte[] CardImagePng { get; init; }
+    /// <summary>The straightened card as JPEG bytes for showing in the app. When the card's outline
+    /// was found this is made straight from the photo at twice the matching size, so small print
+    /// like the collector line stays readable.</summary>
+    public required byte[] CardImageJpeg { get; init; }
     public required bool CardOutlineFound { get; init; }
     public required bool UpsideDown { get; init; }
     /// <summary>True if the best match came from a rectangle inside the outline (e.g. the card inside a sleeve).</summary>
@@ -63,17 +69,19 @@ public sealed class Recognizer : IDisposable
         return new Recognizer(manifest, catalog, index, fp);
     }
 
-    public RecognitionResult IdentifyFile(string path, int topK = 5)
+    /// <param name="forceUpsideDown">null = decide automatically; true/false = the user says which way up it is.</param>
+    public RecognitionResult IdentifyFile(string path, int topK = 5, bool? forceUpsideDown = null)
     {
         using var photo = Cv2.ImRead(path, ImreadModes.Color); // applies phone rotation (EXIF)
         if (photo.Empty())
             throw new InvalidDataException($"Couldn't open {Path.GetFileName(path)}. If it's an iPhone HEIC photo, save it as JPG.");
-        var result = Identify(photo, Path.GetFileName(path), topK);
+        var result = Identify(photo, Path.GetFileName(path), topK, forceUpsideDown);
         result.Folder = Path.GetFileName(Path.GetDirectoryName(Path.GetFullPath(path))) ?? "";
+        result.FilePath = Path.GetFullPath(path);
         return result;
     }
 
-    public RecognitionResult Identify(Mat photo, string source, int topK = 5)
+    public RecognitionResult Identify(Mat photo, string source, int topK = 5, bool? forceUpsideDown = null)
     {
         var sw = Stopwatch.StartNew();
         using var detected = CardDetector.Detect(photo);
@@ -99,10 +107,14 @@ public sealed class Recognizer : IDisposable
 
             // Prefer the outer crop unless an inner one is clearly better (a raw card's own
             // printed frame can look like an inner rectangle; it should not win by a hair).
-            int best = 0;
-            for (int i = 1; i < searches.Count; i++)
+            // Even indexes are upright views, odd are upside down. If the user said which way
+            // up the card is, only consider those views.
+            bool Allowed(int i) => forceUpsideDown is null || (i % 2 == 1) == forceUpsideDown;
+            int best = forceUpsideDown == true ? 1 : 0;
+            for (int i = 0; i < searches.Count; i++)
             {
-                float margin = i >= 2 ? 0.01f : 0f;
+                if (!Allowed(i) || i == best) continue;
+                float margin = i >= 2 && best < 2 ? 0.01f : 0f;
                 if (searches[i][0].Score > searches[best][0].Score + margin) best = i;
             }
             var hits = searches[best];
@@ -111,15 +123,27 @@ public sealed class Recognizer : IDisposable
             var candidates = hits.Where(h => cards.ContainsKey(h.Id))
                                  .Select(h => new Candidate(cards[h.Id], h.Score)).ToList();
 
-            Cv2.ImEncode(".png", views[best], out var png);
+            // Display image: re-straighten from the full photo at 2x when we can, for sharp detail.
+            byte[] jpeg;
+            if (detected.Found && best < 2)
+            {
+                using var hi = CardDetector.Warp(photo, detected.Corners, CardDetector.Width * 2, CardDetector.Height * 2);
+                if (best == 1) Cv2.Rotate(hi, hi, RotateFlags.Rotate180);
+                Cv2.ImEncode(".jpg", hi, out jpeg, new ImageEncodingParam(ImwriteFlags.JpegQuality, 92));
+            }
+            else
+            {
+                Cv2.ImEncode(".jpg", views[best], out jpeg, new ImageEncodingParam(ImwriteFlags.JpegQuality, 92));
+            }
             return new RecognitionResult
             {
                 Source = source,
                 Candidates = candidates,
-                CardImagePng = png,
+                CardImageJpeg = jpeg,
                 CardOutlineFound = detected.Found,
                 UpsideDown = best % 2 == 1,
                 UsedInnerOutline = best >= 2,
+                OrientationForced = forceUpsideDown is not null,
                 Elapsed = sw.Elapsed,
             };
         }

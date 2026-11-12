@@ -89,12 +89,12 @@ public static class CardDetector
     }
 
     /// <summary>Straightens the area inside the four corners (TL, TR, BR, BL) into a flat card image.</summary>
-    public static Mat Warp(Mat photo, Point2f[] corners)
+    public static Mat Warp(Mat photo, Point2f[] corners, int width = Width, int height = Height)
     {
-        var dst = new[] { new Point2f(0, 0), new Point2f(Width - 1, 0), new Point2f(Width - 1, Height - 1), new Point2f(0, Height - 1) };
+        var dst = new[] { new Point2f(0, 0), new Point2f(width - 1, 0), new Point2f(width - 1, height - 1), new Point2f(0, height - 1) };
         using var m = Cv2.GetPerspectiveTransform(corners, dst);
         var card = new Mat();
-        Cv2.WarpPerspective(photo, card, m, new Size(Width, Height), InterpolationFlags.Cubic, BorderTypes.Replicate);
+        Cv2.WarpPerspective(photo, card, m, new Size(width, height), InterpolationFlags.Cubic, BorderTypes.Replicate);
         return card;
     }
 
