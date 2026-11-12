@@ -33,7 +33,7 @@ public partial class IdentifyViewModel : ObservableObject
         _recognizer = recognizer;
         _paths = paths;
         _thumbs = new ThumbnailCache(paths);
-        _logPath = Path.Combine(paths.LogsDir, "identify_log.csv");
+        _logPath = Path.Combine(paths.LogsDir, "identify_results.csv");
     }
 
     public async Task AddFilesAsync(IEnumerable<string> paths)
@@ -101,12 +101,12 @@ public partial class IdentifyViewModel : ObservableObject
             bool newFile = !File.Exists(_logPath);
             using var w = new StreamWriter(_logPath, append: true);
             if (newFile)
-                w.WriteLine("time,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,ms");
+                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,ms");
             var top = item.Result?.Best;
             var right = rank > 0 ? item.Result!.Candidates[rank - 1] : null;
             string[] cols =
             [
-                DateTime.Now.ToString("s"), item.Photo, rank.ToString(),
+                DateTime.Now.ToString("s"), item.Result?.Folder ?? "", item.Photo, rank.ToString(),
                 right?.Card.Id ?? "", right?.Card.Name ?? "", right?.Card.SetCode ?? "", right?.Card.CollectorNumber ?? "",
                 top?.Card.Id ?? "", top?.Card.Name ?? "", top?.Card.SetCode ?? "", top?.Card.CollectorNumber ?? "",
                 (top?.Score ?? 0).ToString("0.0000", CultureInfo.InvariantCulture),

@@ -56,7 +56,7 @@ public partial class ResultItemViewModel : ObservableObject
     {
         _owner = owner;
         Result = result;
-        Photo = result.Source;
+        Photo = string.IsNullOrEmpty(result.Folder) ? result.Source : $"{result.Folder} / {result.Source}";
         CardImage = image;
         int rank = 1;
         foreach (var c in result.Candidates)

@@ -10,6 +10,8 @@ public sealed record Candidate(CardInfo Card, float Score);
 public sealed class RecognitionResult
 {
     public required string Source { get; init; }
+    /// <summary>Name of the folder the photo came from (e.g. "raw", "single sleeve"), if any.</summary>
+    public string Folder { get; set; } = "";
     public required List<Candidate> Candidates { get; init; }
     /// <summary>The straightened card as PNG bytes (for showing in the app).</summary>
     public required byte[] CardImagePng { get; init; }
@@ -66,7 +68,9 @@ public sealed class Recognizer : IDisposable
         using var photo = Cv2.ImRead(path, ImreadModes.Color); // applies phone rotation (EXIF)
         if (photo.Empty())
             throw new InvalidDataException($"Couldn't open {Path.GetFileName(path)}. If it's an iPhone HEIC photo, save it as JPG.");
-        return Identify(photo, Path.GetFileName(path), topK);
+        var result = Identify(photo, Path.GetFileName(path), topK);
+        result.Folder = Path.GetFileName(Path.GetDirectoryName(Path.GetFullPath(path))) ?? "";
+        return result;
     }
 
     public RecognitionResult Identify(Mat photo, string source, int topK = 5)
