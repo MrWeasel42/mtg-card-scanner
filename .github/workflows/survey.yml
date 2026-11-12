@@ -1,0 +1,32 @@
+name: Collector number survey
+
+# Research only: where do different frames/layouts print the collector number?
+on:
+  workflow_dispatch:
+    inputs:
+      per_group:
+        description: Cards sampled per frame/layout group
+        default: "6"
+
+permissions:
+  contents: write
+
+jobs:
+  survey:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install rapidocr_onnxruntime opencv-python-headless numpy
+      - name: Survey
+        working-directory: tools/collector_survey
+        run: python survey.py ${{ inputs.per_group }} | tee survey.log
+      - name: Share results (ci-preview prerelease)
+        working-directory: tools/collector_survey
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view ci-preview >/dev/null 2>&1 || gh release create ci-preview --prerelease --latest=false --title "CI preview" --notes "Automated build output. Not a download for users."
+          gh release upload ci-preview survey.json survey.md survey.log --clobber
