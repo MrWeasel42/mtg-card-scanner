@@ -300,6 +300,8 @@
         <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
           <Button Content="≈ Right card, printing not listed" Command="{Binding NameOnlyCommand}" FontSize="12" />
           <Button Content="✗ Wrong card" Command="{Binding WrongCardCommand}" FontSize="12" />
+          <Button Content="{Binding FlipLabel}" Command="{Binding FlipCommand}" FontSize="12" IsVisible="{Binding CanFlip}"
+                  ToolTip.Tip="Card upside down? Identify it again turned around (F)" />
           <Button Content="Skip card ⏭" Command="{Binding SkipCommand}" FontSize="12"
                   ToolTip.Tip="Leave this one for later and look at the next card (S)" />
         </StackPanel>

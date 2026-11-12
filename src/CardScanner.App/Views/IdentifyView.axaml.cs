@@ -41,6 +41,7 @@ public partial class IdentifyView : UserControl
             case Key.Enter: c.PickThisCommand.Execute(null); e.Handled = true; break;
             case Key.Z: c.ToggleZoomCommand.Execute(null); e.Handled = true; break;
             case Key.S: c.SkipCommand.Execute(null); e.Handled = true; break;
+            case Key.F: c.FlipCommand.Execute(null); e.Handled = true; break;
         }
     }
 

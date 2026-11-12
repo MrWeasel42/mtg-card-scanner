@@ -18,6 +18,7 @@ public partial class CompareViewModel : ObservableObject
 
     private readonly Action _close;
     private readonly Action<CompareViewModel> _advance;
+    private readonly Func<CompareViewModel, Task>? _flip;
     public ResultItemViewModel Item { get; }
 
     [ObservableProperty]
@@ -31,8 +32,10 @@ public partial class CompareViewModel : ObservableObject
     /// <param name="advance">Called after the card is marked (or skipped): moves on to the next card
     /// still waiting in the queue, or closes the view when there's none.</param>
     public CompareViewModel(ResultItemViewModel item, CandidateViewModel candidate, Action close,
-        Action<CompareViewModel> advance, bool bottomOnly = false, string queueText = "")
+        Action<CompareViewModel> advance, bool bottomOnly = false, string queueText = "",
+        Func<CompareViewModel, Task>? flip = null)
     {
+        _flip = flip;
         Item = item;
         _candidate = candidate;
         _close = close;
@@ -98,6 +101,23 @@ public partial class CompareViewModel : ObservableObject
     {
         Item.Choose(null);
         _advance(this);
+    }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FlipLabel))]
+    private bool _isFlipping;
+
+    public string FlipLabel => IsFlipping ? "↻ Flipping…" : "↻ Flip card";
+    public bool CanFlip => _flip is not null && Item.CanFlip;
+
+    /// <summary>Card upside down? Identify it again turned around, staying in this view.</summary>
+    [RelayCommand]
+    private async Task Flip()
+    {
+        if (_flip is null || IsFlipping) return;
+        IsFlipping = true;
+        try { await _flip(this); }
+        finally { IsFlipping = false; }
     }
 
     /// <summary>Leave this card unmarked and look at the next one.</summary>

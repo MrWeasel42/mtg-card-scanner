@@ -153,21 +153,29 @@ public partial class IdentifyViewModel : ObservableObject
     }
 
     /// <summary>Re-identifies a photo with the card turned the other way up, replacing its result.</summary>
-    internal async Task FlipAsync(ResultItemViewModel item)
+    internal async Task<ResultItemViewModel?> FlipAsync(ResultItemViewModel item)
     {
-        if (item.Result?.FilePath is not { } file) return;
+        if (item.Result?.FilePath is not { } file) return null;
         int index = Results.IndexOf(item);
-        if (index < 0) return;
+        if (index < 0) return null;
         bool nowUpsideDown = !item.Result.UpsideDown;
         try
         {
             var result = await Task.Run(() => _recognizer.IdentifyFile(file, forceUpsideDown: nowUpsideDown));
             var replacement = new ResultItemViewModel(result, this) { WasFlipped = true };
             Results[index] = replacement;
-            _ = replacement.LoadThumbnailsAsync(_thumbs);
+            await replacement.LoadThumbnailsAsync(_thumbs);
             UpdateScore();
+            return replacement;
         }
-        catch (Exception ex) { Log.Error($"Flip {file}", ex); }
+        catch (Exception ex) { Log.Error($"Flip {file}", ex); return null; }
+    }
+
+    /// <summary>Flip from the big compare view: re-identify upside down and stay in the compare view.</summary>
+    private async Task FlipInCompare(CompareViewModel from)
+    {
+        var replacement = await FlipAsync(from.Item);
+        if (replacement?.Top is { } top) OpenCompare(replacement, top, from.BottomOnly);
     }
 
     // ---- Compare view (big side-by-side) ----
@@ -179,7 +187,7 @@ public partial class IdentifyViewModel : ObservableObject
     public bool IsComparing => Compare is not null;
 
     internal void OpenCompare(ResultItemViewModel item, CandidateViewModel candidate, bool bottomOnly = false) =>
-        Compare = new CompareViewModel(item, candidate, () => Compare = null, AdvanceCompare, bottomOnly, QueueText(item));
+        Compare = new CompareViewModel(item, candidate, () => Compare = null, AdvanceCompare, bottomOnly, QueueText(item), FlipInCompare);
 
     private static bool Waiting(ResultItemViewModel r) => r.IsShown && r.Verdict == Verdict.None && r.Top is not null;
 
