@@ -96,12 +96,16 @@ jobs:
           name: installer-${{ steps.ver.outputs.version }}
           path: dist/*.exe
 
-      - uses: actions/upload-artifact@v4
+      - name: Share screenshot (ci-preview prerelease)
         if: always()
-        with:
-          name: screenshot-${{ steps.ver.outputs.version }}
-          path: screenshot.png
-          if-no-files-found: ignore
+        shell: pwsh
+        run: |
+          if (-not (Test-Path screenshot.png)) { "No screenshot"; exit 0 }
+          gh release view ci-preview *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create ci-preview --prerelease --latest=false --title "CI preview" --notes "Screenshots from automated builds. Not a download for users."
+          }
+          gh release upload ci-preview screenshot.png --clobber
 
       - name: Publish release
         if: steps.ver.outputs.release == 'true'
