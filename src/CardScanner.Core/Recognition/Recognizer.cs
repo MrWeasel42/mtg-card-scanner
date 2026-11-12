@@ -73,6 +73,7 @@ public sealed class Recognizer : IDisposable
     private const double SetBonus = 0.20;
     private const double BothBonus = 0.50; // set AND number both read: near-decisive
     private const double UnlikelyPenalty = 0.20;    // collector-only reprints, Summer Magic, 90s boxed reprints
+    private const int PictureCandidates = 5;        // nearest pictures always considered
     private const double BorderPenalty = 0.40;      // clearly white border vs a black-bordered printing, or vice versa
     private const double YearBonus = 0.25;          // copyright year printed on the card = the printing's release year
     private const double MinNameScore = 0.85;
@@ -198,6 +199,11 @@ public sealed class Recognizer : IDisposable
         foreach (var set in collector.SetCodes)
             foreach (var num in collector.Numbers)
                 foreach (var p in _cards.PrintingsAt(set, num)) pool[p.Id] = p;
+        // The closest pictures always get a say, so a misread name ("Flying" → Fling) can't shut out
+        // the card the photo obviously shows (a Secret Lair token whose set code didn't read).
+        var pictureIds = new HashSet<string>();
+        foreach (var (id, _) in _index.Search(vec, PictureCandidates))
+            if (_cards.ById(id) is { } p && !pool.ContainsKey(id)) { pool[id] = p; pictureIds.Add(id); }
 
         var scored = new List<(PrintingKey P, double Score, float Sim, bool Name, bool Num, bool Set, bool BorderMismatch, bool Year)>();
         foreach (var p in pool.Values)
@@ -234,7 +240,11 @@ public sealed class Recognizer : IDisposable
         scored.Sort((a, b) => b.Score.CompareTo(a.Score));
         // Don't offer printings whose border colour contradicts the card (a black-bordered Alpha card when
         // the photo clearly shows a white border), unless that's all there is.
-        var top = scored.Where((t, i) => i == 0 || !t.BorderMismatch).Take(topK).ToList();
+        // Picture-only extras are only shown when they're the best guess or the photo really looks like
+        // them, so a Kjeldoran Dead doesn't come with random red cards attached.
+        var top = scored.Where((t, i) => i == 0 || !t.BorderMismatch)
+            .Where((t, i) => i == 0 || !pictureIds.Contains(t.P.Id) || t.Num || t.Sim >= 0.85f)
+            .Take(topK).ToList();
 
         var cards = _catalog.GetMany(top.Select(t => t.P.Id).ToList());
         var candidates = top.Where(t => cards.ContainsKey(t.P.Id))

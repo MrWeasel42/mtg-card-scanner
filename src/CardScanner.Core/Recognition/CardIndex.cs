@@ -27,6 +27,7 @@ public sealed partial class CardIndex
 
     private readonly Dictionary<string, List<PrintingKey>> _byName = new();
     private readonly Dictionary<string, List<PrintingKey>> _byCollector = new();
+    private readonly Dictionary<string, PrintingKey> _byId = new();
     private readonly string[] _names;
     private readonly Dictionary<int, List<int>> _namesByLength = new();
 
@@ -55,6 +56,7 @@ public sealed partial class CardIndex
                 released.Length >= 4 && int.TryParse(released[..4], out var y) ? y : 0,
                 r.IsDBNull(8) ? "en" : r.GetString(8));
             n++;
+            _byId[p.Id] = p;
             // Japanese printings carry their English name, but what's printed on them is Japanese: they're
             // found by collector line and picture, never by reading the name.
             if (!NotRealCards.Contains(p.Layout) && p.Lang == "en")
@@ -81,6 +83,8 @@ public sealed partial class CardIndex
             l.Add(i);
         }
     }
+
+    public PrintingKey? ById(string id) => _byId.GetValueOrDefault(id);
 
     public IReadOnlyList<PrintingKey> PrintingsOfName(string normalizedName) =>
         _byName.TryGetValue(normalizedName, out var l) ? l : [];
