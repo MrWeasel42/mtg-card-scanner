@@ -230,7 +230,8 @@ public sealed class Recognizer : IDisposable
             float sim = _index.Similarity(vec, p.Id);
             double ns = p.Name.Split(" // ").Append(p.Name).Select(CardIndex.Normalize)
                 .Select(k => nameScore.GetValueOrDefault(k)).Max();
-            bool num = collector.Numbers.Contains(p.Number.ToLowerInvariant().TrimStart('0'));
+            bool num = collector.Numbers.Contains(p.Number.ToLowerInvariant().TrimStart('0'))
+                || (collector.SetCodes.Count == 0 && collector.CopyrightDigitsContain(p.Number));
             bool set = collector.SetCodes.Contains(p.SetCode.ToLowerInvariant());
             bool pinnedByCollector = num && set;
             bool borderMismatch = border switch

@@ -12,6 +12,47 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
 
     public bool HasAny => Numbers.Count > 0 || SetCodes.Count > 0;
 
+    /// <summary>
+    /// Every digit read after "Wizards of the Coast" (older and retro frames print the number there), run
+    /// together: "…Coasr 16672145" → "16672145". The OCR often mashes "72/145" into a longer run, so a
+    /// candidate printing counts as matching if its number appears anywhere in here.
+    /// </summary>
+    public string CopyrightDigits
+    {
+        get
+        {
+            var up = Raw.ToUpperInvariant();
+            var ms = AfterCoastAnchor().Matches(up);
+            if (ms.Count == 0) return "";
+            var tail = up[(ms[^1].Index + ms[^1].Length)..];
+            int bar = tail.IndexOf('|');               // a second read of the same line follows "|"
+            if (bar >= 0) tail = tail[..bar];
+            return new string(tail.Replace('O', '0').Where(char.IsDigit).ToArray());
+        }
+    }
+
+    /// <summary>True if this printing's number shows up in <see cref="CopyrightDigits"/> (2+ digits only).</summary>
+    public bool CopyrightDigitsContain(string number)
+    {
+        var digits = new string(number.Where(char.IsDigit).ToArray()).TrimStart('0');
+        if (digits.Length < 2 || digits.Length != number.TrimStart('0').TrimEnd('★', 's', 'a', 'b').Length) return false;
+        var all = string.Join("|", Raw.Split('|').Select(part => (this with { Raw = part }).CopyrightDigitsOne()));
+        return all.Contains(digits);
+    }
+
+    private string CopyrightDigitsOne()
+    {
+        var up = Raw.ToUpperInvariant();
+        var ms = AfterCoastAnchor().Matches(up);
+        if (ms.Count == 0) return "";
+        var tail = up[(ms[^1].Index + ms[^1].Length)..];
+        return new string(tail.Replace('O', '0').Where(char.IsDigit).ToArray());
+    }
+
+    // "COAST", "C0AST", "COASR", "COAS1", then optionally ", INC." / "LLC" read as "L1C", "LTO"
+    [GeneratedRegex(@"C[O0][A-Z]{1,3}[TRS1]|INC\b|LLC|L1C|LT[O0]")]
+    private static partial Regex AfterCoastAnchor();
+
     public static CollectorLine Parse(string raw)
     {
         var up = raw.ToUpperInvariant();

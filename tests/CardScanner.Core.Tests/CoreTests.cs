@@ -280,6 +280,16 @@ public class CollectorLineTests
         if (set is not null) Assert.Contains(set, c.SetCodes);
     }
 
+    [Theory]
+    [InlineData("Matt Cavotta &Pa1093 2010 Wizardg or tbe Coasr 16672145", "72", true)]     // Bazaar Trader 72/145
+    [InlineData("your hbrary 11 Kieran Yanner C1993-2009wizardsofdiee 110184249", "184", false)] // no "coast" read
+    [InlineData("Mike Bierek C199320uoWizardsoftheepastL1C190", "190", true)]                   // LLC read as L1C
+    [InlineData("Yee Ryan 0932010WizardsofheCoasrL1C98/2", "98", true)]
+    [InlineData("Noah Bradley Q2012Wizards0fde Coast101/274", "101", true)]
+    [InlineData("Noah Bradley Q2012Wizards0fde Coast101/274", "1", false)]                    // too short to trust
+    public void Finds_a_printing_number_inside_mashed_copyright_digits(string raw, string number, bool expected)
+        => Assert.Equal(expected, CollectorLine.Parse(raw).CopyrightDigitsContain(number));
+
     [Fact]
     public void Old_number_with_lost_slash_still_offers_the_number()
         => Assert.Contains("179", CollectorLine.Empty.WithCopyrightNumbers("Wayne England M&a93-2007Wizardso1the Coast nc17930").Numbers);
