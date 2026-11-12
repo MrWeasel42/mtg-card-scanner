@@ -141,7 +141,7 @@
                           ToolTip.ShowDelay="250" ToolTip.Placement="Right">
                     <ToolTip.Tip>
                       <StackPanel Spacing="4">
-                        <Image Source="{Binding FullImage}" Width="440" Stretch="Uniform" />
+                        <Image Source="{Binding FullImage}" Width="420" Height="586" Stretch="Uniform" />
                         <TextBlock FontSize="11" Text="Click to compare side by side, full window" HorizontalAlignment="Center" />
                       </StackPanel>
                     </ToolTip.Tip>
@@ -165,7 +165,7 @@
                               ToolTip.ShowDelay="250" ToolTip.Placement="Right">
                         <ToolTip.Tip>
                       <StackPanel Spacing="4">
-                        <Image Source="{Binding FullImage}" Width="440" Stretch="Uniform" />
+                        <Image Source="{Binding FullImage}" Width="420" Height="586" Stretch="Uniform" />
                         <TextBlock FontSize="11" Text="Click to compare side by side, full window" HorizontalAlignment="Center" />
                       </StackPanel>
                     </ToolTip.Tip>
@@ -224,7 +224,7 @@
                                       ToolTip.ShowDelay="250" ToolTip.Placement="Top">
                                 <ToolTip.Tip>
                       <StackPanel Spacing="4">
-                        <Image Source="{Binding FullImage}" Width="440" Stretch="Uniform" />
+                        <Image Source="{Binding FullImage}" Width="420" Height="586" Stretch="Uniform" />
                         <TextBlock FontSize="11" Text="Click to compare side by side, full window" HorizontalAlignment="Center" />
                       </StackPanel>
                     </ToolTip.Tip>
