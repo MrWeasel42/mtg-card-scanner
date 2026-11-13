@@ -214,14 +214,11 @@ def raw_tower():
     for sg in (-1, 1):   # 1 mm relief on the outside, low down beside the gate track: the fins sweep past here
         exitw = exitw.cut(box(xi1 + 2.5, xo1 + 1, *sorted((sg * 22.0, sg * 50.0)), PATH - 7, PATH + 40))
     walls = back.union(exitw)
-    # corner gusset and top rim for stiffness
-    walls = walls.union(box(xi1 - 8, xi1, yi1 - 8, yi1, PATH + 20, PATH + TOWER_H))
-    walls = walls.cut(box(xi1 - 9, xi1 - 0.01, yi1 - 9, yi1 - 0.01, PATH + 19, PATH + TOWER_H + 1)
-                      .cut(box(xi1 - 9, xi1 + 1, yi1 - 9, yi1 + 1, PATH + 19, PATH + TOWER_H + 1)
-                           .cut(cq.Workplane("XY").polyline([(xi1 - 8, yi1), (xi1, yi1), (xi1, yi1 - 8)]).close()
-                                .extrude(TOWER_H + 2).translate((0, 0, PATH + 18)))))
-    walls = walls.union(box(TOWER_X0 + 6, xo1, yi1 - 3, yi1, PATH + TOWER_H - 6, PATH + TOWER_H))
-    walls = walls.union(box(xi1 - 3, xi1, yo0 + 6, yi1, PATH + TOWER_H - 6, PATH + TOWER_H))
+    # stiffening stays OUTSIDE the card space: a top rim and a rib along each free edge, on the outer faces
+    walls = walls.union(box(TOWER_X0 + 6, xo1 + 3, yo1, yo1 + 3, PATH + TOWER_H - 8, PATH + TOWER_H))       # back rim
+    walls = walls.union(box(xo1, xo1 + 3, yo0 + 6, yo1 + 3, PATH + TOWER_H - 8, PATH + TOWER_H))           # exit rim
+    walls = walls.union(box(TOWER_X0 + 6, TOWER_X0 + 10, yo1, yo1 + 4, PATH + 12, PATH + TOWER_H))         # back wall free edge
+    walls = walls.union(box(xo1, xo1 + 4, yo0 + 6, yo0 + 10, PATH + 42, PATH + TOWER_H))                   # exit wall free edge
     # gate track on the exit face (+X) + boss for the M3 adjust screw
     gx = xo1
     walls = walls.union(box(gx, gx + 6, -20, 20, PATH + 6, PATH + 40))

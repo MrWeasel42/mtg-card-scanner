@@ -105,6 +105,11 @@ check("Feed roller with O-ring tyres (D31.6) vs base", fr, base, 0.5)
 check("Exit roller with tyres (D23.6) vs base", er, base, 0.5)
 checks.append(dict(label="Feed roller top above the hopper floor", overlap=0, gap=round(FEED_Z + 15.8 - PATH, 2), need=0.5, ok=0.5 <= FEED_Z + 15.8 - PATH <= 1.5, note="target 0.5-1.5 mm"))
 checks.append(dict(label="Exit roller top above the floor", overlap=0, gap=round(EXIT_Z + 11.8 - PATH, 2), need=0.5, ok=0.5 <= EXIT_Z + 11.8 - PATH <= 1.5, note="target 0.5-1.5 mm"))
+# --- card stack in the hopper (88 x 63 raw cards, 550 deep, leaning with the walls)
+xi1 = TOWER_X0 + TOWER_IN_X
+stack = box(TOWER_X0 + 0.75, xi1 - 0.75, -31.5, 31.5, PATH + 3, PATH + 3 + 550 * 0.305)
+stack = stack.rotate((0, 0, PATH), (1, 0, PATH), -TOWER_LEAN).rotate((xi1, 0, PATH), (xi1, 1, PATH), TOWER_LEAN_X)
+check("Full card stack (550 raw) vs hopper walls", stack, P["raw_tower"], 0.5, "nothing inside the L: braces are on the outside")
 # --- electronics bay
 tray_z = RAIL_Z + 17.2 + 3
 pi = B.pi5().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, tray_z + 5))

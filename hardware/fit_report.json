@@ -208,6 +208,14 @@
   "note": "target 0.5-1.5 mm"
  },
  {
+  "label": "Full card stack (550 raw) vs hopper walls",
+  "overlap": 0.0,
+  "gap": 0.75,
+  "need": 0.5,
+  "ok": true,
+  "note": "nothing inside the L: braces are on the outside"
+ },
+ {
   "label": "Pi 5 + cables vs feeder base",
   "overlap": 0.0,
   "gap": 1.0,
