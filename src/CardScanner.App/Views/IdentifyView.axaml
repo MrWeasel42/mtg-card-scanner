@@ -277,12 +277,31 @@
   <Grid Name="CompareOverlay" IsVisible="{Binding IsComparing}" Background="#E6050810">
     <Grid DataContext="{Binding Compare}" RowDefinitions="Auto,*,Auto" Margin="28,18">
       <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Spacing="2">
-          <TextBlock Classes="teal" FontSize="12" FontWeight="SemiBold" Text="{Binding QueueText}" />
-          <TextBlock Classes="muted" FontSize="12" Text="{Binding Counter}" />
+        <StackPanel Spacing="4">
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <TextBlock Classes="teal" FontSize="12" FontWeight="SemiBold" Text="{Binding QueueText}" VerticalAlignment="Center" />
+            <TextBlock Classes="muted" FontSize="12" Text="{Binding Counter}" VerticalAlignment="Center" />
+          </StackPanel>
+          <!-- What the scanner concluded about this card, so you don't have to leave this view -->
+          <WrapPanel DataContext="{Binding Item}">
+            <Border Classes="pill" Background="#1A22C55E" BorderBrush="#22C55E" IsVisible="{Binding IsPinned}" Margin="0,0,8,4">
+              <TextBlock Text="{Binding PinText}" FontSize="12" Foreground="#4ADE80" />
+            </Border>
+            <Border Classes="pill" Background="#1A2DD4BF" BorderBrush="#2DD4BF" IsVisible="{Binding IsSoftPin}" Margin="0,0,8,4">
+              <TextBlock Text="worth a glance" FontSize="12" Foreground="#5EEAD4" />
+            </Border>
+            <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding IsFlagged}" Margin="0,0,8,4">
+              <TextBlock Text="{Binding FlagReason, StringFormat='⚠ Needs a look: {0}'}" FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap" MaxWidth="900" />
+            </Border>
+            <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding FinishUnsure}" Margin="0,0,8,4">
+              <TextBlock Text="{Binding FinishNote, StringFormat='✨ Finish: {0}'}" FontSize="12" Foreground="#FBBF24" />
+            </Border>
+          </WrapPanel>
+          <TextBlock DataContext="{Binding Item}" Classes="teal" FontSize="12" Text="{Binding DetailNote, StringFormat='🔎 {0}'}"
+                     IsVisible="{Binding DetailNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" TextWrapping="Wrap" />
+          <TextBlock DataContext="{Binding Item}" Classes="muted" FontSize="11" Text="{Binding ReadText}" TextWrapping="Wrap" MaxWidth="1100" HorizontalAlignment="Left" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
-          <Button Content="{Binding ZoomLabel}" Command="{Binding ToggleZoomCommand}" />
           <Button Content="✕ Close" Command="{Binding CloseCommand}" />
         </StackPanel>
       </Grid>
@@ -300,7 +319,15 @@
               <TextBlock Text="{Binding FinishNote}" VerticalAlignment="Center" FontSize="12" Classes="muted" />
             </StackPanel>
           </StackPanel>
-          <Image Source="{Binding LeftShown}" Stretch="Uniform" />
+          <Panel Name="LeftPane" Background="Transparent">
+            <Image Name="LeftImg" Source="{Binding LeftShown}" Stretch="Uniform" />
+            <Canvas IsHitTestVisible="False">
+              <Border Name="LeftLens" Width="300" Height="300" ClipToBounds="True" IsVisible="False" CornerRadius="12"
+                      BorderBrush="{StaticResource TealBrush}" BorderThickness="2" Background="#000" BoxShadow="0 6 18 0 #90000000">
+                <Canvas><Image Name="LeftLensImg" Source="{Binding LeftShown}" Stretch="Fill" /></Canvas>
+              </Border>
+            </Canvas>
+          </Panel>
         </DockPanel>
         <DockPanel Grid.Column="1" Margin="10,0,0,0">
           <TextBlock DockPanel.Dock="Top" Classes="teal" FontSize="12" FontWeight="SemiBold" LetterSpacing="1"
@@ -311,12 +338,22 @@
             <TextBlock Text="{Binding Subtitle}" FontSize="16" HorizontalAlignment="Center" TextAlignment="Center" />
             <TextBlock Classes="gold" Text="{Binding Extra}" FontSize="15" HorizontalAlignment="Center" TextAlignment="Center" />
           </StackPanel>
-          <Image Source="{Binding RightShown}" Stretch="Uniform" />
+          <Panel Name="RightPane" Background="Transparent">
+            <Image Name="RightImg" Source="{Binding RightShown}" Stretch="Uniform" />
+            <Canvas IsHitTestVisible="False">
+              <Border Name="RightLens" Width="300" Height="300" ClipToBounds="True" IsVisible="False" CornerRadius="12"
+                      BorderBrush="{StaticResource TealBrush}" BorderThickness="2" Background="#000" BoxShadow="0 6 18 0 #90000000">
+                <Canvas><Image Name="RightLensImg" Source="{Binding RightShown}" Stretch="Fill" /></Canvas>
+              </Border>
+            </Canvas>
+          </Panel>
         </DockPanel>
       </Grid>
 
       <StackPanel Grid.Row="2" Spacing="10" HorizontalAlignment="Center">
         <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+          <Button Content="{Binding ZoomLabel}" Command="{Binding ToggleZoomCommand}"
+                  ToolTip.Tip="Show just the bottom of both cards (Z). Hovering over a card magnifies it; M turns the magnifier on/off." />
           <Button Content="◀ Previous option" Command="{Binding PreviousCommand}" />
           <Button Classes="accent" Content="✓ This is the one" Command="{Binding PickThisCommand}" Padding="22,8"
                   ToolTip.Tip="Marks this printing and moves to the next card (Enter)" />
