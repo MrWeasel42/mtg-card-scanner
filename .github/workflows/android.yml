@@ -1,0 +1,59 @@
+name: Build phone app
+
+# Builds the Android scanner app (sideload APK) and puts it on the "phone-app" prerelease,
+# so the newest APK is always at:
+#   https://github.com/MrWeasel42/mtg-card-scanner/releases/download/phone-app/MTGScanner.apk
+on:
+  push:
+    branches: [main]
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION_CODE: ${{ github.run_number }}
+      VERSION_NAME: "1.0.${{ github.run_number }}"
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Build APK
+        working-directory: android
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Collect APK
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/release/app-release.apk dist/MTGScanner.apk
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MTGScanner-${{ env.VERSION_NAME }}
+          path: dist/MTGScanner.apk
+
+      - name: Publish to the phone-app prerelease
+        run: |
+          if ! gh release view phone-app >/dev/null 2>&1; then
+            gh release create phone-app --prerelease --latest=false --title "Phone scanner app (Android)" \
+              --notes "Sideload APK for the MTG Card Scanner phone link. On the phone: download MTGScanner.apk, open it, allow installing from your browser. Needs the PC app 0.3.1+ with Settings → Phone link turned on."
+          fi
+          gh release upload phone-app dist/MTGScanner.apk --clobber
+          gh release edit phone-app --notes "Sideload APK for the MTG Card Scanner phone link (build ${VERSION_NAME}). On the phone: download MTGScanner.apk, open it, allow installing from your browser. Needs the PC app 0.3.1+ with Settings → Phone link turned on."

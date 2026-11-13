@@ -21,3 +21,7 @@ Thumbs.db
 # Test fixtures are small and needed by the C# tests
 !tests/**/*.onnx
 !src/CardScanner.Core/OcrModels/*.onnx
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties

@@ -39,6 +39,10 @@ public partial class IdentifyViewModel : ObservableObject
         _thumbs = new ThumbnailCache(paths);
         _logPath = Path.Combine(paths.LogsDir, "identify_results_v6.csv");
         _settings = UiSettings.Load(paths);
+        PhoneLink.Instance.StatusChanged += t => Avalonia.Threading.Dispatcher.UIThread.Post(() => PhoneLinkStatus = t);
+        PhoneLinkStatus = PhoneLink.Instance.Status;
+        PhoneLink.Instance.Handler = HandlePhoneScanAsync;
+        if (_settings.PhoneLink) PhoneLink.Instance.Start();
         Results.CollectionChanged += (_, _) => { OnPropertyChanged(nameof(HasResults)); ApplyFilter(); };
     }
 
@@ -225,22 +229,7 @@ public partial class IdentifyViewModel : ObservableObject
             for (int i = 0; i < files.Count; i++)
             {
                 BusyText = $"Identifying {i + 1} of {files.Count}: {Path.GetFileName(files[i])}";
-                var file = files[i];
-                ResultItemViewModel item;
-                try
-                {
-                    var result = await Task.Run(() => _recognizer.IdentifyFile(file));
-                    item = new ResultItemViewModel(result, this);
-                    SaveCropDiagnostics(result);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error($"Identify {file}", ex);
-                    item = ResultItemViewModel.Failed(Path.GetFileName(file), ex.Message, this);
-                }
-                item.ScanNumber = ++_scanCount;
-                Results.Insert(0, item);
-                _ = item.LoadThumbnailsAsync(_thumbs);
+                await IdentifyOneAsync(files[i]);
             }
         }
         finally
@@ -248,6 +237,105 @@ public partial class IdentifyViewModel : ObservableObject
             IsBusy = false;
             _gate.Release();
         }
+    }
+
+    /// <summary>A photo sent by the phone app: identify it like a dropped file and hand the result back.
+    /// Call on the UI thread.</summary>
+    public async Task<ResultItemViewModel> AddPhonePhotoAsync(string file)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            IsBusy = true;
+            BusyText = $"Identifying phone scan: {Path.GetFileName(file)}";
+            return await IdentifyOneAsync(file);
+        }
+        finally
+        {
+            IsBusy = false;
+            _gate.Release();
+        }
+    }
+
+    private async Task<ResultItemViewModel> IdentifyOneAsync(string file)
+    {
+        ResultItemViewModel item;
+        try
+        {
+            var result = await Task.Run(() => _recognizer.IdentifyFile(file));
+            item = new ResultItemViewModel(result, this);
+            SaveCropDiagnostics(result);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Identify {file}", ex);
+            item = ResultItemViewModel.Failed(Path.GetFileName(file), ex.Message, this);
+        }
+        item.ScanNumber = ++_scanCount;
+        Results.Insert(0, item);
+        _ = item.LoadThumbnailsAsync(_thumbs);
+        return item;
+    }
+
+    // ---- Settings (gear menu) ----
+
+    /// <summary>Unsure finish → non-foil instead of "Check finish". Off by default.</summary>
+    public bool AssumeNonFoil
+    {
+        get => _settings.AssumeNonFoil;
+        set
+        {
+            if (_settings.AssumeNonFoil == value) return;
+            _settings.AssumeNonFoil = value; _settings.Save();
+            OnPropertyChanged();
+            foreach (var r in Results) r.RefreshFinish();
+            ApplyFilter();
+        }
+    }
+
+    /// <summary>Listen for the Android scanner app on this network.</summary>
+    public bool PhoneLinkOn
+    {
+        get => _settings.PhoneLink;
+        set
+        {
+            if (_settings.PhoneLink == value) return;
+            _settings.PhoneLink = value; _settings.Save();
+            OnPropertyChanged();
+            if (value) PhoneLink.Instance.Start(); else PhoneLink.Instance.Stop();
+        }
+    }
+
+    [ObservableProperty] private string _phoneLinkStatus = "";
+
+    /// <summary>A photo from the phone: saved under phone_scans/&lt;date&gt;/, identified like a dropped file,
+    /// and summed up for the phone's screen. Runs off the UI thread; the page update runs on it.</summary>
+    private async Task<object> HandlePhoneScanAsync(byte[] jpeg)
+    {
+        var dir = Path.Combine(_paths.Root, "phone_scans", DateTime.Now.ToString("yyyy-MM-dd"));
+        Directory.CreateDirectory(dir);
+        var file = Path.Combine(dir, $"phone_{DateTime.Now:HHmmss_fff}.jpg");
+        await File.WriteAllBytesAsync(file, jpeg);
+        return await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            var item = await AddPhonePhotoAsync(file);
+            var card = item.ShownCard;
+            return (object)new
+            {
+                ok = item.HasResult && card is not null,
+                scan = item.ScanLabel,
+                name = card?.Name,
+                set = card?.SetName,
+                setCode = card?.SetCode.ToUpperInvariant(),
+                number = card?.CollectorNumber,
+                finish = item.SelectedFinish?.Label,
+                finishUnsure = item.FinishUnsure,
+                pinned = item.IsPinned,
+                pinReason = item.PinReason,
+                price = item.Price,
+                error = item.Error ?? (card is null ? "No card found in the photo." : null),
+            };
+        });
     }
 
     private static IEnumerable<string> Expand(IEnumerable<string> paths)

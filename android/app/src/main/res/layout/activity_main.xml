@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000">
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/preview"
+        android:layout_width="match_parent" android:layout_height="match_parent" />
+
+    <!-- top: connection + counters -->
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="top" android:layout_margin="10dp"
+        android:background="@drawable/panel" android:orientation="vertical" android:padding="10dp">
+        <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textColor="#FFFFFF" android:textSize="15sp" android:text="Looking for the PC…" />
+        <TextView android:id="@+id/watch" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textColor="#8FA3AD" android:textSize="12sp" android:text="" />
+    </LinearLayout>
+
+    <!-- bottom: last result, history, buttons -->
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="bottom" android:layout_margin="10dp" android:orientation="vertical">
+
+        <LinearLayout android:id="@+id/resultPanel"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:background="@drawable/panel" android:orientation="vertical" android:padding="12dp">
+            <TextView android:id="@+id/resultName" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="#FFFFFF" android:textSize="20sp" android:textStyle="bold" android:text="Place a card under the phone" />
+            <TextView android:id="@+id/resultDetail" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="#C7D3D9" android:textSize="14sp" android:text="Auto-capture takes a photo when a new card sits still." />
+            <ScrollView android:layout_width="match_parent" android:layout_height="110dp" android:layout_marginTop="8dp">
+                <TextView android:id="@+id/history" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:textColor="#8FA3AD" android:textSize="12sp" android:fontFamily="monospace" />
+            </ScrollView>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnAuto"
+                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:layout_marginEnd="6dp" android:text="Auto: on" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnShoot"
+                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.2"
+                android:layout_marginEnd="6dp" android:text="Capture" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnMore"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="Settings" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

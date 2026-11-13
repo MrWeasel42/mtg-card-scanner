@@ -139,5 +139,5 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    public void Dispose() => _recognizer?.Dispose();
+    public void Dispose() { PhoneLink.Instance.Stop(); _recognizer?.Dispose(); }
 }

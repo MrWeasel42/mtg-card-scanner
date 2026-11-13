@@ -13,6 +13,13 @@ public sealed class UiSettings
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public CompareLayout Layout { get; set; } = CompareLayout.Left;
 
+    /// <summary>When the photo can't show foil vs non-foil, call it non-foil instead of asking. Off by default:
+    /// those cards go to "Check finish" until the machine's camera can see the foil sheen.</summary>
+    public bool AssumeNonFoil { get; set; }
+
+    /// <summary>Listen for the Android scanner app on the local network.</summary>
+    public bool PhoneLink { get; set; }
+
     [JsonIgnore] private string _path = "";
 
     public static UiSettings Load(AppPaths paths)

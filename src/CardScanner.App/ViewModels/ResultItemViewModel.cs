@@ -211,7 +211,10 @@ public partial class ResultItemViewModel : ObservableObject
     public string FinishReason { get; private set; } = "";
     public bool HasFinishChoice => FinishOptions.Count > 1;
 
-    private void RefreshFinish()
+    /// <summary>The photo itself couldn't show the finish (before any "assume non-foil" setting).</summary>
+    private bool _photoUnsure;
+
+    internal void RefreshFinish()
     {
         if (SelectedCard is not { } card) return;
         var keep = _finishByUser ? SelectedFinish?.Key : null;
@@ -219,12 +222,18 @@ public partial class ResultItemViewModel : ObservableObject
         var (key, reason, sure) = Finish.Detect(card, foilMark, Result?.ShootingStarScore);
         if (_markFoil is { } m && Result?.FoilFromCollector is null && sure)
             reason = m ? "★ found in the photo" : "• found in the photo";
+        var options = Finish.OptionsFor(card);
+        _photoUnsure = !sure && options.Count > 1;
+        if (_photoUnsure && _owner.AssumeNonFoil && options.Any(o => o.Key == "nonfoil"))
+        {
+            key = "nonfoil"; reason = "assumed non-foil (setting)"; sure = true;
+        }
         FinishDetectedKey = key; FinishReason = reason;
         _settingFinish = true;
-        FinishOptions = Finish.OptionsFor(card);
+        FinishOptions = options;
         SelectedFinish = FinishOptions.FirstOrDefault(o => o.Key == keep) ?? FinishOptions.FirstOrDefault(o => o.Key == key);
         _settingFinish = false;
-        FinishUnsure = !sure && FinishOptions.Count > 1;
+        FinishUnsure = !sure && FinishOptions.Count > 1 && !_finishByUser;
         FinishNote = FinishOptions.Count <= 1 ? $"({reason})" : sure ? $"detected: {reason}" : reason;
         OnPropertyChanged(nameof(HasFinishChoice));
     }
@@ -292,7 +301,7 @@ public partial class ResultItemViewModel : ObservableObject
     private bool? _markFoil;
     private async Task CheckStarAsync()
     {
-        if (Result is null || Result.FoilFromCollector is not null || !FinishUnsure) return;
+        if (Result is null || Result.FoilFromCollector is not null || !_photoUnsure) return;
         var jpeg = _cardJpeg ?? Result.CardImageJpeg;
         var score = await Task.Run(() => StarMark.Score(jpeg));
         if (StarMark.Read(score) is not { } foil) return;

@@ -72,6 +72,25 @@
         <Button Name="AddButton" Classes="accent" Content="＋ Add photos" />
         <Button Content="Clear" Command="{Binding ClearCommand}" />
         <Button Content="📄 Results log" Command="{Binding OpenLogFolderCommand}" />
+        <Button Content="⚙ Settings">
+          <Button.Flyout>
+            <Flyout Placement="BottomEdgeAlignedRight">
+              <StackPanel Spacing="14" Width="380" Margin="4">
+                <StackPanel Spacing="4">
+                  <CheckBox IsChecked="{Binding AssumeNonFoil, Mode=TwoWay}" Content="Assume non-foil when the photo can't tell" />
+                  <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="28,0,0,0"
+                             Text="Off: those cards wait in “Check finish” for you. Turn on once the machine's camera can see foil sheen." />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                  <CheckBox IsChecked="{Binding PhoneLinkOn, Mode=TwoWay}" Content="Phone link (Android scanner app)" />
+                  <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="28,0,0,0"
+                             Text="Phone and PC on the same Wi-Fi. If Windows asks about the firewall, allow Private networks." />
+                  <TextBlock FontSize="12" TextWrapping="Wrap" Margin="28,0,0,0" Text="{Binding PhoneLinkStatus}" />
+                </StackPanel>
+              </StackPanel>
+            </Flyout>
+          </Button.Flyout>
+        </Button>
       </StackPanel>
     </Grid>
 
