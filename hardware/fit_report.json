@@ -136,6 +136,30 @@
   "note": ""
  },
  {
+  "label": "Belt home sensor (TCRT5000 module) vs scan module, floor, PSU",
+  "overlap": 0.0,
+  "gap": 0.0,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Home sensor: fin bridge height above the window (TCRT5000 best at 2-4 mm)",
+  "overlap": 0,
+  "gap": 3.0,
+  "need": 2.0,
+  "ok": true,
+  "note": "no fin: black belt back at 7 mm"
+ },
+ {
+  "label": "Home sensor window outside the card path",
+  "overlap": 0,
+  "gap": 4.5,
+  "need": 2.0,
+  "ok": true,
+  "note": "sleeved card reaches |Y| 33"
+ },
+ {
   "label": "Sleeved card (66 mm) in the guides: play per side",
   "overlap": 0,
   "gap": 0.75,

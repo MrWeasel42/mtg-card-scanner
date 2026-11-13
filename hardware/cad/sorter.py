@@ -464,6 +464,8 @@ def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True, ba
         f = rail_slots(f, x0, x1, ys=(RAIL2_Y,))
     return f
 
+HOME_X, HOME_Y = SCAN_X0 + 10.0, 39.5   # belt home sensor (TCRT5000 looking up at the fins, back side)
+
 def scan_side_back():
     """Back wall of the scan module, with the power/cable window that the inlet plate covers."""
     f = side_frame(SCAN_X0, SCAN_X1, 1, bin_opening=False)
@@ -471,6 +473,14 @@ def scan_side_back():
     for x in (SCAN_X0 + 36, SCAN_X0 + 144):
         for z in (RAIL_Z + 33, RAIL_Z + 93):
             f = f.cut(cyl_y(x, z, M3_INSERT / 2, WALL_OUT - 6, WALL_OUT + 1))
+    # belt home sensor: a spare TCRT5000 module under the strip looks up through a window at the fin bridges
+    # going past on the bottom run (3 mm above the window; with no fin it sees the black belt 7 mm up).
+    # Cards never reach |Y| 37. Module screws to an insert in the strip's underside (M3 x 6 from the kit).
+    xh, yh = HOME_X, HOME_Y
+    f = f.cut(box(xh - 4.5, xh + 4.5, yh - 2.0, yh + 2.0, PATH - 5, PATH + 1))          # window
+    f = f.cut(box(xh - 5.2, xh + 5.2, yh - 2.9, yh + 2.9, PATH - 13, PATH - 3.9))       # head pocket
+    f = f.cut(cyl_z(xh + 23.0, yh, M3_INSERT / 2, PATH - 13, PATH - 6))                  # module mounting hole
+    f = f.cut(cyl_y(xh + 30.0, PATH - 18, 3.0, WALL_IN - 1, WALL_OUT + 1))              # wires out to the back
     return f
 
 def scan_floor():

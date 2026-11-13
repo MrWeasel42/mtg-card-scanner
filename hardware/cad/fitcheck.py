@@ -86,6 +86,16 @@ for sgn in (-1, 1):
 tcrt = box(122.0, 132.0, -24.9, -19.1, PATH - 11.0, PATH - 4.0)
 check("Card-clear sensor (TCRT5000 head) vs exit roller, shafts, 122 mm loop", tcrt,
       pr("exit_roller", "feed_roller").union(cyl_y(EXIT_X, EXIT_Z, 2.6, -60, 60)).union(cyl_y(EXIT_X, EXIT_Z, 8, -55, -39)), 1.0)
+# belt home sensor under the back strip: module envelope (head + board + parts underneath)
+home = box(HOME_X - 5.0, HOME_X + 5.0, HOME_Y - 2.9, HOME_Y + 2.9, PATH - 12.0, PATH - 4.5).union(
+       box(HOME_X - 6.0, HOME_X + 27.0, HOME_Y - 7.0, HOME_Y + 7.0, PATH - 22.0, PATH - 12.0))
+check("Belt home sensor (TCRT5000 module) vs scan module, floor, PSU", home,
+      pr("scan_side_back", "scan_side_front", "scan_floor").union(B.lrs100().translate((PSU_X0, 0, RAIL_Z + 5))), 0.0)
+zfin = PATH + RAIL_H + 0.5
+checks.append(dict(label="Home sensor: fin bridge height above the window (TCRT5000 best at 2-4 mm)", overlap=0,
+                   gap=round(zfin - PATH, 2), need=2.0, ok=2.0 <= zfin - PATH <= 4.0, note="no fin: black belt back at 7 mm"))
+checks.append(dict(label="Home sensor window outside the card path", overlap=0, gap=round(HOME_Y - 2.0 - 33.0, 2), need=2.0,
+                   ok=HOME_Y - 2.0 - 33.0 >= 2.0, note="sleeved card reaches |Y| 33"))
 # card fit in the guides
 checks.append(dict(label="Sleeved card (66 mm) in the guides: play per side", overlap=0, gap=round(RAIL_IN - 33.0, 2), need=0.5,
                    ok=RAIL_IN - 33.0 >= 0.5, note="guides 67.5 mm apart"))
