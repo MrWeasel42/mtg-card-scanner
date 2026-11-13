@@ -391,6 +391,18 @@ public sealed class Recognizer : IDisposable
             if (yearOnes.Count == 1 && yearOnes[0].P.Id == best.Card.Id && !(listDoubtFor(best.Card.Name)))
             { pinned = true; pinReason = "name + copyright year (the only printing from that year)"; }
         }
+        // A copyright line ("Wizards of the Coast ... All rights reserved") with no readable year still rules out
+        // everything printed before 1995 (Alpha to Revised have none): a white-bordered Lightning Bolt with
+        // one is 4th Edition, not Unlimited or Revised.
+        if (!pinned && best is { NameMatched: true } && noSetCode && collector.HasCopyrightText && (!bestIsList || listSeen))
+        {
+            static string Group3(PrintingKey p) => p.SetCode + "|" + p.Number.TrimEnd('★');
+            var possible = scored.Where(t => t.Name && t.P.Name == best.Card.Name && ListFits(t.P) && !t.BorderMismatch
+                                             && !t.P.IsUnlikely && t.P.ReleaseYear >= 1995)
+                .GroupBy(t => Group3(t.P)).Select(g => g.First()).ToList();
+            if (possible.Count == 1 && possible[0].P.Id == best.Card.Id && !listDoubtFor(best.Card.Name))
+            { pinned = true; pinReason = "name + copyright line (the only printing since 1995 with this border)"; }
+        }
         // List reprints whose number didn't read: the symbol is clearly there and the card has only one
         // List printing (Thieves' Auction, Street Wraith).
         if (!pinned && bestIsList && listSeen && best is { NameMatched: true }

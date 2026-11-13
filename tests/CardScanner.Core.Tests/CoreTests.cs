@@ -252,7 +252,15 @@ public class CollectorLineTests
     [InlineData("Illus. Christopher Rush 1995wizardsofbe Coas", 1995)]
     [InlineData("Dermot Power TM&C1993-2005WizardsoftheCoast,", 2005)]
     [InlineData("Illus,  Rob Alexander", null)]
+    [InlineData("Illus, Christopher Rush Agg5 Wizardsofthe oastIncAll rights reserve", 1995)]   // 4ED Bolt, run 3
+    [InlineData("Illus, Christopher Rush lgg5 Wizards of theCoast IncAll nights reserved", 1995)]
+    [InlineData("Illus. Christopher Rush 3gg5", null)]                                             // no copyright text: don't guess
     public void Reads_copyright_year(string raw, int? year) => Assert.Equal(year, CollectorLine.Parse(raw).CopyrightYear);
+
+    [Theory]
+    [InlineData("Illus, Christopher Rush lgg5 Wizards of theCoast IncAll nights reserved", true)]
+    [InlineData("Illus. Christopher Rush", false)]
+    public void Sees_copyright_text(string raw, bool expected) => Assert.Equal(expected, CollectorLine.Parse(raw).HasCopyrightText);
 
     [Theory]
     [InlineData("Illus. Anastasia Ovchinnikova TM &  2024 Wizards of the Coast 14", "14", 2024)]   // MH2 retro (H2R)

@@ -37,7 +37,7 @@ public partial class IdentifyViewModel : ObservableObject
         _recognizer = recognizer;
         _paths = paths;
         _thumbs = new ThumbnailCache(paths);
-        _logPath = Path.Combine(paths.LogsDir, "identify_results_v5.csv");
+        _logPath = Path.Combine(paths.LogsDir, "identify_results_v6.csv");
         _settings = UiSettings.Load(paths);
         Results.CollectionChanged += (_, _) => { OnPropertyChanged(nameof(HasResults)); ApplyFilter(); };
     }
@@ -409,7 +409,7 @@ public partial class IdentifyViewModel : ObservableObject
             bool newFile = !File.Exists(_logPath);
             using var w = new StreamWriter(_logPath, append: true);
             if (newFile)
-                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason,list_symbol_score,shooting_star_score,outline_method,detail_pick,detail_margin,straightened,rarity,condition,altered,misprint");
+                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason,list_symbol_score,shooting_star_score,outline_method,detail_pick,detail_margin,straightened,rarity,condition,altered,misprint,image_sim");
             // What you saw: the current top (after any detail-check reordering), not the first guess.
             var top = item.Top?.Source;
             var second = item.Candidates.Skip(1).FirstOrDefault()?.Source;
@@ -439,6 +439,7 @@ public partial class IdentifyViewModel : ObservableObject
                 item.Straightened.ToString(),
                 (right?.Card ?? top?.Card)?.Rarity ?? "", ResultItemViewModel.ConditionCode(item.Condition),
                 item.Altered.ToString(), item.Misprint.ToString(),
+                (top?.ImageSimilarity ?? 0).ToString("0.000", CultureInfo.InvariantCulture),
             ];
             w.WriteLine(string.Join(",", cols.Select(Csv)));
         }

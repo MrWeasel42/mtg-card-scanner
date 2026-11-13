@@ -12,6 +12,30 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
 
     public bool HasAny => Numbers.Count > 0 || SetCodes.Count > 0;
 
+    /// <summary>True if a copyright line was read ("Wizards of the Coast", "All rights reserved"). Cards
+    /// printed before 1995 (Alpha to Revised, Arabian Nights to Fallen Empires) have none.</summary>
+    public bool HasCopyrightText => CopyrightText().IsMatch(Raw.ToUpperInvariant());
+
+    [GeneratedRegex(@"WIZARD|RIGHTS\s?RESERV|ALL\s?RIGHTS")]
+    private static partial Regex CopyrightText();
+
+    /// <summary>The OCR often reads the "©1995" on 1995-1997 cards as "Agg5" or "lgg5" (9 read as g/q).
+    /// Only trusted on a line that also reads as a copyright line.</summary>
+    private static int? FuzzyYear(string up)
+    {
+        if (!CopyrightText().IsMatch(up)) return null;
+        int? year = null;
+        foreach (Match m in FuzzyYearRx().Matches(up))
+        {
+            int y = 1990 + (m.Groups[1].Value[0] - '0');
+            if (y is >= 1993 and <= 1999) year = Math.Max(year ?? 0, y);
+        }
+        return year;
+    }
+
+    [GeneratedRegex(@"(?<![A-Z0-9])[A-Z1|©]?[9GQ][9GQ]([0-9])(?![0-9])")]
+    private static partial Regex FuzzyYearRx();
+
     /// <summary>
     /// Every digit read after "Wizards of the Coast" (older and retro frames print the number there), run
     /// together: "…Coasr 16672145" → "16672145". The OCR often mashes "72/145" into a longer run, so a
@@ -83,6 +107,7 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
         int? year = null;
         foreach (Match m in Year().Matches(up))
             if (int.TryParse(m.Value, out var y) && y is >= 1993 and <= 2030) year = Math.Max(year ?? 0, y);
+        year ??= FuzzyYear(up);
         return new CollectorLine(raw, numbers, sets, foil, year);
     }
 
@@ -100,6 +125,7 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
         int? year = CopyrightYear;
         foreach (Match m in Year().Matches(copyrightLine))
             if (int.TryParse(m.Value, out var y) && y is >= 1993 and <= 2030) year = Math.Max(year ?? 0, y);
+        year ??= FuzzyYear(copyrightLine.ToUpperInvariant());
         return this with { Raw = (Raw + " | " + copyrightLine).Trim(' ', '|'), Numbers = nums, CopyrightYear = year };
     }
 
