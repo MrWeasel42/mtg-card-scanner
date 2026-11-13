@@ -611,12 +611,32 @@ def end_side(side):
     yb0, yb1 = sorted((s * (WALL_OUT - 5.2), s * (WALL_OUT + 0.1)))
     f = f.cut(cyl_y(xs, PUL_Z, 8.05, yb0, yb1))           # 625 bearing seat (outer face)
     f = f.cut(box(xs - 20, PITCH + 1, *sorted((s * 35.0, s * WALL_IN_UP)), PATH, WALL_TOP + 1))  # room for pulley + fins
+    if s > 0:   # ramp flange screws into the underside of the back strip
+        for xh in (6.5 + 15, PITCH - 5.0 - 15):
+            f = f.cut(cyl_z(xh, 41.0, M3_INSERT / 2, PATH - 12.5, PATH - 5))
     if s > 0:   # track motor on a 30 mm standoff on the back wall, screws into inserts
         for dx in (-1, 1):
             for dz in (-1, 1):
                 f = f.cut(cyl_y(xs + dx * NEMA_HOLES / 2, PUL_Z + dz * NEMA_HOLES / 2, M3_INSERT / 2, WALL_OUT - 6.5, WALL_OUT + 1))
     f = f.cut(box(x0 + 12, x1 - 12, *sorted((s * WALL_IN - s, s * WALL_OUT + s)), RAIL_Z + 20, PATH - 40))
     return f
+
+def end_ramp():
+    """Fixed ramp in the end module, the same plane as an open door (60 deg): cards pushed off the end of the
+    track land on it and slide off its low edge into a standard bin, exactly like the other bins. A flange
+    along the top screws up into the back strip (2 x M3 into heat-set inserts); two ribs underneath stiffen it.
+    Module coordinates (x 0..PITCH)."""
+    x0, x1 = 6.5, PITCH - 5.0
+    W, T = 69.6, 3.0
+    pl = box(x0, x1, -W / 2, W / 2, PATH - T, PATH)
+    for xr in (x0 + 20, x1 - 20):
+        pl = pl.union(box(xr - 1.5, xr + 1.5, -W / 2 + 6, W / 2, PATH - T - 6, PATH - T))
+    pl = pl.rotate((0, 34.5, PATH - 3), (1, 34.5, PATH - 3), 60)
+    pl = pl.cut(box(-1, PITCH + 1, -60, 60, PATH - 4.0, PATH + 10))       # top trimmed flat, 4 mm under the floor line
+    fl = box(x0, x1, 30.0, WALL_IN - 0.5, PATH - 16, PATH - 12.2)           # flange under the back strip
+    for xh in (x0 + 15, x1 - 15):
+        fl = fl.cut(cyl_z(xh, 41.0, M3 / 2, PATH - 17, PATH - 12))
+    return pl.union(fl)
 
 def end_cap():
     """Closes the end of the track above the last bin (catches cards that overshoot)."""
@@ -811,11 +831,11 @@ PRINTED = {
     "door":            (door, 2, "PETG", "Top face down on the smooth plate side (slick surface)."),
     "servo_link":      (servo_link, 2, "PETG", ""),
     "tie_bar":         (tie_bar, 4, "PETG", "Floor plate face DOWN on the smooth side of the plate (slick top)."),
-    "end_bin":         (lambda: bin_box(depth=END_BIN_D), 1, "PLA", "Open side up, 2 walls, 10% infill. Deeper: catches cards pushed off the end of the track."),
-    "bin":             (bin_box, 2, "PLA", "Open side up, 2 walls, 10% infill. Big front window + a fill mark every 100 cards. ~5 h each."),
+    "bin":             (bin_box, 3, "PLA", "Open side up, 2 walls, 10% infill. Big front window + a fill mark every 100 cards. ~5 h each."),
     "end_side_front":  (lambda: end_side(-1), 1, "PETG", ""),
     "end_side_back":   (lambda: end_side(1), 1, "PETG", ""),
     "end_cap":         (end_cap, 1, "PETG", ""),
+    "end_ramp":        (end_ramp, 1, "PETG", "Ramp face DOWN on the smooth side of the plate (slick), tree supports under the flange."),
     "electronics_tray":(electronics_tray, 1, "PETG", "Flat."),
     "bay_cover":       (bay_cover, 1, "PLA matte black", "Flat, outside face down."),
     "psu_cradle":      (psu_cradle, 2, "PETG", "On its back."),
@@ -849,10 +869,7 @@ def placed():
         P[f"bin_side_front_{i}"] = bin_module_side(-1).translate((x0, 0, 0))
         P[f"door_{i}"] = door().translate((x0 + 5.5, 0, PATH))
     for i, xb in enumerate(BIN_X):
-        if i < 2:
-            P[f"bin_{i}"] = bin_box().translate((xb, BIN_Y, 0.0))
-        else:   # end bin catches cards pushed off the end (centred), front lined up with the others
-            P[f"bin_{i}"] = bin_box(depth=END_BIN_D).translate((xb, END_BIN_Y, 0.0))
+        P[f"bin_{i}"] = bin_box().translate((xb, BIN_Y, 0.0))
     P["electronics_tray"] = electronics_tray().translate((8.5, 0, RAIL_Z + 17.2))
     P["bay_cover"] = bay_cover().translate((7, -63, RAIL_Z + 6))
     for xc in (PSU_X0 + 8, PSU_X0 + PSU_L - 26):
@@ -870,6 +887,7 @@ def placed():
     P["end_side_front"] = end_side(-1).translate((xe, 0, 0))
     P["end_side_back"] = end_side(1).translate((xe, 0, 0))
     P["end_cap"] = end_cap().translate((xe + PITCH, 0, 0))
+    P["end_ramp"] = end_ramp().translate((xe, 0, 0))
     for k, xj in enumerate((BIN_X[0] - PITCH / 2, BIN_X[1] - PITCH / 2, BIN_X[1] + PITCH / 2)):
         P[f"tie_bar_{k}"] = tie_bar().translate((xj, 0, 0))
     return P

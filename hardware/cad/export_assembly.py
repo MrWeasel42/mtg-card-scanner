@@ -43,7 +43,7 @@ for s in (-1, 1):
 put("stack", box(TOWER_X0 + 0.7, TOWER_X0 + 88.7, -31.5, 31.5, PATH, PATH + 120), "stack")
 put("card_scan", box(SCAN_X - 44, SCAN_X + 44, -31.5, 31.5, PATH, PATH + 0.6), "card")
 put("card_bin1", box(BIN_X[0] - 44, BIN_X[0] + 44, -31.5, 31.5, PATH, PATH + 0.6), "card")
-BY = [BIN_Y, BIN_Y, END_BIN_Y]
+BY = [BIN_Y, BIN_Y, BIN_Y]
 for i, h in enumerate((60, 25, 90)):
     put(f"cards_in_bin{i}", box(BIN_X[i] - 44, BIN_X[i] + 44, BY[i] - 31.5, BY[i] + 31.5, 2, 2 + h * 0.3), "stack")
 # the 7 in display in its cradle (picture only)

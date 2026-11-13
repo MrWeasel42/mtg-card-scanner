@@ -137,7 +137,11 @@ for i, xb in enumerate(BIN_X[:2]):
     check(f"Bin {i+1} door (with lever) opened 60 deg vs tie bars + walls", leafd,
           pr(*[k for k in P if k.startswith("tie_bar")], f"bin_side_front_{i}"), 0.4, "0.5 mm end gap to the joint bridges")
     check(f"Bin {i+1} vs its module (posts, back wall, sensor mount)", P[f"bin_{i}"], pr(f"bin_side_back_{i}", f"bin_side_front_{i}"), 0.8, "slides out the front between the 2.5 mm posts")
-check("End bin vs end module walls, posts, end cap", P["bin_2"], pr("end_side_front", "end_side_back", "end_cap"), 0.8)
+check("End bin vs end module walls, posts, end cap, ramp", P["bin_2"], pr("end_side_front", "end_side_back", "end_cap", "end_ramp"), 0.8)
+check("End ramp vs end module walls and end cap", P["end_ramp"], pr("end_side_front", "end_cap"), 0.5, "flange screws up under the back strip")
+rb = P["end_ramp"].val().BoundingBox()
+checks.append(dict(label="End ramp low edge above the end bin (same as an open door)", overlap=0, gap=round(rb.zmin - 135.0, 1), need=3.0,
+                   ok=rb.zmin - 135.0 >= 3.0, note=f"low edge at Y {rb.ymin:.1f}; bin back wall at Y -1"))
 # --- bins forward: card landing room, second rail, level sensors
 rail2 = box(BIN_X[0] - PITCH / 2, BIN_X[1] + PITCH / 2, RAIL2_Y - 10, RAIL2_Y + 10, 0, RAIL_Z)
 check("Second back rail (Y +24) vs bins", rail2, pr("bin_0", "bin_1", "bin_2"), 2.0, "runs under the doors behind the bins; stops at the end module")

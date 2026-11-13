@@ -352,7 +352,7 @@
   "note": "slides out the front between the 2.5 mm posts"
  },
  {
-  "label": "End bin vs end module walls, posts, end cap",
+  "label": "End bin vs end module walls, posts, end cap, ramp",
   "overlap": 0.0,
   "gap": 1.0,
   "need": 0.8,
@@ -360,9 +360,25 @@
   "note": ""
  },
  {
+  "label": "End ramp vs end module walls and end cap",
+  "overlap": 0.0,
+  "gap": 5.0,
+  "need": 0.5,
+  "ok": true,
+  "note": "flange screws up under the back strip"
+ },
+ {
+  "label": "End ramp low edge above the end bin (same as an open door)",
+  "overlap": 0,
+  "gap": 7.0,
+  "need": 3.0,
+  "ok": true,
+  "note": "low edge at Y -2.7; bin back wall at Y -1"
+ },
+ {
   "label": "Second back rail (Y +24) vs bins",
   "overlap": 0.0,
-  "gap": 3.5,
+  "gap": 13.0,
   "need": 2.0,
   "ok": true,
   "note": "runs under the doors behind the bins; stops at the end module"
