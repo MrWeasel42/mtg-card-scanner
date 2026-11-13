@@ -262,7 +262,7 @@ public partial class IdentifyViewModel : ObservableObject
             bool newFile = !File.Exists(_logPath);
             using var w = new StreamWriter(_logPath, append: true);
             if (newFile)
-                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason,list_symbol_score,shooting_star_score,outline_method");
+                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason,list_symbol_score,shooting_star_score,outline_method,detail_pick,detail_margin");
             var top = item.Result?.Best;
             var second = item.Result?.Candidates.Skip(1).FirstOrDefault();
             var right = rank > 0 ? item.Result!.Candidates[rank - 1] : null;
@@ -286,6 +286,7 @@ public partial class IdentifyViewModel : ObservableObject
                 (item.Result?.ListSymbolScore ?? 0).ToString("0.000", CultureInfo.InvariantCulture),
                 (item.Result?.ShootingStarScore ?? 0).ToString("0.000", CultureInfo.InvariantCulture),
                 item.Result?.OutlineMethod ?? "",
+                item.DetailPick, item.DetailMargin.ToString("0.000", CultureInfo.InvariantCulture),
             ];
             w.WriteLine(string.Join(",", cols.Select(Csv)));
         }

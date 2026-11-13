@@ -203,6 +203,8 @@
                       </Border>
                     </StackPanel>
                     <TextBlock Classes="muted" FontSize="12" Text="{Binding ReadText}" TextWrapping="Wrap" />
+                    <TextBlock Classes="teal" FontSize="12" Text="{Binding DetailNote, StringFormat='🔎 {0}'}" TextWrapping="Wrap"
+                               IsVisible="{Binding DetailNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
                       <TextBlock Text="Finish:" VerticalAlignment="Center" FontWeight="SemiBold" />
                       <ComboBox ItemsSource="{Binding FinishOptions}" SelectedItem="{Binding SelectedFinish}"

@@ -378,6 +378,39 @@ public class WhiteBorderTests
     }
 }
 
+public class DetailCompareTests
+{
+    // Two "editions" of the same card: identical art, but the artist line sits at a different height
+    // (like Unlimited vs Revised).
+    private static Mat Edition(int illusY)
+    {
+        var m = new Mat(1360, 976, MatType.CV_8UC3, new Scalar(220, 220, 220));
+        Cv2.Rectangle(m, new Rect(60, 120, 856, 600), new Scalar(40, 90, 160), -1);          // art
+        Cv2.Rectangle(m, new Rect(70, 860, 836, 300), new Scalar(200, 160, 120), -1);        // text box
+        Cv2.PutText(m, "Counters target spell", new Point(120, 920), HersheyFonts.HersheySimplex, 1.4, Scalar.Black, 3);
+        Cv2.PutText(m, "Illus. Mark Poole", new Point(80, illusY), HersheyFonts.HersheySimplex, 1.1, Scalar.Black, 2);
+        Cv2.Rectangle(m, new Rect(860, 760, 50, 50), Scalar.Black, 4);                       // set symbol
+        return m;
+    }
+
+    [Fact]
+    public void Prefers_the_edition_whose_layout_matches()
+    {
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        using var unlimited = Edition(1245);
+        using var revised = Edition(1280);
+        Cv2.ImWrite(Path.Combine(dir, "u.png"), unlimited);
+        Cv2.ImWrite(Path.Combine(dir, "r.png"), revised);
+        using var photo = revised.Clone();
+        using var noise = new Mat(photo.Size(), photo.Type());
+        Cv2.Randn(noise, Scalar.All(0), Scalar.All(8));
+        Cv2.Add(photo, noise, photo);
+        Cv2.ImEncode(".jpg", photo, out var jpeg);
+        var s = DetailCompare.Score(jpeg, [("u", Path.Combine(dir, "u.png")), ("r", Path.Combine(dir, "r.png"))]);
+        Assert.Equal("r", s.OrderByDescending(x => x.Score).First().Id);
+    }
+}
+
 public class FinishTests
 {
     private static CardInfo Card(string finishes, string special = "") =>

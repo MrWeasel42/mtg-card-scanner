@@ -3,6 +3,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CardScanner.Core.Catalog;
 using CardScanner.Core.Recognition;
+using CardScanner.Core.Vision;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -59,12 +60,69 @@ public partial class ResultItemViewModel : ObservableObject
     /// <summary>Whether the current filter tab shows this result.</summary>
     [ObservableProperty] private bool _isShown = true;
 
-    public bool IsPinned => Result?.Pinned == true;
+    // ---- Detail check: close-up comparison against each look-alike printing's catalog image ----
+
+    /// <summary>Pinned by the detail check (set symbol, text box, artist line) after the images loaded.</summary>
+    private bool _detailPinned;
+    private string? _detailNote;
+    public string DetailPick { get; private set; } = "";
+    public double DetailMargin { get; private set; }
+
+    public bool IsPinned => Result?.Pinned == true || _detailPinned;
+    private string? PinReason => Result?.Pinned == true ? Result.PinReason : _detailPinned ? "card details (set symbol, text box, artist line)" : null;
     /// <summary>Pins that lean on more than a printed set code: worth a closer look when spot-checking.</summary>
-    public bool IsSoftPin => IsPinned && Result?.PinReason is { } r && !r.StartsWith("name + set");
-    public string PinText => IsSoftPin ? $"📌 Pinned by {Result!.PinReason}" : "📌 Pinned: name + set + number agree";
-    public bool IsFlagged => Result?.Flagged == true;
-    public string? FlagReason => Result?.FlagReason;
+    public bool IsSoftPin => IsPinned && PinReason is { } r && !r.StartsWith("name + set");
+    public string PinText => IsSoftPin ? $"📌 Pinned by {PinReason}" : "📌 Pinned: name + set + number agree";
+    public string? FlagReason => _detailPinned ? null : Result?.FlagReason;
+    public bool IsFlagged => FlagReason is not null;
+    public string? DetailNote => _detailNote;
+
+    /// <summary>
+    /// Once the candidates' catalog images are on disk: compare the photo up close against every printing
+    /// of the top card. A clear lead moves that printing to the top; a big lead pins it. Never overrides a
+    /// printing pinned by its printed set code and number.
+    /// </summary>
+    private async Task RunDetailCheckAsync()
+    {
+        if (Result is null || Top is null || Verdict != Verdict.None) return;
+        var group = Candidates.Where(c => c.Card.Name == Top.Card.Name && c.ImagePath is not null).ToList();
+        if (group.Count < 2) return;
+        var jpeg = Result.CardImageJpeg;
+        var scores = await Task.Run(() => DetailCompare.Score(jpeg, group.Select(c => (c.Card.Id, c.ImagePath!))));
+        if (scores.Count < 2 || Verdict != Verdict.None) return;
+        var ranked = scores.OrderByDescending(x => x.Score).ToList();
+        var pick = group.First(c => c.Card.Id == ranked[0].Id);
+        DetailMargin = ranked[0].Score - ranked[1].Score;
+        DetailPick = $"{pick.Card.SetCode} {pick.Card.CollectorNumber}";
+        bool printedPin = Result.Pinned && Result.PinReason?.StartsWith("name + set + number") == true;
+        if (printedPin || DetailMargin < DetailCompare.ReorderMargin) return;
+
+        if (pick != Top)
+        {
+            var order = new List<CandidateViewModel> { pick };
+            order.AddRange(Candidates.Where(c => c != pick));
+            Rebuild(order);
+            _detailNote = $"Close-up check preferred {pick.Card.SetCode.ToUpperInvariant()} #{pick.Card.CollectorNumber} over the picture match.";
+        }
+        if (DetailMargin >= DetailCompare.PinMargin && !Result.Pinned) _detailPinned = true;
+        OnPropertyChanged(string.Empty);   // everything about this card may have changed
+        RefreshFinish();
+        _owner.ApplyFilter();
+    }
+
+    /// <summary>Re-number the candidates in a new order, keeping their pictures.</summary>
+    private void Rebuild(List<CandidateViewModel> order)
+    {
+        var old = order.ToList();
+        Candidates.Clear(); Others.Clear();
+        int rank = 1;
+        foreach (var o in old)
+        {
+            var vm = new CandidateViewModel(o.Source, rank++, this) { ImagePath = o.ImagePath, Thumbnail = o.Thumbnail };
+            Candidates.Add(vm);
+            if (vm.Rank > 1) Others.Add(vm);
+        }
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(VerdictText), nameof(IsReviewed), nameof(VerdictBrush))]
@@ -158,11 +216,13 @@ public partial class ResultItemViewModel : ObservableObject
 
     public async Task LoadThumbnailsAsync(ThumbnailCache cache)
     {
-        foreach (var c in Candidates)
+        foreach (var c in Candidates.ToList())
         {
             c.ImagePath = await cache.GetPathAsync(c.Card);
             c.Thumbnail = Images.SmallFromFile(c.ImagePath, 360);
         }
+        try { await RunDetailCheckAsync(); }
+        catch (Exception ex) { Log.Error($"Detail check {Photo}", ex); }
     }
 
     internal void Choose(CandidateViewModel? chosen, Verdict? verdict = null)
@@ -205,6 +265,7 @@ public partial class ResultItemViewModel : ObservableObject
 
 public partial class CandidateViewModel(Candidate candidate, int rank, ResultItemViewModel owner) : ObservableObject
 {
+    public Candidate Source { get; } = candidate;
     private Bitmap? _fullImage;
 
     public ResultItemViewModel Owner { get; } = owner;
