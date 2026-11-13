@@ -121,13 +121,15 @@
                 Command="{Binding AcceptGoodCommand}" IsEnabled="{Binding CanAcceptGood}"
                 ToolTip.Tip="Marks every card in the Pinned tab as the correct printing, so they're logged too." />
       </WrapPanel>
+      <TextBox Text="{Binding SearchText}" Watermark="🔍 Search this tab: card name, set, or scan number" MaxWidth="520"
+               HorizontalAlignment="Left" Width="520" />
       <TextBlock Classes="muted" Text="{Binding EmptyFilterText}" TextWrapping="Wrap"
                  IsVisible="{Binding EmptyFilterText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
     </StackPanel>
 
     <!-- Results -->
     <ScrollViewer Grid.Row="4" Padding="0,0,6,16">
-      <ItemsControl ItemsSource="{Binding Results}">
+      <ItemsControl ItemsSource="{Binding Shown}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
             <StackPanel />
@@ -152,7 +154,7 @@
                       <Image Source="{Binding CardImage}" Stretch="Uniform" />
                     </Border>
                   </Button>
-                  <TextBlock Classes="muted" FontSize="11" Text="{Binding Photo}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Classes="muted" FontSize="11" Text="{Binding ScanLabel}" ToolTip.Tip="{Binding Photo}" TextTrimming="CharacterEllipsis" />
                   <Button Content="{Binding FlipLabel}" FontSize="12" Padding="10,4" IsVisible="{Binding CanFlip}"
                           Command="{Binding FlipCommand}"
                           ToolTip.Tip="Card upside down? Turn it around and identify it again" />
@@ -275,74 +277,138 @@
 
   <!-- Big side-by-side compare view -->
   <Grid Name="CompareOverlay" IsVisible="{Binding IsComparing}" Background="#E6050810">
-    <Grid DataContext="{Binding Compare}" RowDefinitions="Auto,*,Auto" Margin="28,18">
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Spacing="4">
-          <StackPanel Orientation="Horizontal" Spacing="12">
-            <TextBlock Classes="teal" FontSize="12" FontWeight="SemiBold" Text="{Binding QueueText}" VerticalAlignment="Center" />
-            <TextBlock Classes="muted" FontSize="12" Text="{Binding Counter}" VerticalAlignment="Center" />
-          </StackPanel>
-          <!-- What the scanner concluded about this card, so you don't have to leave this view -->
-          <WrapPanel DataContext="{Binding Item}">
-            <Border Classes="pill" Background="#1A22C55E" BorderBrush="#22C55E" IsVisible="{Binding IsPinned}" Margin="0,0,8,4">
-              <TextBlock Text="{Binding PinText}" FontSize="12" Foreground="#4ADE80" />
-            </Border>
-            <Border Classes="pill" Background="#1A2DD4BF" BorderBrush="#2DD4BF" IsVisible="{Binding IsSoftPin}" Margin="0,0,8,4">
-              <TextBlock Text="worth a glance" FontSize="12" Foreground="#5EEAD4" />
-            </Border>
-            <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding IsFlagged}" Margin="0,0,8,4">
-              <TextBlock Text="{Binding FlagReason, StringFormat='⚠ Needs a look: {0}'}" FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap" MaxWidth="900" />
-            </Border>
-            <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding FinishUnsure}" Margin="0,0,8,4">
-              <TextBlock Text="{Binding FinishNote, StringFormat='✨ Finish: {0}'}" FontSize="12" Foreground="#FBBF24" />
-            </Border>
-          </WrapPanel>
-          <TextBlock DataContext="{Binding Item}" Classes="teal" FontSize="12" Text="{Binding DetailNote, StringFormat='🔎 {0}'}"
-                     IsVisible="{Binding DetailNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" TextWrapping="Wrap" />
-          <TextBlock DataContext="{Binding Item}" Classes="muted" FontSize="11" Text="{Binding ReadText}" TextWrapping="Wrap" MaxWidth="1100" HorizontalAlignment="Left" />
-        </StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
-          <Button Content="✕ Close" Command="{Binding CloseCommand}" />
-        </StackPanel>
-      </Grid>
+    <Grid DataContext="{Binding Compare}" RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*,Auto" Margin="28,18">
 
-      <Grid Grid.Row="1" ColumnDefinitions="*,*" Margin="0,14">
-        <DockPanel Margin="0,0,20,0">
+      <!-- Top bar: layout choice and Close (always); queue + tags centered in the "Tags on top" layout -->
+      <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="12" VerticalAlignment="Top"
+                  IsVisible="{Binding IsTopLayout}">
+        <TextBlock Classes="teal" FontSize="12" FontWeight="SemiBold" Text="{Binding QueueText}" VerticalAlignment="Center" />
+        <TextBlock Classes="muted" FontSize="12" Text="{Binding Counter}" VerticalAlignment="Center" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Spacing="4" MaxWidth="1100" HorizontalAlignment="Center" Margin="0,22,0,0"
+                  IsVisible="{Binding IsTopLayout}">
+            <WrapPanel DataContext="{Binding Item}" HorizontalAlignment="Center">
+              <Border Classes="pill" Background="#1A22C55E" BorderBrush="#22C55E" IsVisible="{Binding IsPinned}" Margin="0,0,8,6">
+                <TextBlock Text="{Binding PinText}" FontSize="12" Foreground="#4ADE80" TextWrapping="Wrap" />
+              </Border>
+              <Border Classes="pill" Background="#1A2DD4BF" BorderBrush="#2DD4BF" IsVisible="{Binding IsSoftPin}" Margin="0,0,8,6">
+                <TextBlock Text="worth a glance" FontSize="12" Foreground="#5EEAD4" />
+              </Border>
+              <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding IsFlagged}" Margin="0,0,8,6">
+                <TextBlock Text="{Binding FlagReason, StringFormat='⚠ Needs a look: {0}'}" FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap" MaxWidth="900" />
+              </Border>
+              <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding FinishUnsure}" Margin="0,0,8,6">
+                <TextBlock Text="{Binding FinishNote, StringFormat='✨ Finish: {0}'}" FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap" MaxWidth="900" />
+              </Border>
+            </WrapPanel>
+            <TextBlock DataContext="{Binding Item}" Classes="teal" FontSize="12" Text="{Binding DetailNote, StringFormat='🔎 {0}'}" TextAlignment="Center"
+                       IsVisible="{Binding DetailNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" TextWrapping="Wrap" />
+            <TextBlock DataContext="{Binding Item}" Classes="muted" FontSize="11" Text="{Binding ReadText}" TextWrapping="Wrap" TextAlignment="Center" />
+      </StackPanel>
+      <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Top">
+        <ComboBox ItemsSource="{Binding LayoutOptions}" SelectedItem="{Binding LayoutChoice}" FontSize="12" MinWidth="160"
+                  ToolTip.Tip="Where the card info and buttons go. Remembered next time." />
+        <Button Content="✕ Close" Command="{Binding CloseCommand}" />
+      </StackPanel>
+
+      <!-- Side panel (left or right): queue, scan number, tags, what was read, and all the buttons -->
+      <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="{Binding PanelColumn}" IsVisible="{Binding IsPanelLayout}"
+              Width="330" Margin="0,14,0,0" Padding="18" CornerRadius="14" Background="#0B1220" BorderBrush="#1E293B" BorderThickness="1">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Bottom" Spacing="8">
+            <Button Classes="accent" Content="✓ This is the one" Command="{Binding PickThisCommand}" HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center" Padding="0,10" ToolTip.Tip="Marks this printing and moves to the next card (Enter)" />
+            <UniformGrid Columns="2">
+              <Button Content="◀ Previous option" Command="{Binding PreviousCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,4,0" />
+              <Button Content="Next option ▶" Command="{Binding NextCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="4,0,0,0" />
+            </UniformGrid>
+            <UniformGrid Columns="2">
+              <Button Content="◀ Last card" Command="{Binding LastCardCommand}" IsEnabled="{Binding CanGoBack}" FontSize="12"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,0,4,0"
+                      ToolTip.Tip="Back to the card before this one, to fix a mis-click (Backspace)" />
+              <Button Content="Skip card ⏭" Command="{Binding SkipCommand}" FontSize="12" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                      Margin="4,0,0,0" ToolTip.Tip="Leave this one for later and look at the next card (S)" />
+            </UniformGrid>
+            <UniformGrid Columns="2">
+              <Button Content="{Binding ZoomLabel}" Command="{Binding ToggleZoomCommand}" FontSize="12" HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Center" Margin="0,0,4,0"
+                      ToolTip.Tip="Show just the bottom of both cards (Z). Hovering over a card magnifies it; M turns the magnifier on/off." />
+              <Button Content="{Binding FlipLabel}" Command="{Binding FlipCommand}" FontSize="12" IsEnabled="{Binding CanFlip}"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="4,0,0,0"
+                      ToolTip.Tip="Card upside down? Identify it again turned around (F)" />
+            </UniformGrid>
+            <Button Content="≈ Right card, printing not listed" Command="{Binding NameOnlyCommand}" FontSize="12"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+            <Button Content="✗ Wrong card" Command="{Binding WrongCardCommand}" FontSize="12"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+          </StackPanel>
+          <ScrollViewer>
+            <StackPanel Spacing="10">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Classes="teal" FontSize="12" FontWeight="SemiBold" Text="{Binding QueueText}" />
+                <TextBlock Classes="muted" FontSize="12" Text="{Binding Counter}" />
+              </StackPanel>
+              <TextBlock Text="{Binding PhotoName}" FontSize="16" Classes="muted" />
+              <Border Height="1" Background="#1E293B" />
+            <WrapPanel DataContext="{Binding Item}" HorizontalAlignment="Left">
+              <Border Classes="pill" Background="#1A22C55E" BorderBrush="#22C55E" IsVisible="{Binding IsPinned}" Margin="0,0,8,6">
+                <TextBlock Text="{Binding PinText}" FontSize="12" Foreground="#4ADE80" TextWrapping="Wrap" />
+              </Border>
+              <Border Classes="pill" Background="#1A2DD4BF" BorderBrush="#2DD4BF" IsVisible="{Binding IsSoftPin}" Margin="0,0,8,6">
+                <TextBlock Text="worth a glance" FontSize="12" Foreground="#5EEAD4" />
+              </Border>
+              <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding IsFlagged}" Margin="0,0,8,6">
+                <TextBlock Text="{Binding FlagReason, StringFormat='⚠ Needs a look: {0}'}" FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap" MaxWidth="280" />
+              </Border>
+              <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding FinishUnsure}" Margin="0,0,8,6">
+                <TextBlock Text="{Binding FinishNote, StringFormat='✨ Finish: {0}'}" FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap" MaxWidth="280" />
+              </Border>
+            </WrapPanel>
+            <TextBlock DataContext="{Binding Item}" Classes="teal" FontSize="12" Text="{Binding DetailNote, StringFormat='🔎 {0}'}" TextAlignment="Left"
+                       IsVisible="{Binding DetailNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" TextWrapping="Wrap" />
+            <TextBlock DataContext="{Binding Item}" Classes="muted" FontSize="11" Text="{Binding ReadText}" TextWrapping="Wrap" TextAlignment="Left" />
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+
+      <!-- The two cards, side by side with a fixed gap; labels centered under each card -->
+      <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,120,*" Margin="24,14">
+        <DockPanel HorizontalAlignment="Right">
           <TextBlock DockPanel.Dock="Top" Classes="muted" FontSize="12" FontWeight="SemiBold" LetterSpacing="1"
                      Text="YOUR PHOTO" HorizontalAlignment="Center" Margin="0,0,0,6" />
-          <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,8,0,0" Spacing="6">
-            <TextBlock Text="{Binding PhotoName}" FontSize="14" Classes="muted" HorizontalAlignment="Center" />
+          <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,8,0,0" Spacing="4">
+            <TextBlock Text="{Binding PhotoName}" FontSize="14" Classes="muted" HorizontalAlignment="Center" IsVisible="{Binding IsTopLayout}" />
             <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" DataContext="{Binding Item}">
               <TextBlock Text="Finish:" VerticalAlignment="Center" FontWeight="SemiBold" />
               <ComboBox ItemsSource="{Binding FinishOptions}" SelectedItem="{Binding SelectedFinish}"
                         IsEnabled="{Binding HasFinishChoice}" MinWidth="150" />
-              <TextBlock Text="{Binding FinishNote}" VerticalAlignment="Center" FontSize="12" Classes="muted" />
             </StackPanel>
+            <TextBlock DataContext="{Binding Item}" Text="{Binding FinishNote}" FontSize="12" Classes="muted" HorizontalAlignment="Center" />
           </StackPanel>
           <Panel Name="LeftPane" Background="Transparent">
-            <!-- Pushed toward the middle so the two cards sit close together -->
-            <Image Name="LeftImg" Source="{Binding LeftShown}" Stretch="Uniform" HorizontalAlignment="Right" />
+            <Image Name="LeftImg" Source="{Binding LeftShown}" Stretch="Uniform" />
             <Canvas IsHitTestVisible="False">
-              <Border Name="LeftLens" Width="300" Height="300" ClipToBounds="True" IsVisible="False" CornerRadius="12"
+              <Border Name="LeftLens" Width="360" Height="360" ClipToBounds="True" IsVisible="False" CornerRadius="12"
                       BorderBrush="{StaticResource TealBrush}" BorderThickness="2" Background="#000" BoxShadow="0 6 18 0 #90000000">
                 <Canvas><Image Name="LeftLensImg" Source="{Binding LeftShown}" Stretch="Fill" /></Canvas>
               </Border>
             </Canvas>
           </Panel>
         </DockPanel>
-        <DockPanel Grid.Column="1" Margin="20,0,0,0">
+        <DockPanel Grid.Column="2" HorizontalAlignment="Left">
           <TextBlock DockPanel.Dock="Top" Classes="teal" FontSize="12" FontWeight="SemiBold" LetterSpacing="1"
-                     Text="CATALOG PRINTING" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                     Text="REFERENCE IMAGE" HorizontalAlignment="Center" Margin="0,0,0,6" />
           <!-- Which printing this is, right under the picture -->
           <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,8,0,0" Spacing="2">
-            <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" />
-            <TextBlock Text="{Binding Subtitle}" FontSize="16" HorizontalAlignment="Center" TextAlignment="Center" />
-            <TextBlock Classes="gold" Text="{Binding Extra}" FontSize="15" HorizontalAlignment="Center" TextAlignment="Center" />
+            <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Subtitle}" FontSize="16" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+            <TextBlock Classes="gold" Text="{Binding Extra}" FontSize="15" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
           </StackPanel>
           <Panel Name="RightPane" Background="Transparent">
-            <Image Name="RightImg" Source="{Binding RightShown}" Stretch="Uniform" HorizontalAlignment="Left" />
+            <Image Name="RightImg" Source="{Binding RightShown}" Stretch="Uniform" />
             <Canvas IsHitTestVisible="False">
-              <Border Name="RightLens" Width="300" Height="300" ClipToBounds="True" IsVisible="False" CornerRadius="12"
+              <Border Name="RightLens" Width="360" Height="360" ClipToBounds="True" IsVisible="False" CornerRadius="12"
                       BorderBrush="{StaticResource TealBrush}" BorderThickness="2" Background="#000" BoxShadow="0 6 18 0 #90000000">
                 <Canvas><Image Name="RightLensImg" Source="{Binding RightShown}" Stretch="Fill" /></Canvas>
               </Border>
@@ -351,8 +417,11 @@
         </DockPanel>
       </Grid>
 
-      <StackPanel Grid.Row="2" Spacing="10" HorizontalAlignment="Center">
+      <!-- Buttons along the bottom ("Tags on top" layout) -->
+      <StackPanel Grid.Row="2" Grid.Column="1" Spacing="10" HorizontalAlignment="Center" IsVisible="{Binding IsTopLayout}">
         <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+          <Button Content="◀ Last card" Command="{Binding LastCardCommand}" IsEnabled="{Binding CanGoBack}"
+                  ToolTip.Tip="Back to the card before this one, to fix a mis-click (Backspace)" />
           <Button Content="{Binding ZoomLabel}" Command="{Binding ToggleZoomCommand}"
                   ToolTip.Tip="Show just the bottom of both cards (Z). Hovering over a card magnifies it; M turns the magnifier on/off." />
           <Button Content="◀ Previous option" Command="{Binding PreviousCommand}" />

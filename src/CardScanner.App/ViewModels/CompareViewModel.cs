@@ -33,9 +33,13 @@ public partial class CompareViewModel : ObservableObject
     /// still waiting in the queue, or closes the view when there's none.</param>
     public CompareViewModel(ResultItemViewModel item, CandidateViewModel candidate, Action close,
         Action<CompareViewModel> advance, bool bottomOnly = false, string queueText = "",
-        Func<CompareViewModel, Task>? flip = null)
+        Func<CompareViewModel, Task>? flip = null, Action<CompareViewModel>? back = null,
+        CompareLayout layout = CompareLayout.Left, Action<CompareLayout>? saveLayout = null)
     {
         _flip = flip;
+        _back = back;
+        _layout = layout;
+        _saveLayout = saveLayout;
         Item = item;
         _candidate = candidate;
         _close = close;
@@ -46,7 +50,33 @@ public partial class CompareViewModel : ObservableObject
 
     /// <summary>e.g. "12 cards left to verify".</summary>
     public string QueueText { get; }
-    public string PhotoName => Item.Photo;
+    public string PhotoName => Item.ScanLabel;
+
+    // ---- Layout: info + buttons in a panel on the left (default), on the right, or across the top ----
+    private readonly Action<CompareLayout>? _saveLayout;
+    public static IReadOnlyList<string> LayoutOptions { get; } = ["Panel on the left", "Panel on the right", "Tags on top"];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsTopLayout), nameof(IsPanelLayout), nameof(PanelColumn), nameof(LayoutChoice))]
+    private CompareLayout _layout;
+
+    partial void OnLayoutChanged(CompareLayout value) => _saveLayout?.Invoke(value);
+
+    public bool IsTopLayout => Layout == CompareLayout.Top;
+    public bool IsPanelLayout => !IsTopLayout;
+    public int PanelColumn => Layout == CompareLayout.Right ? 2 : 0;
+    public string LayoutChoice
+    {
+        get => LayoutOptions[Layout switch { CompareLayout.Right => 1, CompareLayout.Top => 2, _ => 0 }];
+        set => Layout = Array.IndexOf(LayoutOptions.ToArray(), value) switch { 1 => CompareLayout.Right, 2 => CompareLayout.Top, _ => CompareLayout.Left };
+    }
+
+    // ---- Last card: back to the previous card to fix a mis-click ----
+    private readonly Action<CompareViewModel>? _back;
+    public bool CanGoBack => _back is not null;
+
+    [RelayCommand]
+    private void LastCard() => _back?.Invoke(this);
 
     public string Title => Candidate.Name;
     public string Subtitle => Candidate.SetLabel;

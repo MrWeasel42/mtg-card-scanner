@@ -48,6 +48,7 @@ public partial class IdentifyView : UserControl
             case Key.M: _magnifier = !_magnifier; if (!_magnifier) HideLenses(); e.Handled = true; break;
             case Key.S: c.SkipCommand.Execute(null); e.Handled = true; break;
             case Key.F: c.FlipCommand.Execute(null); e.Handled = true; break;
+            case Key.Back when e.Source is not TextBox: c.LastCardCommand.Execute(null); e.Handled = true; break;
         }
     }
 
@@ -86,7 +87,7 @@ public partial class IdentifyView : UserControl
 
     // ---- Magnifier: a lens that follows the mouse over either card, showing the same spot on both ----
 
-    private const double LensZoom = 3.0, LensSize = 300;
+    private const double LensZoom = 2.5, LensSize = 360;
     private bool _magnifier = true;
 
     private void OnComparePointerMoved(object? sender, PointerEventArgs e)
@@ -121,10 +122,14 @@ public partial class IdentifyView : UserControl
         r = r.Translate(new Vector(offset.X, offset.Y));
         lensImg.Width = r.Width * LensZoom;
         lensImg.Height = r.Height * LensZoom;
-        Canvas.SetLeft(lensImg, LensSize / 2 - u * lensImg.Width);
-        Canvas.SetTop(lensImg, LensSize / 2 - v * lensImg.Height);
-        Canvas.SetLeft(lens, r.X + u * r.Width - LensSize / 2);
-        Canvas.SetTop(lens, r.Y + v * r.Height - LensSize / 2);
+        // The lens stays over the card (slides back near an edge); the magnified spot stays under the pointer.
+        double px = r.X + u * r.Width, py = r.Y + v * r.Height;
+        double left = Math.Clamp(px - LensSize / 2, r.X, Math.Max(r.X, r.Right - LensSize));
+        double top = Math.Clamp(py - LensSize / 2, r.Y, Math.Max(r.Y, r.Bottom - LensSize));
+        Canvas.SetLeft(lensImg, (px - left) - u * lensImg.Width);
+        Canvas.SetTop(lensImg, (py - top) - v * lensImg.Height);
+        Canvas.SetLeft(lens, left);
+        Canvas.SetTop(lens, top);
         lens.IsVisible = true;
     }
 

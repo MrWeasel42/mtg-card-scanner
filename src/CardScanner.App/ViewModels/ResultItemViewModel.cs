@@ -19,6 +19,23 @@ public partial class ResultItemViewModel : ObservableObject
 
     public RecognitionResult? Result { get; }
     public string Photo { get; }
+    /// <summary>Order the card came in (1 = first card scanned this session). Shown as "Scan 0001".</summary>
+    public int ScanNumber { get; set; }
+    public string ScanLabel => ScanNumber > 0 ? $"Scan {ScanNumber:0000}" : Photo;
+    /// <summary>When you marked it: the Done tab lists the most recent first.</summary>
+    public DateTime? VerifiedAt { get; set; }
+    public CandidateViewModel? Chosen => Candidates.FirstOrDefault(c => c.IsChosen);
+
+    /// <summary>Search box: card name (any candidate), set code / name, scan number or photo file name.</summary>
+    internal bool MatchesSearch(string query)
+    {
+        var q = query.Trim();
+        if (q.Length == 0) return true;
+        bool Has(string? s) => s is not null && s.Contains(q, StringComparison.OrdinalIgnoreCase);
+        if (Has(Photo) || Has(ScanLabel) || ScanNumber.ToString("0000").Contains(q.TrimStart('#'))) return true;
+        var shown = Chosen ?? Top;
+        return Candidates.Any(c => Has(c.Card.Name)) || Has(shown?.Card.SetCode) || Has(shown?.Card.SetLabel);
+    }
     /// <summary>The straightened card as JPEG: from the outline at first, replaced by the overlay-straightened
     /// version once the top match's catalog image is available.</summary>
     private byte[]? _cardJpeg;
@@ -259,6 +276,7 @@ public partial class ResultItemViewModel : ObservableObject
     internal void Choose(CandidateViewModel? chosen, Verdict? verdict = null)
     {
         foreach (var c in Candidates) c.IsChosen = c == chosen;
+        VerifiedAt = DateTime.Now;
         Verdict = verdict ?? (chosen is null ? Verdict.NotListed : chosen.Rank == 1 ? Verdict.TopCorrect : Verdict.LowerCorrect);
         OnPropertyChanged(nameof(VerdictText));
         int rank = Verdict switch { Verdict.NameOnly => -1, _ => chosen?.Rank ?? 0 };

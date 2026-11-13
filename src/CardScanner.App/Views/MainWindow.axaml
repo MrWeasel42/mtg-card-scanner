@@ -39,7 +39,7 @@
           <Border Classes="pill" IsVisible="{Binding CatalogText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
             <TextBlock Classes="muted" FontSize="12" Text="{Binding CatalogText}" />
           </Border>
-          <Button Content="✨ New cards available — update catalog" IsVisible="{Binding UpdateAvailable}"
+          <Button Content="✨ New cards available — update database" IsVisible="{Binding UpdateAvailable}"
                   Command="{Binding UpdateCatalogCommand}" />
           <Button Classes="accent" Content="{Binding AppUpdateText}"
                   IsVisible="{Binding AppUpdateText, Converter={x:Static ObjectConverters.IsNotNull}}"

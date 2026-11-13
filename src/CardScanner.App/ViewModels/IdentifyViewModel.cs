@@ -23,6 +23,8 @@ public partial class IdentifyViewModel : ObservableObject
     private readonly ThumbnailCache _thumbs;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly string _logPath;
+    private int _scanCount;
+    private readonly UiSettings _settings;
 
     public ObservableCollection<ResultItemViewModel> Results { get; } = [];
 
@@ -36,6 +38,7 @@ public partial class IdentifyViewModel : ObservableObject
         _paths = paths;
         _thumbs = new ThumbnailCache(paths);
         _logPath = Path.Combine(paths.LogsDir, "identify_results_v4.csv");
+        _settings = UiSettings.Load(paths);
         Results.CollectionChanged += (_, _) => { OnPropertyChanged(nameof(HasResults)); ApplyFilter(); };
     }
 
@@ -63,6 +66,14 @@ public partial class IdentifyViewModel : ObservableObject
 
     partial void OnFilterChanged(ReviewFilter value) => ApplyFilter();
 
+    /// <summary>Search box above the list: filters whichever tab is open.</summary>
+    [ObservableProperty] private string _searchText = "";
+    partial void OnSearchTextChanged(string value) => ApplyFilter();
+
+    /// <summary>What the list shows: the open tab, matching the search. Done lists the most recently
+    /// marked card first so a mis-click is easy to find; the other tabs list newest scans first.</summary>
+    public ObservableCollection<ResultItemViewModel> Shown { get; } = [];
+
     [RelayCommand]
     private void SetFilter(string name) => Filter = Enum.Parse<ReviewFilter>(name);
 
@@ -79,7 +90,15 @@ public partial class IdentifyViewModel : ObservableObject
 
     internal void ApplyFilter()
     {
-        foreach (var r in Results) r.IsShown = Matches(r, Filter);
+        foreach (var r in Results) r.IsShown = Matches(r, Filter) && r.MatchesSearch(SearchText);
+        var want = Results.Where(r => r.IsShown);
+        if (Filter == ReviewFilter.Done) want = want.OrderByDescending(r => r.VerifiedAt ?? DateTime.MinValue);
+        var list = want.ToList();
+        if (!list.SequenceEqual(Shown))
+        {
+            Shown.Clear();
+            foreach (var r in list) Shown.Add(r);
+        }
         int Count(ReviewFilter f) => Results.Count(r => Matches(r, f));
         int q = Count(ReviewFilter.Queue);
         QueueLabel = $"To verify ({q})";
@@ -88,7 +107,7 @@ public partial class IdentifyViewModel : ObservableObject
         FinishLabel = $"✨ Check finish ({Count(ReviewFilter.Finish)})";
         AllLabel = $"All ({Results.Count})";
         CanAcceptGood = Count(ReviewFilter.Good) > 0;
-        EmptyFilterText = !HasResults || Count(Filter) > 0 ? "" : Filter switch
+        EmptyFilterText = !HasResults ? "" : Count(Filter) > 0 ? (Shown.Count == 0 ? $"Nothing in this tab matches “{SearchText.Trim()}”." : "") : Filter switch
         {
             ReviewFilter.Queue => "Queue's clear, nothing left to verify. 🎉 Peek at the Pinned tab if you want to double-check those.",
             ReviewFilter.Good => "No unmarked pinned cards left.",
@@ -132,6 +151,7 @@ public partial class IdentifyViewModel : ObservableObject
                     Log.Error($"Identify {file}", ex);
                     item = ResultItemViewModel.Failed(Path.GetFileName(file), ex.Message, this);
                 }
+                item.ScanNumber = ++_scanCount;
                 Results.Insert(0, item);
                 _ = item.LoadThumbnailsAsync(_thumbs);
             }
@@ -211,7 +231,7 @@ public partial class IdentifyViewModel : ObservableObject
         try
         {
             var result = await Task.Run(() => _recognizer.IdentifyFile(file, forceUpsideDown: nowUpsideDown));
-            var replacement = new ResultItemViewModel(result, this) { WasFlipped = true };
+            var replacement = new ResultItemViewModel(result, this) { WasFlipped = true, ScanNumber = item.ScanNumber };
             Results[index] = replacement;
             await replacement.LoadThumbnailsAsync(_thumbs);
             UpdateScore();
@@ -236,8 +256,16 @@ public partial class IdentifyViewModel : ObservableObject
 
     public bool IsComparing => Compare is not null;
 
+    /// <summary>Where the compare view puts the card info and buttons. Remembered between runs.</summary>
+    public CompareLayout Layout
+    {
+        get => _settings.Layout;
+        set { _settings.Layout = value; _settings.Save(); }
+    }
+
     internal void OpenCompare(ResultItemViewModel item, CandidateViewModel candidate, bool bottomOnly = false) =>
-        Compare = new CompareViewModel(item, candidate, () => Compare = null, AdvanceCompare, bottomOnly, QueueText(item), FlipInCompare);
+        Compare = new CompareViewModel(item, candidate, () => Compare = null, AdvanceCompare, bottomOnly, QueueText(item), FlipInCompare,
+            HasHistory ? GoBack : null, Layout, l => Layout = l);
 
     private static bool Waiting(ResultItemViewModel r) => r.IsShown && r.Verdict == Verdict.None && r.Top is not null;
 
@@ -251,6 +279,7 @@ public partial class IdentifyViewModel : ObservableObject
     /// still waiting in this tab, keeping the zoom setting. Closes when nothing's left.</summary>
     private void AdvanceCompare(CompareViewModel from)
     {
+        _history.Add(from.Item);
         int start = Results.IndexOf(from.Item);
         for (int k = 1; k <= Results.Count; k++)
         {
@@ -264,6 +293,23 @@ public partial class IdentifyViewModel : ObservableObject
 
     [RelayCommand]
     private void CloseCompare() => Compare = null;
+
+    /// <summary>Cards already looked at in the compare view, most recent last ("◀ Last card").</summary>
+    private readonly List<ResultItemViewModel> _history = [];
+    private bool HasHistory => _history.Any(Results.Contains);
+
+    /// <summary>Back to the card before this one (to fix a mis-click), showing what you picked for it.</summary>
+    private void GoBack(CompareViewModel from)
+    {
+        while (_history.Count > 0)
+        {
+            var prev = _history[^1];
+            _history.RemoveAt(_history.Count - 1);
+            if (!Results.Contains(prev) || prev.Top is null) continue;
+            OpenCompare(prev, prev.Chosen ?? prev.Top, from.BottomOnly);
+            return;
+        }
+    }
 
     /// <summary>Called when the user marks a result. rank = 1-based position of the exact printing,
     /// -1 = right card but the exact printing wasn't listed, 0 = wrong card.</summary>
@@ -328,6 +374,8 @@ public partial class IdentifyViewModel : ObservableObject
     private void Clear()
     {
         Results.Clear();
+        _scanCount = 0;
+        _history.Clear();
         ScoreText = "Drop some card photos in to get started.";
     }
 

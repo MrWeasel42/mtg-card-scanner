@@ -49,7 +49,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public async Task DownloadCatalogAsync()
     {
         CurrentPage = Setup;
-        Setup.Begin("Downloading the card catalog (about 210 MB, one time only)...");
+        Setup.Begin("Downloading the card database (about 210 MB, one time only)...");
         try
         {
             var progress = new Progress<DownloadProgress>(p => Setup.Report(p));
@@ -60,7 +60,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             Log.Error("Catalog download", ex);
-            Setup.Fail("Couldn't download the card catalog. Check your internet connection and try again.\n\n" + ex.Message);
+            Setup.Fail("Couldn't download the card database. Check your internet connection and try again.\n\n" + ex.Message);
         }
     }
 
@@ -75,20 +75,20 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task LoadAndShowMainAsync()
     {
-        Setup.Begin("Loading the card catalog...");
+        Setup.Begin("Loading the card database...");
         Setup.Indeterminate = true;
         try
         {
             var old = _recognizer;
             _recognizer = await Task.Run(() => Recognizer.Load(Paths));
             old?.Dispose();
-            CatalogText = $"Catalog {_recognizer.Manifest.CatalogVersion} · {_recognizer.Manifest.Cards:N0} printings";
+            CatalogText = $"App v{AppVersion} · Database {_recognizer.Manifest.CatalogVersion} · {_recognizer.Manifest.Cards:N0} printings";
             CurrentPage = new IdentifyViewModel(_recognizer, Paths);
         }
         catch (Exception ex)
         {
             Log.Error("Catalog load", ex);
-            Setup.Fail("The card catalog on this computer looks damaged. Click Retry to download it again.\n\n" + ex.Message);
+            Setup.Fail("The card database on this computer looks damaged. Click Retry to download it again.\n\n" + ex.Message);
         }
     }
 
