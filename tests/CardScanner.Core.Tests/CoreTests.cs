@@ -370,6 +370,17 @@ public class WhiteBorderTests
     }
 
     [Fact]
+    public void One_odd_side_does_not_spoil_the_white_border()
+    {
+        // Like Library of Leng: the top border reads wider (a scuff) than the other three sides.
+        using var img = new Mat(1000, 900, MatType.CV_8UC3);
+        Cv2.Randu(img, Scalar.All(120), Scalar.All(200));
+        Cv2.Rectangle(img, new Rect(200, 135, 500, 715), new Scalar(225, 230, 232), -1);   // card, extra 15px on top
+        Cv2.Rectangle(img, new Rect(225, 175, 450, 650), new Scalar(40, 70, 120), -1);
+        Assert.NotNull(WhiteBorder.Extend(img, [new(225, 175), new(675, 175), new(675, 825), new(225, 825)]));
+    }
+
+    [Fact]
     public void Leaves_black_bordered_cards_alone()
     {
         using var img = new Mat(1000, 900, MatType.CV_8UC3, new Scalar(230, 230, 230));

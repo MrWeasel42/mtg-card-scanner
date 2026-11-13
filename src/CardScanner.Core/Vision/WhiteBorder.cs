@@ -74,6 +74,10 @@ public static class WhiteBorder
         // Old white borders are the same width all round; a side that stops short (shadow, wear, a
         // stain) takes the width the two widest sides agree on.
         var rel = offs.ToDictionary(kv => kv.Key, kv => kv.Value / w);
+        // One side that disagrees with the other three (a stain, a shadow, a scuff) takes their width.
+        double med = Median(rel.Values);
+        var odd = rel.Where(kv => kv.Value < 0.65 * med || kv.Value > 1.5 * med).Select(kv => kv.Key).ToList();
+        if (odd.Count == 1) { rel[odd[0]] = med; offs[odd[0]] = med * w; }
         var top2 = rel.Values.OrderBy(v => v).TakeLast(2).ToArray();
         double width = (top2[0] + top2[1]) / 2;
         if (width < 0.025 || width > 0.08 || top2[1] / top2[0] >= 1.4) return null;
