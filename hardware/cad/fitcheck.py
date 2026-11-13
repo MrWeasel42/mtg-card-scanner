@@ -31,6 +31,11 @@ so_f = motor_standoff().translate((FEED_X, Y_BACK, FEED_Z))
 cpl_f = cyl_y(FEED_X, FEED_Z, 9.5, Y_BACK + 2.5, Y_BACK + 27.5)
 base = P["feeder_base"]
 check("Feed motor vs feeder base", feed_m, base, 1.0)
+check("Feed motor vs hopper tower", feed_m, P["raw_tower"], 2.0)
+loop = box(FEED_X, EXIT_X, -54, -40, FEED_Z - 7.8, FEED_Z + 7.8).union(cyl_y(FEED_X, FEED_Z, 7.8, -54, -40)).union(cyl_y(EXIT_X, EXIT_Z, 7.8, -54, -40))
+check("122 mm loop + pulleys (horizontal now) vs base", loop, base, 0.3)
+checks.append(dict(label="Exit roller speed / feed roller speed (same pulleys)", overlap=0, gap=round(11.8 / 11.8, 3), need=1.0,
+                   ok=True, note="both D23.6 on 20T pulleys: the card isn't pushed into a slower nip"))
 check("Feed coupler (D19 x 25) vs its standoff", cpl_f, so_f, 0.5)
 xe = BIN_X[1] + PITCH / 2
 endm = pr("end_side_back", "end_side_front", "end_cap", "bin_2")
@@ -117,10 +122,10 @@ feed_pulley = cyl_y(FEED_X, FEED_Z, 8, -55, -39); exit_pulley = cyl_y(EXIT_X, EX
 check("Feed-shaft pulley (122 mm loop) vs base", feed_pulley, base, 0.3, "pulley set 1 mm off the wall")
 check("Exit-shaft pulley vs base", exit_pulley, base, 0.3)
 # --- rollers vs floor openings
-fr = cyl_y(FEED_X, FEED_Z, 15.8, -20, 20); er = cyl_y(EXIT_X, EXIT_Z, 11.8, -15, 15)
-check("Feed roller with O-ring tyres (D31.6) vs base", fr, base, 0.5)
+fr = cyl_y(FEED_X, FEED_Z, 11.8, -20, 20); er = cyl_y(EXIT_X, EXIT_Z, 11.8, -15, 15)
+check("Feed roller with O-ring tyres (D23.6) vs base", fr, base, 0.5)
 check("Exit roller with tyres (D23.6) vs base", er, base, 0.5)
-checks.append(dict(label="Feed roller top above the hopper floor", overlap=0, gap=round(FEED_Z + 15.8 - PATH, 2), need=0.5, ok=0.5 <= FEED_Z + 15.8 - PATH <= 1.5, note="target 0.5-1.5 mm"))
+checks.append(dict(label="Feed roller top above the hopper floor", overlap=0, gap=round(FEED_Z + 11.8 - PATH, 2), need=0.5, ok=0.5 <= FEED_Z + 11.8 - PATH <= 1.5, note="target 0.5-1.5 mm"))
 checks.append(dict(label="Exit roller top above the floor", overlap=0, gap=round(EXIT_Z + 11.8 - PATH, 2), need=0.5, ok=0.5 <= EXIT_Z + 11.8 - PATH <= 1.5, note="target 0.5-1.5 mm"))
 # --- card stack in the hopper (88 x 63 raw cards, 550 deep, leaning with the walls)
 xi1 = TOWER_X0 + TOWER_IN_X

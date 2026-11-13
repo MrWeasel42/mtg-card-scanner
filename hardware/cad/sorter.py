@@ -59,7 +59,8 @@ POST_T = 2.5
 RAIL2_Y = 24.0                    # second back rail (under the doors) replaces the front rail under the bin modules
 TOF_X = 33.0                      # bin-level ToF sensor (Pololu VL53L1X carrier, 13 x 18 mm) position in each module
 
-FEED_X, FEED_Z, FEED_R = 95.0, PATH - 15.0, 16.0     # feed roller (O-ring tyres, OD 32)
+FEED_X, FEED_Z, FEED_R = 95.0, PATH - 11.0, 12.0     # feed roller: same O-rings, size and height as the exit roller,
+                                                      # so both move the card at the same speed (same 20T pulleys)
 EXIT_X, EXIT_Z, EXIT_R = 136.0, PATH - 11.0, 12.0    # exit roller pair; 122 mm GT2 closed loop from the feed shaft
 
 def box(x0, x1, y0, y1, z0, z1):
@@ -152,11 +153,11 @@ def feeder_base():
     b = b.cut(box(FEED_X - 18, FEED_X + 18, -21, 21, PATH - 6, PATH + 1))
     b = b.cut(box(EXIT_X - 14, EXIT_X + 14, -17, 17, PATH - 6, PATH + 1))
     b = b.cut(box(X1 - 5, X1 + 1, -17, 17, EXIT_Z - 14, PATH - 4))
-    b = b.cut(box(EXIT_X - 10, EXIT_X + 10, -56, -38, PATH - 4.1, PATH - 2.2))   # recess over the exit pulley (122 mm loop)   # exit roller (D23.6) reaches past the end wall's inner face
-    # feed roller shaft: bearing seats (625: 16 mm OD x 5) in inner ribs at Y = +-24
-    for y in (-28, 24):
-        b = b.union(box(FEED_X - 14, FEED_X + 14, y, y + 4, FEED_Z - 18, PATH - 4))
-    b = b.cut(cyl_y(FEED_X, FEED_Z, 8.05, -29, 29))
+    b = b.cut(box(FEED_X - 10, EXIT_X + 10, -56, -38, PATH - 4.1, PATH - 2.2))   # recess over both pulleys + the loop (122 mm loop)   # exit roller (D23.6) reaches past the end wall's inner face
+    # feed roller shaft: 685ZZ bearings (11 mm OD x 5) in inner ribs at |Y| 24..29 (small enough to stay under the floor)
+    for y in (-29, 24):
+        b = b.union(box(FEED_X - 12, FEED_X + 12, y, y + 5, FEED_Z - 14, PATH - 4))
+    b = b.cut(cyl_y(FEED_X, FEED_Z, 5.55, -30, 30))
     b = b.cut(cyl_y(FEED_X, FEED_Z, 3.0, Y0 - 1, Y1 + 1))
     # exit roller shaft through both walls
     # exit roller bearings sit in slots (+-2 mm along X) so the 122 mm belt can be tensioned
@@ -264,8 +265,8 @@ def o_ring_roller(r_hub, width, grooves=3, bore=5.0, d_flat=0.5):
     hub = hub.cut(cq.Workplane("XY").circle(1.4).extrude(r_hub + 1).translate((0, 0, 0)))
     return hub
 
-def feed_roller():   # OD with tyres ~32 mm: three 24 x 3.5 mm O-rings (ID x cross-section)
-    return o_ring_roller(14.0, 40.0, 3)
+def feed_roller():   # OD with tyres ~24 mm: three 16 x 3.5 mm O-rings (same as the exit rollers)
+    return o_ring_roller(10.0, 40.0, 3)
 
 def exit_roller():   # OD with tyres ~24 mm: two 16 x 3.5 mm O-rings (print 2: driven + pressure)
     return o_ring_roller(10.0, 30.0, 2)
@@ -390,6 +391,42 @@ def motor_standoff():
             m = m.union(box(*sorted((sx * 18.4, sx * 15.4)), yy - 3 if yy > T else yy, yy + 3 if yy == T else yy, -21.15, -18.8))
             m = m.union(box(*sorted((sx * 18.4, sx * 15.4)), yy - 3 if yy > T else yy, yy + 3 if yy == T else yy, 18.8, 21.15))
     return m
+
+def fit_coupon():
+    """Print this first (PETG, ~1 h). Every hole size the machine depends on, at the design value (marked *)
+    and a step either side, so the CAD can be matched to this printer before the long prints.
+    Rows (front to back): M3 heat-set insert holes · 685ZZ seats (idler pulleys) · 625 seats (shaft bearings) ·
+    5 mm shaft holes + M2 fin-screw pilots. Back rib: horizontal 2 mm hinge-pin and 5 mm shaft holes (walls print
+    upright, so those holes print sideways) and the M3 nut trap from the drive-pulley hub."""
+    W, D, T = 112.0, 80.0, 6.0
+    c = box(0, W, 0, D, 0, T)
+    labels = []
+    def row(y, dias, design, depth, push=None, x0=10.0, dx=None):
+        n = len(dias); dx = dx or (W - 2 * x0) / (n - 1)
+        for i, d in enumerate(dias):
+            x = x0 + i * dx
+            nonlocal c
+            c = c.cut(cyl_z(x, y, d / 2, T - depth, T + 1))
+            if push: c = c.cut(cyl_z(x, y, push / 2, -1, T))
+            labels.append((x, y - (max(dias) / 2 + 3.2), f"{d:g}" + ("*" if abs(d - design) < 1e-6 else "")))
+    row(10.0, [3.9, 4.0, 4.1, 4.2, 4.3], M3_INSERT, 5.5)
+    row(27.0, [10.9, 11.0, 11.1, 11.2], 11.1, 5.0, push=7.0, x0=14.0)
+    row(48.0, [16.0, 16.1, 16.2], 16.1, 5.0, push=10.0, x0=16.0)
+    row(68.0, [5.1, 5.3, 5.5], 5.5, T + 1, x0=8.0, dx=11.0)
+    row(68.0, [1.5, 1.6, 1.7], 1.6, T + 1, x0=50.0, dx=8.0)
+    # back rib with horizontal holes (hinge pin 2.0/2.1/2.2, frame vs door; shaft 5.5) and the nut trap
+    rib = box(0, W, D, D + 8, 0, 16)
+    for x, d in ((12, 2.0), (24, 2.1), (36, 2.2), (54, 5.3), (70, 5.5)):
+        rib = rib.cut(cyl_y(x, 9.0, d / 2, D - 1, D + 9))
+        star = "*" if d in (2.1, 5.5) else ""
+        labels.append((x, D - 2.6, f"{d:g}{star}"))
+    rib = rib.cut(box(84, 89.8, D - 1, D + 9, 7.0, 9.6))                           # M3 nut trap 5.8 x 2.6
+    rib = rib.cut(cyl_z(86.9, D + 4, 1.6, 0, 17))
+    c = c.union(rib)
+    labels.append((86.9, D - 2.6, "nut"))
+    for (x, y, t) in labels:
+        c = c.cut(cq.Workplane("XY").text(t, 3.2, 0.6, halign="center", valign="center").translate((x, y, T - 0.6)))
+    return c
 
 # ============================================================================ SCANNER
 SCAN_X0, SCAN_X1 = 150.0, 330.0  # scan module footprint along X (under the hood)
@@ -852,13 +889,14 @@ PRINTED = {
     "feed_roller":     (feed_roller, 1, "PETG", "Flat on its end, 100% infill. Fit three 24 x 3.5 mm O-rings."),
     "exit_roller":     (exit_roller, 2, "PETG", "Flat on its end, 100% infill. Two 16 x 3.5 mm O-rings each."),
     "pressure_arm":    (pressure_arm, 1, "PETG", "Flat."),
-    "stack_weight":    (stack_weight, 1, "PLA", "Add 4 M8 washers in the pocket."),
+    "stack_weight":    (stack_weight, 1, "PLA", "Fill the pocket with about 50 g (2 oz) of coins or nuts."),
     "fin":             (fin, 24, "PETG", "12 + 12 mirrored (10 per side + spares). On its side, 0.12 mm layers. Glue a 3 x 3 mm silicone square in the face pocket."),
     "belt_drill_jig":  (belt_drill_jig, 1, "PETG", "Ridges up. 2 mm drill through the guide holes."),
     "fin_gauge":       (fin_gauge, 1, "PETG", "Flat."),
     "track_pulley_idler": (lambda: track_pulley(False), 2, "PETG", "Axis vertical, 0.12 mm layers, 100% infill. 2 x 685ZZ each. Test-fit the belt first."),
     "track_pulley_drive": (lambda: track_pulley(True), 2, "PETG", "Hub down on the plate, 0.12 mm layers, 100% infill. Hub faces the track (inward). M3 nut + M3 x 4 grub."),
     "sensor_clip":     (sensor_clip, 4, "PETG", "Holds an Adafruit break-beam half (20 x 10 x 8 housing)."),
+    "fit_coupon":      (fit_coupon, 1, "PETG", "PRINT FIRST. Flat. Test inserts, bearings, shaft, pin and nut against the * sizes; tell Claude which fit."),
     "motor_standoff":  (motor_standoff, 2, "PETG", "Standing on a side wall, 5 walls. One for the feed motor, one for the track motor. M3 x 8 to the motor, M3 x 10 to the wall."),
     "scan_side_front": (lambda: side_frame(SCAN_X0, SCAN_X1, -1, bin_opening=False), 1, "PETG", "On its outer face."),
     "scan_side_back":  (lambda: scan_side_back(), 1, "PETG", "On its outer face."),
