@@ -108,7 +108,7 @@ class MainActivity : AppCompatActivity() {
             onInfo = { t -> runOnUiThread { watchText.text = t } },
         )
         watcher.enabled = prefs.getBoolean("auto", true)
-        watcher.stableMs = prefs.getLong("stableMs", 600L)
+        watcher.stableMs = prefs.getLong("stableMs", 450L)
         updateAutoButton()
 
         btnAuto.setOnClickListener {
@@ -141,7 +141,7 @@ class MainActivity : AppCompatActivity() {
                 .setResolutionStrategy(ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY)
                 .build()
             imageCapture = ImageCapture.Builder()
-                .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                 .setResolutionSelector(sel43)
                 .setJpegQuality(92)
                 .build()
@@ -344,7 +344,7 @@ class MainActivity : AppCompatActivity() {
         val torch = CheckBox(this).apply { text = "Phone flashlight on (can cause glare)"; isChecked = prefs.getBoolean("torch", false) }
         val stableLabel = TextView(this).apply { text = "Wait before auto photo (ms): longer if photos come out blurry" }
         val stable = EditText(this).apply {
-            setText(prefs.getLong("stableMs", 600L).toString()); inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText(prefs.getLong("stableMs", 450L).toString()); inputType = android.text.InputType.TYPE_CLASS_NUMBER
         }
         val tips = TextView(this).apply {
             text = "\nTips: pinch to zoom so the card fills most of the screen; tap to focus. " +
@@ -363,9 +363,9 @@ class MainActivity : AppCompatActivity() {
                     .putBoolean("keepCopy", keep.isChecked)
                     .putBoolean("beep", beep.isChecked)
                     .putBoolean("torch", torch.isChecked)
-                    .putLong("stableMs", stable.text.toString().toLongOrNull()?.coerceIn(200, 5000) ?: 600L)
+                    .putLong("stableMs", stable.text.toString().toLongOrNull()?.coerceIn(200, 5000) ?: 450L)
                     .apply()
-                watcher.stableMs = prefs.getLong("stableMs", 600L)
+                watcher.stableMs = prefs.getLong("stableMs", 450L)
                 camera?.cameraControl?.enableTorch(torch.isChecked)
             }
             .setNeutralButton("Re-learn empty bed") { _, _ -> watcher.setEmptyBed() }
