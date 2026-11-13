@@ -70,17 +70,69 @@ public partial class IdentifyViewModel : ObservableObject
     [ObservableProperty] private string _searchText = "";
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
-    /// <summary>Rarity filter next to the search box (rarity of the printing on screen).</summary>
+    // ---- Filter menu (funnel button next to the search box): rarity, price, sort ----
     public IReadOnlyList<string> RarityOptions => RarityList;
-    private static readonly IReadOnlyList<string> RarityList = ["All rarities", "Common", "Uncommon", "Rare", "Mythic", "Special / bonus"];
+    private static readonly IReadOnlyList<string> RarityList = ["All rarities", "Mythic", "Rare", "Uncommon", "Common", "Special / timeshifted"];
+    public IReadOnlyList<string> PriceOptions => PriceList;
+    private static readonly IReadOnlyList<string> PriceList = ["Any price", "Under $1", "$1 – $5", "$5 – $20", "$20 – $100", "$100 and up", "No price"];
+    public IReadOnlyList<string> SortOptions => SortList;
+    private static readonly IReadOnlyList<string> SortList =
+        ["Newest first", "Scan order (0001 first)", "Name A–Z", "Price: high to low", "Price: low to high", "Rarity (mythic first)", "Set"];
+
     [ObservableProperty] private string _rarityFilter = "All rarities";
-    partial void OnRarityFilterChanged(string value) => ApplyFilter();
+    [ObservableProperty] private string _priceFilter = "Any price";
+    [ObservableProperty] private string _sortOrder = "Newest first";
+    partial void OnRarityFilterChanged(string value) => FiltersChanged();
+    partial void OnPriceFilterChanged(string value) => FiltersChanged();
+    partial void OnSortOrderChanged(string value) => FiltersChanged();
+    private void FiltersChanged() { OnPropertyChanged(nameof(FilterLabel)); ApplyFilter(); }
+
+    /// <summary>Button text: shows how many filters are on.</summary>
+    public string FilterLabel
+    {
+        get
+        {
+            int n = (RarityFilter != RarityList[0] ? 1 : 0) + (PriceFilter != PriceList[0] ? 1 : 0) + (SortOrder != SortList[0] ? 1 : 0);
+            return n == 0 ? "Filter" : $"Filter ({n})";
+        }
+    }
+
+    [RelayCommand]
+    private void ResetFilters()
+    {
+        RarityFilter = RarityList[0]; PriceFilter = PriceList[0]; SortOrder = SortList[0]; SearchText = "";
+    }
 
     private bool MatchesRarity(ResultItemViewModel r) => RarityFilter switch
     {
         "All rarities" => true,
-        "Special / bonus" => r.ShownCard?.Rarity is "special" or "bonus",
+        "Special / timeshifted" => r.ShownCard?.Rarity is "special" or "bonus",
         var f => string.Equals(r.ShownCard?.Rarity, f, StringComparison.OrdinalIgnoreCase),
+    };
+
+    private bool MatchesPrice(ResultItemViewModel r) => (PriceFilter, r.Price) switch
+    {
+        ("Any price", _) => true,
+        ("No price", var p) => p is null,
+        (_, null) => false,
+        ("Under $1", var p) => p < 1,
+        ("$1 – $5", var p) => p >= 1 && p < 5,
+        ("$5 – $20", var p) => p >= 5 && p < 20,
+        ("$20 – $100", var p) => p >= 20 && p < 100,
+        (_, var p) => p >= 100,
+    };
+
+    private IEnumerable<ResultItemViewModel> Sorted(IEnumerable<ResultItemViewModel> items) => SortOrder switch
+    {
+        "Scan order (0001 first)" => items.OrderBy(r => r.ScanNumber),
+        "Name A–Z" => items.OrderBy(r => r.ShownCard?.Name ?? "~").ThenBy(r => r.ScanNumber),
+        "Price: high to low" => items.OrderByDescending(r => r.Price ?? -1),
+        "Price: low to high" => items.OrderBy(r => r.Price ?? decimal.MaxValue),
+        "Rarity (mythic first)" => items.OrderBy(r => RarityStyle.Order(r.ShownCard?.Rarity ?? "")).ThenBy(r => r.ShownCard?.Name),
+        "Set" => items.OrderBy(r => r.ShownCard?.SetName ?? "~").ThenBy(r => r.ShownCard?.CollectorNumber.PadLeft(5, '0')),
+        // Newest first: in Done, the card you marked most recently; elsewhere the newest scan.
+        _ when Filter == ReviewFilter.Done => items.OrderByDescending(r => r.VerifiedAt ?? DateTime.MinValue),
+        _ => items.OrderByDescending(r => r.ScanNumber),
     };
 
     /// <summary>What the list shows: the open tab, matching the search. Done lists the most recently
@@ -103,10 +155,8 @@ public partial class IdentifyViewModel : ObservableObject
 
     internal void ApplyFilter()
     {
-        foreach (var r in Results) r.IsShown = Matches(r, Filter) && r.MatchesSearch(SearchText) && MatchesRarity(r);
-        var want = Results.Where(r => r.IsShown);
-        if (Filter == ReviewFilter.Done) want = want.OrderByDescending(r => r.VerifiedAt ?? DateTime.MinValue);
-        var list = want.ToList();
+        foreach (var r in Results) r.IsShown = Matches(r, Filter) && r.MatchesSearch(SearchText) && MatchesRarity(r) && MatchesPrice(r);
+        var list = Sorted(Results.Where(r => r.IsShown)).ToList();
         if (!list.SequenceEqual(Shown))
         {
             Shown.Clear();
@@ -120,7 +170,7 @@ public partial class IdentifyViewModel : ObservableObject
         FinishLabel = $"✨ Check finish ({Count(ReviewFilter.Finish)})";
         AllLabel = $"All ({Results.Count})";
         CanAcceptGood = Count(ReviewFilter.Good) > 0;
-        EmptyFilterText = !HasResults ? "" : Count(Filter) > 0 ? (Shown.Count == 0 ? "Nothing in this tab matches the search / rarity filter." : "") : Filter switch
+        EmptyFilterText = !HasResults ? "" : Count(Filter) > 0 ? (Shown.Count == 0 ? "Nothing in this tab matches the search / filters." : "") : Filter switch
         {
             ReviewFilter.Queue => "Queue's clear, nothing left to verify. 🎉 Peek at the Pinned tab if you want to double-check those.",
             ReviewFilter.Good => "No unmarked pinned cards left.",

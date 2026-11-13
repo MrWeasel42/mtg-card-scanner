@@ -22,7 +22,7 @@ public partial class CompareViewModel : ObservableObject
     public ResultItemViewModel Item { get; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Title), nameof(Subtitle), nameof(Extra), nameof(Rarity), nameof(HasRarity), nameof(RarityBrush), nameof(Counter), nameof(RightShown), nameof(IsChosen))]
+    [NotifyPropertyChangedFor(nameof(Title), nameof(Subtitle), nameof(Extra), nameof(Rarity), nameof(HasRarity), nameof(RarityBackground), nameof(RarityForeground), nameof(RarityBorder), nameof(Counter), nameof(RightShown), nameof(IsChosen))]
     private CandidateViewModel _candidate;
 
     [ObservableProperty]
@@ -84,7 +84,9 @@ public partial class CompareViewModel : ObservableObject
     public string Extra => Candidate.Extra;
     public string Rarity => Candidate.Rarity;
     public bool HasRarity => Candidate.HasRarity;
-    public Avalonia.Media.IBrush RarityBrush => Candidate.RarityBrush;
+    public Avalonia.Media.IBrush RarityBackground => Candidate.RarityBackground;
+    public Avalonia.Media.IBrush RarityForeground => Candidate.RarityForeground;
+    public Avalonia.Media.IBrush RarityBorder => Candidate.RarityBorder;
     public string Counter => $"Option {Candidate.Rank} of {Item.Candidates.Count}";
     public bool IsChosen => Candidate.IsChosen;
     public string ZoomLabel => BottomOnly ? "🔍 Show whole card" : "🔍 Zoom: bottom of card";

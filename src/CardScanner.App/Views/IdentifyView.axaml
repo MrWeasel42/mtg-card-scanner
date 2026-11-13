@@ -123,7 +123,26 @@
       </WrapPanel>
       <StackPanel Orientation="Horizontal" Spacing="8">
         <TextBox Text="{Binding SearchText}" Watermark="🔍 Search this tab: card name, set, or scan number" Width="440" />
-        <ComboBox ItemsSource="{Binding RarityOptions}" SelectedItem="{Binding RarityFilter}" MinWidth="150" />
+        <Button Padding="12,6" ToolTip.Tip="Filter by rarity or price, and change the sort order">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <!-- funnel -->
+            <Path Data="M0,0 L14,0 L8.5,6.5 L8.5,12 L5.5,10.5 L5.5,6.5 Z" Fill="{StaticResource TealBrush}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding FilterLabel}" VerticalAlignment="Center" FontSize="13" />
+          </StackPanel>
+          <Button.Flyout>
+            <Flyout Placement="BottomEdgeAlignedLeft">
+              <StackPanel Spacing="10" Width="260" Margin="4">
+                <TextBlock Text="Rarity" FontWeight="SemiBold" FontSize="12" />
+                <ComboBox ItemsSource="{Binding RarityOptions}" SelectedItem="{Binding RarityFilter}" HorizontalAlignment="Stretch" />
+                <TextBlock Text="Price (in the finish set for the card)" FontWeight="SemiBold" FontSize="12" />
+                <ComboBox ItemsSource="{Binding PriceOptions}" SelectedItem="{Binding PriceFilter}" HorizontalAlignment="Stretch" />
+                <TextBlock Text="Sort" FontWeight="SemiBold" FontSize="12" />
+                <ComboBox ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SortOrder}" HorizontalAlignment="Stretch" />
+                <Button Content="Reset filters" Command="{Binding ResetFiltersCommand}" HorizontalAlignment="Right" FontSize="12" />
+              </StackPanel>
+            </Flyout>
+          </Button.Flyout>
+        </Button>
       </StackPanel>
       <TextBlock Classes="muted" Text="{Binding EmptyFilterText}" TextWrapping="Wrap"
                  IsVisible="{Binding EmptyFilterText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
@@ -185,8 +204,8 @@
                         <TextBlock Text="{Binding Name}" FontSize="24" FontWeight="Bold" TextWrapping="Wrap" />
                         <TextBlock Text="{Binding SetLabel}" TextWrapping="Wrap" />
                         <TextBlock Classes="gold" Text="{Binding Extra}" TextWrapping="Wrap" />
-                        <Border Classes="pill" HorizontalAlignment="Left" BorderBrush="{Binding RarityBrush}" IsVisible="{Binding HasRarity}">
-                          <TextBlock Text="{Binding Rarity}" FontSize="12" FontWeight="SemiBold" Foreground="{Binding RarityBrush}" />
+                        <Border Classes="pill" HorizontalAlignment="Left" Background="{Binding RarityBackground}" BorderBrush="{Binding RarityBorder}" BorderThickness="1" IsVisible="{Binding HasRarity}">
+                          <TextBlock Text="{Binding Rarity}" FontSize="12" FontWeight="Bold" Foreground="{Binding RarityForeground}" />
                         </Border>
                         <Border Classes="pill" HorizontalAlignment="Left" Margin="0,4,0,0">
                           <TextBlock Classes="muted" FontSize="12" Text="{Binding ScoreText}" />
@@ -432,8 +451,8 @@
             <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
             <TextBlock Text="{Binding Subtitle}" FontSize="16" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
             <TextBlock Classes="gold" Text="{Binding Extra}" FontSize="15" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
-            <Border Classes="pill" HorizontalAlignment="Center" Margin="0,4,0,0" BorderBrush="{Binding RarityBrush}" IsVisible="{Binding HasRarity}">
-              <TextBlock Text="{Binding Rarity}" FontSize="13" FontWeight="SemiBold" Foreground="{Binding RarityBrush}" />
+            <Border Classes="pill" HorizontalAlignment="Center" Margin="0,4,0,0" Background="{Binding RarityBackground}" BorderBrush="{Binding RarityBorder}" BorderThickness="1" IsVisible="{Binding HasRarity}">
+              <TextBlock Text="{Binding Rarity}" FontSize="13" FontWeight="Bold" Foreground="{Binding RarityForeground}" />
             </Border>
           </StackPanel>
           <Panel Name="RightPane" Background="Transparent">

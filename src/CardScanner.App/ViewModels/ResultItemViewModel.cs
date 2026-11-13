@@ -243,6 +243,13 @@ public partial class ResultItemViewModel : ObservableObject
 
     /// <summary>The printing on screen for this card: what you picked, or the top match.</summary>
     public CardInfo? ShownCard => (Chosen ?? Top)?.Card;
+    /// <summary>Price of that printing in the finish set for this card (for the price filter and sort).</summary>
+    public decimal? Price => ShownCard is not { } c ? null : SelectedFinish?.Key switch
+    {
+        "foil" => c.PriceUsdFoil ?? c.PriceUsd,
+        "etched" => c.PriceUsdEtched ?? c.PriceUsdFoil ?? c.PriceUsd,
+        _ => c.PriceUsd ?? c.PriceUsdFoil,
+    };
 
     partial void OnSelectedFinishChanged(Finish.Option? value)
     {
@@ -342,10 +349,9 @@ public partial class CandidateViewModel(Candidate candidate, int rank, ResultIte
     public string SetLabel => Card.SetLabel;
     public string Rarity => Card.RarityLabel;
     public bool HasRarity => Rarity.Length > 0;
-    public IBrush RarityBrush => new SolidColorBrush(Color.Parse(Card.Rarity switch
-    {
-        "uncommon" => "#B8C4D6", "rare" => "#E5C25B", "mythic" => "#F97316", "special" or "bonus" => "#C084FC", _ => "#94A3B8",
-    }));
+    public IBrush RarityBackground => RarityStyle.Background(Card.Rarity);
+    public IBrush RarityForeground => RarityStyle.Foreground(Card.Rarity);
+    public IBrush RarityBorder => RarityStyle.Border(Card.Rarity);
     public string Extra
     {
         get
