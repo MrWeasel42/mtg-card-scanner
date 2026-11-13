@@ -107,14 +107,19 @@ class MainActivity : AppCompatActivity() {
             onCapture = { runOnUiThread { takePhoto(auto = true) } },
             onInfo = { t -> runOnUiThread { watchText.text = t } },
         )
-        watcher.enabled = prefs.getBoolean("auto", true)
         watcher.stableMs = prefs.getLong("stableMs", 450L)
         updateAutoButton()
 
         btnAuto.setOnClickListener {
-            watcher.enabled = !watcher.enabled
-            prefs.edit().putBoolean("auto", watcher.enabled).apply()
+            if (watcher.enabled) watcher.pause() else watcher.start()
             updateAutoButton()
+        }
+        findViewById<MaterialButton>(R.id.btnClear).setOnClickListener {
+            history.text = ""
+            shots = 0; sent = 0
+            resultName.text = "Cleared"
+            resultDetail.text = "Press Start with the bed clear, then place a card."
+            showConnected()
         }
         findViewById<MaterialButton>(R.id.btnShoot).setOnClickListener { watcher.markShot(); takePhoto(auto = false) }
         findViewById<MaterialButton>(R.id.btnMore).setOnClickListener { showSettings() }
@@ -127,7 +132,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch { senderLoop() }
     }
 
-    private fun updateAutoButton() { btnAuto.text = if (watcher.enabled) "Auto: on" else "Auto: off" }
+    private fun updateAutoButton() { btnAuto.text = if (watcher.enabled) "⏸ Pause" else "▶ Start" }
 
     // ---------------------------------------------------------------- camera
 
@@ -348,7 +353,7 @@ class MainActivity : AppCompatActivity() {
         }
         val tips = TextView(this).apply {
             text = "\nTips: pinch to zoom so the card fills most of the screen; tap to focus. " +
-                "Use a dark, plain background. \"Re-learn empty bed\" if auto-capture fires with no card."
+                "Use a dark, plain background. Start learns the empty bed, so press it with nothing on the bed."
             textSize = 12f
         }
         listOf(hostLabel, host, keep, beep, torch, stableLabel, stable, tips).forEach { box.addView(it) }
