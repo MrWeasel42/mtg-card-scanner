@@ -307,7 +307,7 @@
       </Grid>
 
       <Grid Grid.Row="1" ColumnDefinitions="*,*" Margin="0,14">
-        <DockPanel Margin="0,0,8,0">
+        <DockPanel Margin="0,0,20,0">
           <TextBlock DockPanel.Dock="Top" Classes="muted" FontSize="12" FontWeight="SemiBold" LetterSpacing="1"
                      Text="YOUR PHOTO" HorizontalAlignment="Center" Margin="0,0,0,6" />
           <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,8,0,0" Spacing="6">
@@ -330,7 +330,7 @@
             </Canvas>
           </Panel>
         </DockPanel>
-        <DockPanel Grid.Column="1" Margin="8,0,0,0">
+        <DockPanel Grid.Column="1" Margin="20,0,0,0">
           <TextBlock DockPanel.Dock="Top" Classes="teal" FontSize="12" FontWeight="SemiBold" LetterSpacing="1"
                      Text="CATALOG PRINTING" HorizontalAlignment="Center" Margin="0,0,0,6" />
           <!-- Which printing this is, right under the picture -->
