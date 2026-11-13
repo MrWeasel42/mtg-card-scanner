@@ -116,6 +116,9 @@ public partial class IdentifyView : UserControl
     private static void ShowLens(Image img, Border lens, Image lensImg, double u, double v)
     {
         if (!Rendered(img, out var r)) { lens.IsVisible = false; return; }
+        // The lens lives in a canvas covering the whole pane; the image may sit to one side of it.
+        var offset = lens.Parent is Visual canvas ? img.TranslatePoint(default, canvas) ?? default : default;
+        r = r.Translate(new Vector(offset.X, offset.Y));
         lensImg.Width = r.Width * LensZoom;
         lensImg.Height = r.Height * LensZoom;
         Canvas.SetLeft(lensImg, LensSize / 2 - u * lensImg.Width);
