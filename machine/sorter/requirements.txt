@@ -1,0 +1,6 @@
+pyyaml
+smbus2
+gpiozero
+lgpio
+VL53L1X
+# picamera2 comes from Raspberry Pi OS: sudo apt install -y python3-picamera2

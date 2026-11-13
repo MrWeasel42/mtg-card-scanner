@@ -1,0 +1,13 @@
+[Unit]
+Description=Card sorter
+After=network-online.target klipper.service moonraker.service
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/mtg-card-scanner/machine/sorter
+ExecStart=/usr/bin/python3 sorter.py
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
