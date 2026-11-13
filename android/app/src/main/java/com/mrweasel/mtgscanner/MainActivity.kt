@@ -35,6 +35,8 @@ import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.Dispatchers
@@ -87,6 +89,12 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Android 15 draws apps under the status and navigation bars: keep the panels and buttons clear of them
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.root)) { v, insets ->
+            val b = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            v.setPadding(b.left, b.top, b.right, b.bottom)
+            insets
+        }
         preview = findViewById(R.id.preview)
         status = findViewById(R.id.status)
         watchText = findViewById(R.id.watch)
@@ -220,10 +228,18 @@ class MainActivity : AppCompatActivity() {
         queue.trySend(file)
     }
 
+    private var misses = 0
+
+    @Suppress("DEPRECATION")
+    private fun phoneIp(): String = try {
+        val ip = (applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager).connectionInfo.ipAddress
+        if (ip == 0) "not on Wi-Fi" else "${ip and 255}.${ip shr 8 and 255}.${ip shr 16 and 255}.${ip shr 24 and 255}"
+    } catch (_: Exception) { "?" }
+
     private suspend fun connectionLoop() {
         while (lifecycleScope.isActive) {
             if (pc == null) {
-                withContext(Dispatchers.Main) { status.text = "Looking for the PC… (turn on Settings → Phone link in the PC app)" }
+                if (misses < 2) withContext(Dispatchers.Main) { status.text = "Looking for the PC… (turn on Settings → Phone link in the PC app)" }
                 val manual = prefs.getString("host", "")!!.trim()
                 val found = withContext(Dispatchers.IO) {
                     if (manual.isNotEmpty()) {
@@ -232,10 +248,19 @@ class MainActivity : AppCompatActivity() {
                     } else link.discover()?.let { d -> link.hello(d.host, d.port)?.let { d.copy(name = it) } }
                 }
                 if (found != null) {
+                    misses = 0
                     pc = found
                     withContext(Dispatchers.Main) { showConnected() }
                     pendingDir.listFiles()?.sortedBy { it.name }?.forEach { enqueue(it) }
-                } else delay(4000)
+                } else {
+                    misses++
+                    if (misses >= 2) withContext(Dispatchers.Main) {
+                        status.text = if (manual.isNotEmpty())
+                            "Can't reach the PC at $manual. Check the address, and that the PC app's Phone link is on."
+                        else "PC not found (phone ${phoneIp()}). Turn on Phone link in the PC app, or type the PC's address in Settings."
+                    }
+                    delay(4000)
+                }
             } else delay(3000)
         }
     }

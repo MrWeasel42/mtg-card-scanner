@@ -63,6 +63,35 @@ public sealed class PhoneLink
         SetStatus("Phone link is off.");
     }
 
+    public const string FirewallRule = "MTG Card Scanner phone link";
+
+    /// <summary>
+    /// Opens the phone link's two ports to the local network only (remoteip=localsubnet), on every network type,
+    /// after removing any rule for this app that Windows made when its "allow" prompt was dismissed (a block
+    /// rule beats an allow rule). Shows the Windows admin prompt; returns false if that was declined.
+    /// </summary>
+    public static async Task<bool> AllowThroughFirewallAsync()
+    {
+        var exe = Environment.ProcessPath ?? "";
+        var cmd = string.Join(" & ",
+            $"netsh advfirewall firewall delete rule name=all program=\"{exe}\"",
+            $"netsh advfirewall firewall delete rule name=\"{FirewallRule}\"",
+            $"netsh advfirewall firewall add rule name=\"{FirewallRule}\" dir=in action=allow protocol=TCP localport={HttpPort} remoteip=localsubnet profile=any",
+            $"netsh advfirewall firewall add rule name=\"{FirewallRule}\" dir=in action=allow protocol=UDP localport={DiscoveryPort} remoteip=localsubnet profile=any");
+        var psi = new System.Diagnostics.ProcessStartInfo("cmd.exe", "/c " + cmd)
+        {
+            UseShellExecute = true, Verb = "runas", WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
+        };
+        try
+        {
+            using var p = System.Diagnostics.Process.Start(psi);
+            if (p is null) return false;
+            await p.WaitForExitAsync();
+            return p.ExitCode == 0;
+        }
+        catch (System.ComponentModel.Win32Exception) { return false; }   // admin prompt declined
+    }
+
     /// <summary>This PC's Wi-Fi / Ethernet addresses, for typing into the phone if discovery is blocked.</summary>
     public static string Addresses()
     {

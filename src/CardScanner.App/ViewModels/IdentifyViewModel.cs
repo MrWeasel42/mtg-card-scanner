@@ -308,6 +308,17 @@ public partial class IdentifyViewModel : ObservableObject
 
     [ObservableProperty] private string _phoneLinkStatus = "";
 
+    [ObservableProperty] private string _firewallText = "";
+
+    [RelayCommand]
+    private async Task AllowFirewall()
+    {
+        FirewallText = "Click Yes on the Windows prompt…";
+        bool ok = await PhoneLink.AllowThroughFirewallAsync();
+        FirewallText = ok ? "✓ Allowed on this network. Try the phone again." : "Not changed (the Windows prompt was declined or failed).";
+        if (ok && PhoneLinkOn) { PhoneLink.Instance.Stop(); PhoneLink.Instance.Start(); }
+    }
+
     /// <summary>A photo from the phone: saved under phone_scans/&lt;date&gt;/, identified like a dropped file,
     /// and summed up for the phone's screen. Runs off the UI thread; the page update runs on it.</summary>
     private async Task<object> HandlePhoneScanAsync(byte[] jpeg)
