@@ -50,14 +50,19 @@ for sgn in (-1, 1):
     dr = cyl_y(END_SHAFT_X, PUL_Z, 12.0, y0, y1)
     check(f"Drive pulley ({nm}) vs end module", dr, pr("end_side_back", "end_side_front", "end_cap"), 0.3)
 # --- everywhere a fin goes: straight runs + the arcs round both pulleys
-RF = PUL_Z - PATH - 0.3                                   # fin tip radius round a pulley (16.7)
+RF = PUL_Z - (PATH - GROOVE_D + 0.5)                 # finger tip radius round a pulley (17.7)
+RB = PUL_Z - (PATH + RAIL_H + 0.5)                   # bridge underside radius (14.0)
 def fin_path(sgn):
-    y0, y1 = sorted((sgn * FIN_REACH_Y, sgn * 43.75))
-    low = box(FIN_START_X, END_SHAFT_X, y0, y1, PATH + 0.3, BELT_BACK_LOW)
+    """Everywhere a fin goes. Finger |Y| 27-33.25 (down into the lane), bridge + leg |Y| 33.25-43.75 above the rail."""
+    yf = sorted((sgn * FIN_REACH_Y, sgn * (RAIL_IN - 1.0))); yb = sorted((sgn * (RAIL_IN - 1.0), sgn * 43.75))
+    zf = PATH - GROOVE_D + 0.5; zb = PATH + RAIL_H + 0.5
+    low = box(FIN_START_X, END_SHAFT_X, *yf, zf, BELT_BACK_LOW).union(box(FIN_START_X, END_SHAFT_X, *yb, zb, BELT_BACK_LOW))
     top_b = PUL_Z + PUL_R + 0.45
-    high = box(FIN_START_X, END_SHAFT_X, y0, y1, top_b, top_b + (BELT_BACK_LOW - PATH - 0.3))
-    arcs = cyl_y(FIN_START_X, PUL_Z, RF, y0, y1).union(cyl_y(END_SHAFT_X, PUL_Z, RF, y0, y1)).cut(
-           cyl_y(FIN_START_X, PUL_Z, PUL_R + 0.4, y0 - 1, y1 + 1)).cut(cyl_y(END_SHAFT_X, PUL_Z, PUL_R + 0.4, y0 - 1, y1 + 1))
+    high = box(FIN_START_X, END_SHAFT_X, *sorted((sgn * FIN_REACH_Y, sgn * 43.75)), top_b, top_b + (BELT_BACK_LOW - zf))
+    arcs = None
+    for xc in (FIN_START_X, END_SHAFT_X):
+        a = cyl_y(xc, PUL_Z, RF, *yf).union(cyl_y(xc, PUL_Z, RB, *yb)).cut(cyl_y(xc, PUL_Z, PUL_R + 0.4, -99, 99))
+        arcs = a if arcs is None else arcs.union(a)
     return low.union(high).union(arcs.cut(box(FIN_START_X, END_SHAFT_X, -99, 99, PUL_Z - PUL_R, PUL_Z + PUL_R)))
 fixed = None
 for k, v in P.items():
@@ -66,10 +71,25 @@ for k, v in P.items():
     fixed = v if fixed is None else fixed.union(v)
 for sgn in (-1, 1):
     check(f"Fin path ({'back' if sgn>0 else 'front'} belt, whole loop) vs every fixed part", fin_path(sgn), fixed, 0.2,
-          "fins run 0.3 mm over the floor, past the tower, gate, pressure roller, hood tunnel and end cap")
+          "finger in the lane, bridge 0.5 mm over the guide; past the tower, gate, pressure roller, hood and end cap")
     y0, y1 = sorted((sgn * BELT_Y0, sgn * BELT_Y1))
     lowb = box(FIN_START_X, END_SHAFT_X, y0, y1, BELT_BACK_LOW + 0.05, BELT_BACK_LOW + 1.38)
     check(f"Belt bottom run ({'back' if sgn>0 else 'front'}) vs walls (rests on the ledge)", lowb, fixed, 0.0)
+# card-clear sensor under the floor at the feeder exit
+tcrt = box(122.0, 132.0, -24.9, -19.1, PATH - 11.0, PATH - 4.0)
+check("Card-clear sensor (TCRT5000 head) vs exit roller, shafts, 122 mm loop", tcrt,
+      pr("exit_roller", "feed_roller").union(cyl_y(EXIT_X, EXIT_Z, 2.6, -60, 60)).union(cyl_y(EXIT_X, EXIT_Z, 8, -55, -39)), 1.0)
+# card fit in the guides
+checks.append(dict(label="Sleeved card (66 mm) in the guides: play per side", overlap=0, gap=round(RAIL_IN - 33.0, 2), need=0.5,
+                   ok=RAIL_IN - 33.0 >= 0.5, note="guides 67.5 mm apart"))
+off = RAIL_IN - 31.5
+checks.append(dict(label="Raw card pushed fully to one side: finger overlap on its back edge", overlap=0, gap=round(31.5 - off - FIN_REACH_Y, 2), need=2.0,
+                   ok=31.5 - off - FIN_REACH_Y >= 2.0, note="fingers reach in to |Y| 27"))
+ang = math.degrees(math.atan((TAPER_IN0 - RAIL_IN) / (TAPER_X1 - TAPER_X0)))
+checks.append(dict(label="Lead-in taper angle per side (degrees)", overlap=0, gap=round(ang, 2), need=2.0, ok=ang <= 2.0,
+                   note="73 mm wide at the nip down to 67.5 mm at X 230, before the camera"))
+checks.append(dict(label="Fin finger below the card floor (no card can get under it)", overlap=0, gap=round(GROOVE_D - 0.5, 2), need=0.5,
+                   ok=GROOVE_D - 0.5 >= 0.5, note="finger runs 0.5 mm above the lane bottom, never on the card floor"))
 checks.append(dict(label="Fin lands behind the exit-roller nip", overlap=0, gap=round(EXIT_X - FIN_START_X, 2), need=4.0,
                    ok=EXIT_X - FIN_START_X >= 4.0, note="the card's tail leaves the nip at X 136; fins touch down at X 131"))
 loop = 2 * (END_SHAFT_X - FIN_START_X) + 2 * math.pi * PUL_R

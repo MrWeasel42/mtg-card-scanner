@@ -77,7 +77,7 @@
   "gap": 0.25,
   "need": 0.2,
   "ok": true,
-  "note": "fins run 0.3 mm over the floor, past the tower, gate, pressure roller, hood tunnel and end cap"
+  "note": "finger in the lane, bridge 0.5 mm over the guide; past the tower, gate, pressure roller, hood and end cap"
  },
  {
   "label": "Belt bottom run (front) vs walls (rests on the ledge)",
@@ -93,7 +93,7 @@
   "gap": 0.25,
   "need": 0.2,
   "ok": true,
-  "note": "fins run 0.3 mm over the floor, past the tower, gate, pressure roller, hood tunnel and end cap"
+  "note": "finger in the lane, bridge 0.5 mm over the guide; past the tower, gate, pressure roller, hood and end cap"
  },
  {
   "label": "Belt bottom run (back) vs walls (rests on the ledge)",
@@ -102,6 +102,46 @@
   "need": 0.0,
   "ok": true,
   "note": ""
+ },
+ {
+  "label": "Card-clear sensor (TCRT5000 head) vs exit roller, shafts, 122 mm loop",
+  "overlap": 0.0,
+  "gap": 1.4,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Sleeved card (66 mm) in the guides: play per side",
+  "overlap": 0,
+  "gap": 0.75,
+  "need": 0.5,
+  "ok": true,
+  "note": "guides 67.5 mm apart"
+ },
+ {
+  "label": "Raw card pushed fully to one side: finger overlap on its back edge",
+  "overlap": 0,
+  "gap": 2.25,
+  "need": 2.0,
+  "ok": true,
+  "note": "fingers reach in to |Y| 27"
+ },
+ {
+  "label": "Lead-in taper angle per side (degrees)",
+  "overlap": 0,
+  "gap": 1.68,
+  "need": 2.0,
+  "ok": true,
+  "note": "73 mm wide at the nip down to 67.5 mm at X 230, before the camera"
+ },
+ {
+  "label": "Fin finger below the card floor (no card can get under it)",
+  "overlap": 0,
+  "gap": 0.7,
+  "need": 0.5,
+  "ok": true,
+  "note": "finger runs 0.5 mm above the lane bottom, never on the card floor"
  },
  {
   "label": "Fin lands behind the exit-roller nip",
