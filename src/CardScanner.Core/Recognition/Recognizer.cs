@@ -179,17 +179,21 @@ public sealed class Recognizer : IDisposable
                 .DefaultIfEmpty(ImageWeight * _index.Search(vecs[v], 1)[0].Score)
                 .Max();
             view = Best(1) > Best(0) ? 1 : 0;
-            // No name readable either way (hand-lettered Secret Lair names, some showcase frames): the
-            // picture alone can be fooled. The collector line ("R 2279 SLD • EN") only reads the right way up.
-            if (hits.Count == 0)
+            // The collector line ("R 2279 SLD • EN") only reads the right way up. If exactly one way gives a
+            // real set + number, go with it, unless the other way has a clean, exact name read. This fixes
+            // hand-lettered names (Skyshroud Claim), split/Room cards whose names run up the side (Spiked
+            // Corridor), and stray rules-text words read as names ("library").
+            bool Readable(int v)
             {
-                bool Readable(int v)
-                {
-                    var c = ReadCollector(hi[v]);
-                    return c.SetCodes.Any(sc => c.Numbers.Any(n => _cards.PrintingsAt(sc, n).Count > 0));
-                }
-                bool up = Readable(0), down = Readable(1);
-                if (up != down) view = up ? 0 : 1;
+                var c = ReadCollector(hi[v]);
+                return c.SetCodes.Any(sc => c.Numbers.Any(n => _cards.PrintingsAt(sc, n).Count > 0));
+            }
+            bool up = Readable(0), down = Readable(1);
+            if (up != down)
+            {
+                int readable = up ? 0 : 1;
+                bool strongNameOtherWay = hits.Any(h => h.View != readable && h.Score >= 0.99 && h.Raw.Length >= 6);
+                if (!strongNameOtherWay) view = readable;
             }
         }
         var vec = vecs[view];
