@@ -18,8 +18,12 @@ public sealed class PhoneLink
     public const int HttpPort = 8770, DiscoveryPort = 8771;
     public static PhoneLink Instance { get; } = new();
 
-    /// <summary>Set by the identify page: takes a JPEG, returns the reply object (serialized to JSON).</summary>
-    public Func<byte[], Task<object>>? Handler { get; set; }
+    /// <summary>One request from the phone (or the machine's Pi).</summary>
+    public sealed record Request(string Method, string Path, IReadOnlyDictionary<string, string> Headers, byte[] Body, string Peer);
+
+    /// <summary>Set by the identify page: answers /api/scan, /api/session/*, /api/undo and /api/status.
+    /// Returns the HTTP status and a reply object (serialized to JSON).</summary>
+    public Func<Request, Task<(int Code, object Body)>>? Handler { get; set; }
 
     public event Action<string>? StatusChanged;
     public string Status { get; private set; } = "Phone link is off.";
@@ -154,14 +158,17 @@ public sealed class PhoneLink
                 SetStatus($"Phone link on · {Addresses()} · phone connected ({peer})");
                 await Reply(stream, 200, new { app = "MTG Card Scanner", pc = Environment.MachineName, version = ViewModels.MainViewModel.AppVersion });
             }
-            else if (method == "POST" && path == "/api/scan")
+            else if (path.StartsWith("/api/"))
             {
                 if (Handler is null) { await Reply(stream, 503, new { ok = false, error = "The PC app is still loading the card database." }); return; }
-                if (body.Length < 1000) { await Reply(stream, 400, new { ok = false, error = "No photo in the request." }); return; }
-                var result = await Handler(body);
-                _scans++;
-                SetStatus($"Phone link on · {Addresses()} · {_scans} scan{(_scans == 1 ? "" : "s")} from {peer}");
-                await Reply(stream, 200, result);
+                if (path == "/api/scan" && body.Length < 1000) { await Reply(stream, 400, new { ok = false, error = "No photo in the request." }); return; }
+                var (code, result) = await Handler(new Request(method, path, headers, body, peer));
+                if (path == "/api/scan")
+                {
+                    _scans++;
+                    SetStatus($"Phone link on · {Addresses()} · {_scans} scan{(_scans == 1 ? "" : "s")} from {peer}");
+                }
+                await Reply(stream, code, result);
             }
             else await Reply(stream, 404, new { ok = false, error = "Unknown request." });
         }
@@ -213,7 +220,7 @@ public sealed class PhoneLink
     private static async Task Reply(NetworkStream s, int code, object payload)
     {
         var json = JsonSerializer.SerializeToUtf8Bytes(payload, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        var text = code switch { 200 => "OK", 400 => "Bad Request", 404 => "Not Found", 503 => "Service Unavailable", _ => "Error" };
+        var text = code switch { 200 => "OK", 400 => "Bad Request", 404 => "Not Found", 409 => "Conflict", 503 => "Service Unavailable", _ => "Error" };
         var hdr = Encoding.ASCII.GetBytes(
             $"HTTP/1.1 {code} {text}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {json.Length}\r\nConnection: close\r\n\r\n");
         await s.WriteAsync(hdr);

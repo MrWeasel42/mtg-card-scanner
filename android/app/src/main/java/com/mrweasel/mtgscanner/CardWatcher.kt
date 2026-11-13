@@ -1,34 +1,39 @@
 package com.mrweasel.mtgscanner
 
+import android.graphics.RectF
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import kotlin.math.abs
 
 /**
- * Watches low-res preview frames and says when to take a photo: a card is on the bed (the frame differs from
- * the empty bed), nothing has moved for [stableMs], and it isn't the card we already took (works whether you
- * swap cards or stack the next one on top, like the TCG Archivist stand).
- *
- * Each frame is shrunk to a 40 x 30 grid of average brightness; all the tests are on that grid.
+ * Watches low-res preview frames, only inside the card box, and says when to take a photo:
+ *  - a card is in the box (one solid patch that differs from the empty box),
+ *  - no hand is on the box edge (a thumb still holding the card),
+ *  - nothing has moved for [stableMs],
+ *  - a hand has been in since the last photo (so a foil's sparkle or a light change never counts as a new
+ *    card) and the picture really changed.
+ * The box is shrunk to a 24 x 32 grid of average brightness; all the tests are on that grid.
  */
 class CardWatcher(
     private val onCapture: () -> Unit,
-    private val onInfo: (String) -> Unit,
+    private val onInfo: (String, Boolean) -> Unit,      // text, hand in the box
 ) : ImageAnalysis.Analyzer {
 
     companion object {
-        const val GW = 40
-        const val GH = 30
-        const val CELL_DIFF = 22f        // brightness change (0-255) that counts a grid cell as "different"
-        const val PRESENT_FRAC = 0.06f   // this much of the frame differs from the empty bed → a card is there
-        const val NEW_FRAC = 0.05f       // this much differs from the last photo → it's a new card, even with no hand seen
-        const val NEW_FRAC_AFTER_HAND = 0.012f  // after a hand went past, a much smaller change counts (similar-looking cards)
-        const val MOTION_MAX = 3.0f      // mean change between frames below this counts as still
-        const val HAND_MOTION = 7.0f     // a frame changing this much means a hand is swapping the card
+        const val GW = 24
+        const val GH = 32
+        const val CELL_DIFF = 22f          // brightness change (0-255) that counts a grid cell as different
+        const val PRESENT_FRAC = 0.20f     // this much of the box differs from the empty box → a card is there
+        const val NEW_FRAC = 0.012f        // after a hand went past, this much change from the last photo = a new card
+        const val RING_BUSY = 0.22f        // this much of the box's edge ring covered → a hand is in the way
+        const val MOTION_MAX = 3.0f        // mean change between frames below this counts as still
+        const val HAND_MOTION = 7.0f       // a frame changing this much means a hand is moving in the box
     }
 
-    @Volatile var enabled = false   // starts paused: press Start with the bed clear
-    @Volatile var stableMs = 600L
+    @Volatile var enabled = false
+    @Volatile var stableMs = 450L
+    @Volatile var box = RectF(0.2f, 0.2f, 0.8f, 0.75f)
+        set(v) { field = v; setEmptyBed() }
     @Volatile private var busy = false
 
     private var prev: FloatArray? = null
@@ -36,24 +41,21 @@ class CardWatcher(
     private var lastShot: FloatArray? = null
     private var stillSince = 0L
     private var handSeen = false
-    private var bgCandidateSince = 0L
+    private var firstShot = true
     @Volatile private var resetBackground = true
 
-    /** Next still frame becomes the empty-bed picture. */
-    fun setEmptyBed() { resetBackground = true; lastShot = null; handSeen = false }
-
-    /** Start watching: re-learns the empty bed first, so start with the bed clear. */
-    fun start() { setEmptyBed(); enabled = true }
+    fun setEmptyBed() { resetBackground = true; lastShot = null; handSeen = false; firstShot = true; prev = null }
+    /** Start watching: re-learns the empty box first, so start with the box empty. */
+    fun start() { setEmptyBed(); busy = false; enabled = true }
     fun pause() { enabled = false }
-
-    /** The photo is done (sent or saved): watch for the next card. */
+    /** Ready for the next photo (the last one is saved and there's room in the queue). */
     fun captureFinished() { busy = false }
-
     /** Manual shot: remember this frame so auto doesn't take the same card again. */
-    fun markShot() { lastShot = prev?.copyOf(); handSeen = false }
+    fun markShot() { lastShot = prev?.copyOf(); handSeen = false; firstShot = false }
 
     override fun analyze(image: ImageProxy) {
         try {
+            if (!enabled) { onInfo("Paused", false); return }
             val g = grid(image)
             val now = System.currentTimeMillis()
             val p = prev
@@ -63,30 +65,35 @@ class CardWatcher(
             if (motion > HAND_MOTION && p != null) handSeen = true
             val stillFor = if (stillSince == 0L) 0L else now - stillSince
 
-            if (!enabled) { onInfo("Paused · clear the bed and press Start"); return }
             if (resetBackground) {
-                if (stillFor >= 800) { background = g.copyOf(); resetBackground = false; lastShot = null }
-                onInfo("Learning the empty bed… keep it clear and still")
+                if (stillFor >= 800) { background = g.copyOf(); resetBackground = false; lastShot = null; handSeen = false; firstShot = true }
+                onInfo("Learning the empty box… keep it empty and still", false)
                 return
             }
+            if (busy) { onInfo("Taking photo…", false); return }
             val bg = background ?: return
-            val present = cardPresence(g, bg)
+            if (bg.size != g.size) { setEmptyBed(); return }
+            val off = exposureOffset(g, bg)
+            val present = cardPresence(g, bg, off)
+            val ring = ringCovered(g, bg, off)
             val change = lastShot?.let { fracDiffComp(g, it) } ?: 1f
             val cardThere = present >= PRESENT_FRAC
-            if (!cardThere) lastShot = null
-            val isNew = change >= NEW_FRAC || (handSeen && change >= NEW_FRAC_AFTER_HAND)
+            val hand = ring >= RING_BUSY || motion > HAND_MOTION
 
             val state = when {
-                busy -> "taking photo…"
-                !cardThere -> "waiting for a card"
-                stillFor < stableMs -> "card moving"
-                !isNew -> "same card — place the next one"
+                !cardThere && ring < RING_BUSY -> "Waiting for a card"
+                hand -> "Hand in the box"
+                !cardThere -> "Waiting for a card"
+                stillFor < stableMs -> "Hold still…"
+                !(handSeen || firstShot) || change < NEW_FRAC -> "Same card · place the next one"
                 else -> "capture"
             }
-            onInfo(String.format("%s · card %.0f%% · new %.1f%% · motion %.1f%s", state, present * 100, change * 100, motion, if (handSeen) " · hand" else ""))
+            onInfo(String.format("%s · card %.0f%% · edge %.0f%% · new %.1f%%", if (state == "capture") "Photo" else state,
+                present * 100, ring * 100, change * 100), hand)
             if (state == "capture") {
                 busy = true
                 handSeen = false
+                firstShot = false
                 lastShot = g.copyOf()
                 onCapture()
             }
@@ -95,76 +102,93 @@ class CardWatcher(
         }
     }
 
+    private var ringW = GW
+    private var ringH = GH
+
+    /** The box's brightness grid, sampled from the Y plane in the sensor's orientation. */
     private fun grid(image: ImageProxy): FloatArray {
-        val plane = image.planes[0]          // Y (brightness)
+        val plane = image.planes[0]
         val buf = plane.buffer
         val rowStride = plane.rowStride
         val pixStride = plane.pixelStride
-        val w = image.width; val h = image.height
-        val out = FloatArray(GW * GH)
-        val cw = w / GW; val ch = h / GH
-        val step = 4
-        for (gy in 0 until GH) for (gx in 0 until GW) {
+        val rot = image.imageInfo.rotationDegrees
+        val roi = BoxMath.toStored(box, image.width, image.height, rot)
+        val (gx, gy) = if (rot == 90 || rot == 270) GH to GW else GW to GH
+        val out = FloatArray(gx * gy)
+        val cw = maxOf(1, roi.width() / gx); val ch = maxOf(1, roi.height() / gy)
+        val step = maxOf(1, minOf(cw, ch) / 4)
+        for (j in 0 until gy) for (i in 0 until gx) {
             var sum = 0; var n = 0
-            var y = gy * ch
-            while (y < (gy + 1) * ch) {
-                var x = gx * cw
+            var y = roi.top + j * ch
+            val yEnd = minOf(roi.top + (j + 1) * ch, image.height)
+            while (y < yEnd) {
                 val row = y * rowStride
-                while (x < (gx + 1) * cw) {
+                var x = roi.left + i * cw
+                val xEnd = minOf(roi.left + (i + 1) * cw, image.width)
+                while (x < xEnd) {
                     sum += buf.get(row + x * pixStride).toInt() and 0xFF
                     n++
                     x += step
                 }
                 y += step
             }
-            out[gy * GW + gx] = if (n > 0) sum.toFloat() / n else 0f
+            out[j * gx + i] = if (n > 0) sum.toFloat() / n else 0f
         }
+        ringW = gx; ringH = gy
         return out
     }
 
-    private fun meanDiff(a: FloatArray, b: FloatArray): Float {
-        var s = 0f
-        for (i in a.indices) s += abs(a[i] - b[i])
-        return s / a.size
+    private fun ringIndices(): List<Int> {
+        val w = ringW; val h = ringH
+        val r = ArrayList<Int>(2 * (w + h))
+        for (x in 0 until w) { r.add(x); r.add((h - 1) * w + x) }
+        for (y in 1 until h - 1) { r.add(y * w); r.add(y * w + w - 1) }
+        return r
     }
 
-    /** Brightness shift between two frames from the outer ring of cells (where a card rarely sits), so the camera's
-     *  auto-exposure drifting doesn't look like a card. */
+    /** Brightness shift (auto-exposure) between two frames, from the box's edge ring where the card doesn't sit. */
     private fun exposureOffset(a: FloatArray, b: FloatArray): Float {
-        val d = ArrayList<Float>(2 * (GW + GH))
-        for (x in 0 until GW) { d.add(a[x] - b[x]); d.add(a[(GH - 1) * GW + x] - b[(GH - 1) * GW + x]) }
-        for (y in 1 until GH - 1) { d.add(a[y * GW] - b[y * GW]); d.add(a[y * GW + GW - 1] - b[y * GW + GW - 1]) }
-        d.sort()
+        val d = ringIndices().map { a[it] - b[it] }.sorted()
         return d[d.size / 2].coerceIn(-40f, 40f)
     }
 
+    private fun ringCovered(g: FloatArray, bg: FloatArray, off: Float): Float {
+        val ring = ringIndices()
+        return ring.count { abs(g[it] - bg[it] - off) > CELL_DIFF }.toFloat() / ring.size
+    }
+
     private fun fracDiffComp(a: FloatArray, b: FloatArray): Float {
+        if (a.size != b.size) return 1f
         val off = exposureOffset(a, b)
         var n = 0
         for (i in a.indices) if (abs(a[i] - b[i] - off) > CELL_DIFF) n++
         return n.toFloat() / a.size
     }
 
-    /** Share of the frame covered by a card: the cells that differ from the empty bed must form one solid patch
-     *  (at least 45% of their bounding box), so scattered glare or shadows on the desk don't count. */
-    private fun cardPresence(g: FloatArray, bg: FloatArray): Float {
-        val off = exposureOffset(g, bg)
-        var n = 0; var x0 = GW; var x1 = -1; var y0 = GH; var y1 = -1
-        for (y in 0 until GH) for (x in 0 until GW) {
-            val i = y * GW + x
+    /** Share of the box covered by a card: the cells that differ from the empty box must form one solid patch
+     *  (at least 45% of their bounding box), so glare or shadows don't count. */
+    private fun cardPresence(g: FloatArray, bg: FloatArray, off: Float): Float {
+        val w = ringW; val h = ringH
+        var n = 0; var x0 = w; var x1 = -1; var y0 = h; var y1 = -1
+        for (y in 0 until h) for (x in 0 until w) {
+            val i = y * w + x
             if (abs(g[i] - bg[i] - off) > CELL_DIFF) {
                 n++
-                if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y
+                if (x < x0) x0 = x
+                if (x > x1) x1 = x
+                if (y < y0) y0 = y
+                if (y > y1) y1 = y
             }
         }
         if (n == 0) return 0f
-        val box = (x1 - x0 + 1) * (y1 - y0 + 1)
-        return if (n.toFloat() / box >= 0.45f) n.toFloat() / g.size else 0f
+        val area = (x1 - x0 + 1) * (y1 - y0 + 1)
+        return if (n.toFloat() / area >= 0.45f) n.toFloat() / g.size else 0f
     }
 
-    private fun fracDiff(a: FloatArray, b: FloatArray): Float {
-        var n = 0
-        for (i in a.indices) if (abs(a[i] - b[i]) > CELL_DIFF) n++
-        return n.toFloat() / a.size
+    private fun meanDiff(a: FloatArray, b: FloatArray): Float {
+        if (a.size != b.size) return 99f
+        var s = 0f
+        for (i in a.indices) s += abs(a[i] - b[i])
+        return s / a.size
     }
 }

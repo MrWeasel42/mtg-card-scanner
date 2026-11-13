@@ -5,6 +5,10 @@ import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapRegionDecoder
+import android.graphics.Matrix
+import android.graphics.RectF
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Build
@@ -37,6 +41,7 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.Dispatchers
@@ -45,26 +50,28 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 import java.util.concurrent.Executors
 
 /**
- * Phone scanner for the MTG Card Scanner desktop app. The phone is only the camera: each photo goes to the PC
- * over Wi-Fi and the PC identifies it (same recognizer, logs and review pages as dropped-in photos).
- * If the PC can't be reached, photos wait on the phone and go as soon as it's back.
+ * Phone scanner for the MTG Card Scanner PC app. The phone is only the camera: inside a scan session it takes a
+ * photo of the card box each time a new card is placed, sends it to the PC, and shows what the PC found.
+ *  - Nothing is taken while the PC isn't connected, and at most 2 photos ever wait to be sent (kept in memory
+ *    only), so there is never a backlog. Stop (here or on the PC) ends the session and drops anything waiting.
+ *  - Only the card box is sent, cropped and cut down to 2,400 px: faster to send and easier for the PC to read.
  */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var preview: PreviewView
+    private lateinit var overlay: BoxOverlay
     private lateinit var status: TextView
     private lateinit var watchText: TextView
     private lateinit var resultName: TextView
     private lateinit var resultDetail: TextView
     private lateinit var history: TextView
-    private lateinit var btnAuto: MaterialButton
+    private lateinit var btnStart: MaterialButton
 
     private val prefs by lazy { getSharedPreferences("scanner", Context.MODE_PRIVATE) }
     private val link by lazy { PcLink(this) }
@@ -74,12 +81,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var watcher: CardWatcher
 
     @Volatile private var pc: PcLink.Pc? = null
-    private val queue = Channel<File>(Channel.UNLIMITED)
-    private val queued = HashSet<String>()
-    private var shots = 0
+    @Volatile private var session = false          // a scan session is open on the PC
+    @Volatile private var generation = 0           // bumps on Stop: anything still queued from before is dropped
+    private val queue = Channel<Pair<Int, ByteArray>>(Channel.UNLIMITED)
+    @Volatile private var waiting = 0
+    private val maxWaiting = 2
     private var sent = 0
+    private var lastScan: String? = null
+    private var misses = 0
     private val beeper by lazy { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 90) }
-    private val pendingDir by lazy { File(filesDir, "pending").apply { mkdirs() } }
 
     private val askCamera = registerForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         if (ok) startCamera() else status.text = "The camera permission is needed to scan cards."
@@ -89,50 +99,134 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        // Android 15 draws apps under the status and navigation bars: keep the panels and buttons clear of them
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.root)) { v, insets ->
             val b = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             v.setPadding(b.left, b.top, b.right, b.bottom)
             insets
         }
         preview = findViewById(R.id.preview)
+        overlay = findViewById(R.id.box)
         status = findViewById(R.id.status)
         watchText = findViewById(R.id.watch)
         resultName = findViewById(R.id.resultName)
         resultDetail = findViewById(R.id.resultDetail)
         history = findViewById(R.id.history)
-        btnAuto = findViewById(R.id.btnAuto)
+        btnStart = findViewById(R.id.btnStart)
+        cacheDir.listFiles()?.filter { it.name.startsWith("scan_") }?.forEach { it.delete() }   // nothing carries over
+        File(filesDir, "pending").deleteRecursively()                                            // old builds' backlog
 
         watcher = CardWatcher(
-            onCapture = { runOnUiThread { takePhoto(auto = true) } },
-            onInfo = { t -> runOnUiThread { watchText.text = t } },
+            onCapture = { runOnUiThread { takePhoto() } },
+            onInfo = { t, hand -> runOnUiThread { watchText.text = t; overlay.handInBox = hand } },
         )
         watcher.stableMs = prefs.getLong("stableMs", 450L)
-        updateAutoButton()
+        val saved = loadBox()
+        overlay.box = saved
+        watcher.box = saved
+        overlay.onChanged = { b -> saveBox(b); watcher.box = RectF(b) }
+        if (!prefs.contains("box_l")) overlay.editing = true     // first run: ask for the box straight away
 
-        btnAuto.setOnClickListener {
-            if (watcher.enabled) watcher.pause() else watcher.start()
-            updateAutoButton()
+        btnStart.setOnClickListener { if (watcher.enabled) pauseWatching("Paused") else startOrResume() }
+        findViewById<MaterialButton>(R.id.btnShoot).setOnClickListener {
+            if (!session || pc == null) { toast("Press Start first (connected to the PC)"); return@setOnClickListener }
+            watcher.markShot(); takePhoto()
         }
-        findViewById<MaterialButton>(R.id.btnClear).setOnClickListener {
-            history.text = ""
-            shots = 0; sent = 0
-            resultName.text = "Cleared"
-            resultDetail.text = "Press Start with the bed clear, then place a card."
-            showConnected()
-        }
-        findViewById<MaterialButton>(R.id.btnShoot).setOnClickListener { watcher.markShot(); takePhoto(auto = false) }
+        findViewById<MaterialButton>(R.id.btnUndo).setOnClickListener { undoLast() }
+        findViewById<MaterialButton>(R.id.btnStop).setOnClickListener { stopSession(tellPc = true, why = "Stopped.") }
         findViewById<MaterialButton>(R.id.btnMore).setOnClickListener { showSettings() }
         setupGestures()
+        updateButtons()
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) startCamera()
         else askCamera.launch(Manifest.permission.CAMERA)
 
         lifecycleScope.launch { connectionLoop() }
         lifecycleScope.launch { senderLoop() }
+        lifecycleScope.launch { statusLoop() }
     }
 
-    private fun updateAutoButton() { btnAuto.text = if (watcher.enabled) "⏸ Pause" else "▶ Start" }
+    override fun onStop() {
+        super.onStop()
+        // leaving the app pauses scanning; nothing keeps running in the background
+        if (watcher.enabled) pauseWatching("Paused (app was in the background)")
+    }
+
+    private fun toast(t: String) = Toast.makeText(this, t, Toast.LENGTH_SHORT).show()
+
+    private fun updateButtons() { btnStart.text = if (watcher.enabled) "⏸ Pause" else if (session) "▶ Resume" else "▶ Start" }
+
+    // ---------------------------------------------------------------- card box
+
+    private fun loadBox() = RectF(prefs.getFloat("box_l", 0.2f), prefs.getFloat("box_t", 0.2f),
+        prefs.getFloat("box_r", 0.8f), prefs.getFloat("box_b", 0.75f))
+
+    private fun saveBox(b: RectF) {
+        prefs.edit().putFloat("box_l", b.left).putFloat("box_t", b.top).putFloat("box_r", b.right).putFloat("box_b", b.bottom).apply()
+    }
+
+    // ---------------------------------------------------------------- session
+
+    private fun startOrResume() {
+        val target = pc ?: run { toast("Not connected to the PC yet"); return }
+        if (overlay.editing) { overlay.editing = false; saveBox(overlay.box); watcher.box = RectF(overlay.box) }
+        lifecycleScope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                try {
+                    val st = link.status(target)
+                    if (session && st.active && !st.stop) link.resumeSession(target) else link.startSession(target)
+                    true
+                } catch (_: Exception) { false }
+            }
+            if (!ok) { toast("The PC didn't answer"); return@launch }
+            if (!session) { sent = 0; lastScan = null; history.text = "" }
+            session = true
+            watcher.start()
+            resultName.text = "Scanning"
+            resultDetail.text = "Keep the box empty for a second, then place cards one at a time and let go of each."
+            updateButtons()
+            showConnected()
+        }
+    }
+
+    private fun pauseWatching(why: String) {
+        watcher.pause()
+        watchText.text = why
+        updateButtons()
+    }
+
+    /** Ends the session: stops the camera watching, drops anything waiting, clears the list. */
+    private fun stopSession(tellPc: Boolean, why: String) {
+        watcher.pause()
+        val had = session
+        session = false
+        generation++
+        waiting = 0
+        val target = pc
+        if (tellPc && had && target != null) lifecycleScope.launch(Dispatchers.IO) { try { link.stopSession(target) } catch (_: Exception) {} }
+        resultName.text = why
+        resultDetail.text = if (sent > 0) "$sent card${if (sent == 1) "" else "s"} sent this session. Press Start for a new one." else "Press Start to scan."
+        history.text = ""
+        lastScan = null
+        updateButtons()
+        showConnected()
+    }
+
+    private fun undoLast() {
+        val scan = lastScan ?: run { toast("Nothing to undo"); return }
+        val target = pc ?: run { toast("Not connected"); return }
+        lifecycleScope.launch {
+            val err = withContext(Dispatchers.IO) { try { link.undo(target, scan) } catch (e: Exception) { e.message ?: "failed" } }
+            if (err == null) {
+                sent = maxOf(0, sent - 1)
+                lastScan = null
+                history.text = history.text.lines().drop(1).joinToString("\n")
+                resultName.text = "↶ Removed $scan"
+                resultDetail.text = "Place the card again, or the next one."
+                watcher.markShot()
+                showConnected()
+            } else toast(err)
+        }
+    }
 
     // ---------------------------------------------------------------- camera
 
@@ -140,22 +234,19 @@ class MainActivity : AppCompatActivity() {
         val future = ProcessCameraProvider.getInstance(this)
         future.addListener({
             val provider = future.get()
-            val pv = Preview.Builder().build().also { it.setSurfaceProvider(preview.surfaceProvider) }
-            val sel43 = ResolutionSelector.Builder()
-                .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
-                .setResolutionStrategy(ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY)
-                .build()
+            val ratio43 = AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY
+            val pv = Preview.Builder()
+                .setResolutionSelector(ResolutionSelector.Builder().setAspectRatioStrategy(ratio43).build())
+                .build().also { it.setSurfaceProvider(preview.surfaceProvider) }
             imageCapture = ImageCapture.Builder()
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                .setResolutionSelector(sel43)
-                .setJpegQuality(92)
+                .setResolutionSelector(ResolutionSelector.Builder().setAspectRatioStrategy(ratio43)
+                    .setResolutionStrategy(ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY).build())
+                .setJpegQuality(95)
                 .build()
             val analysis = ImageAnalysis.Builder()
-                .setResolutionSelector(
-                    ResolutionSelector.Builder().setResolutionStrategy(
-                        ResolutionStrategy(Size(640, 480), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER)
-                    ).build()
-                )
+                .setResolutionSelector(ResolutionSelector.Builder().setAspectRatioStrategy(ratio43).setResolutionStrategy(
+                    ResolutionStrategy(Size(640, 480), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER)).build())
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
             analysis.setAnalyzer(analysisExec, watcher)
@@ -192,48 +283,77 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun takePhoto(auto: Boolean) {
-        val ic = imageCapture ?: run { watcher.captureFinished(); return }
-        val stamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(Date())
-        val file = File(pendingDir, "scan_$stamp.jpg")
+    private fun takePhoto() {
+        val ic = imageCapture
+        if (ic == null || !session || pc == null) { watcher.captureFinished(); return }
+        val gen = generation
+        val file = File(cacheDir, "scan_${System.currentTimeMillis()}.jpg")
         ic.takePicture(ImageCapture.OutputFileOptions.Builder(file).build(), ContextCompat.getMainExecutor(this),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    shots++
-                    watcher.captureFinished()
-                    if (prefs.getBoolean("keepCopy", true)) saveCopyToGallery(file)
-                    enqueue(file)
-                    resultName.text = "📷 Scan $shots taken"
-                    resultDetail.text = if (pc != null) "Sending to ${pc!!.name}…" else "Saved on the phone — it goes to the PC when it's found."
+                    lifecycleScope.launch {
+                        val jpeg = withContext(Dispatchers.Default) {
+                            try { cropToBox(file) } catch (e: Exception) { null } finally { file.delete() }
+                        }
+                        if (jpeg == null || gen != generation) { watcher.captureFinished(); return@launch }
+                        if (prefs.getBoolean("keepCopy", false)) withContext(Dispatchers.IO) { saveCopyToGallery(jpeg) }
+                        waiting++
+                        queue.trySend(gen to jpeg)
+                        if (waiting < maxWaiting) watcher.captureFinished()
+                        resultName.text = "📷 Photo taken"
+                        resultDetail.text = "Sending to ${pc?.name ?: "the PC"}…"
+                        showConnected()
+                    }
                 }
                 override fun onError(e: ImageCaptureException) {
+                    file.delete()
                     watcher.captureFinished()
-                    Toast.makeText(this@MainActivity, "Photo failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                    toast("Photo failed: ${e.message}")
                 }
             })
     }
 
-    private fun saveCopyToGallery(file: File) {
+    /** The card box (plus 6% each way) from the full photo, turned upright, at most 2,400 px tall. */
+    private fun cropToBox(file: File): ByteArray {
+        val rot = ExifInterface(file.absolutePath).rotationDegrees
+        @Suppress("DEPRECATION")
+        val dec = BitmapRegionDecoder.newInstance(file.absolutePath, false)!!
+        val r = BoxMath.toStored(RectF(overlay.box), dec.width, dec.height, rot, margin = 0.06f)
+        var bmp = dec.decodeRegion(r, null)
+        dec.recycle()
+        if (rot != 0) {
+            val m = Matrix().apply { postRotate(rot.toFloat()) }
+            val turned = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
+            if (turned !== bmp) bmp.recycle()
+            bmp = turned
+        }
+        val long = maxOf(bmp.width, bmp.height)
+        if (long > 2400) {
+            val s = 2400f / long
+            val small = Bitmap.createScaledBitmap(bmp, (bmp.width * s).toInt(), (bmp.height * s).toInt(), true)
+            if (small !== bmp) bmp.recycle()
+            bmp = small
+        }
+        val out = ByteArrayOutputStream()
+        bmp.compress(Bitmap.CompressFormat.JPEG, 92, out)
+        bmp.recycle()
+        return out.toByteArray()
+    }
+
+    private fun saveCopyToGallery(jpeg: ByteArray) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
         try {
             val values = ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, file.name)
+                put(MediaStore.Images.Media.DISPLAY_NAME, "scan_${System.currentTimeMillis()}.jpg")
                 put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
                 put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/MTG Scans")
             }
             val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return
-            contentResolver.openOutputStream(uri)?.use { out -> file.inputStream().use { it.copyTo(out) } }
+            contentResolver.openOutputStream(uri)?.use { it.write(jpeg) }
         } catch (_: Exception) {}
     }
 
     // ---------------------------------------------------------------- PC link
-
-    private fun enqueue(file: File) {
-        synchronized(queued) { if (!queued.add(file.name)) return }
-        queue.trySend(file)
-    }
-
-    private var misses = 0
 
     @Suppress("DEPRECATION")
     private fun phoneIp(): String = try {
@@ -244,7 +364,7 @@ class MainActivity : AppCompatActivity() {
     private suspend fun connectionLoop() {
         while (lifecycleScope.isActive) {
             if (pc == null) {
-                if (misses < 2) withContext(Dispatchers.Main) { status.text = "Looking for the PC… (turn on Settings → Phone link in the PC app)" }
+                if (misses < 2) withContext(Dispatchers.Main) { status.text = "Looking for the PC… (PC app: ⚙ Settings → Phone link)" }
                 val manual = prefs.getString("host", "")!!.trim()
                 val found = withContext(Dispatchers.IO) {
                     if (manual.isNotEmpty()) {
@@ -256,13 +376,11 @@ class MainActivity : AppCompatActivity() {
                     misses = 0
                     pc = found
                     withContext(Dispatchers.Main) { showConnected() }
-                    pendingDir.listFiles()?.sortedBy { it.name }?.forEach { enqueue(it) }
                 } else {
                     misses++
                     if (misses >= 2) withContext(Dispatchers.Main) {
-                        status.text = if (manual.isNotEmpty())
-                            "Can't reach the PC at $manual. Check the address, and that the PC app's Phone link is on."
-                        else "PC not found (phone ${phoneIp()}). Turn on Phone link in the PC app, or type the PC's address in Settings."
+                        status.text = if (manual.isNotEmpty()) "Can't reach the PC at $manual. Is the PC app's Phone link on?"
+                        else "PC not found (this phone: ${phoneIp()}). Turn on Phone link in the PC app, or type the PC's address in ⚙."
                     }
                     delay(4000)
                 }
@@ -270,45 +388,65 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** While a session is open, pick up Pause / Stop pressed on the PC. */
+    private suspend fun statusLoop() {
+        while (lifecycleScope.isActive) {
+            delay(2000)
+            val target = pc ?: continue
+            if (!session) continue
+            val st = withContext(Dispatchers.IO) { try { link.status(target) } catch (_: Exception) { null } } ?: continue
+            if (st.stop || !st.active) stopSession(tellPc = false, why = "Stopped on the PC.")
+            else if (st.paused && watcher.enabled) pauseWatching("Paused on the PC · press Resume to carry on")
+        }
+    }
+
     private fun showConnected() {
         val p = pc ?: return
-        val waiting = pendingDir.listFiles()?.size ?: 0
-        status.text = "✅ ${p.name} (${p.host}) · $sent sent" + if (waiting > 0) " · $waiting waiting" else ""
+        status.text = "✅ ${p.name} (${p.host})" + (if (session) " · $sent sent" else " · press Start") +
+            (if (waiting > 0) " · $waiting waiting" else "")
     }
 
     private suspend fun senderLoop() {
-        for (file in queue) {
-            while (true) {
+        for ((gen, jpeg) in queue) {
+            while (gen == generation) {
                 val target = pc
-                if (target == null) { delay(1500); continue }
-                val reply = withContext(Dispatchers.IO) {
-                    try { link.send(target.host, target.port, file) } catch (e: Exception) { null }
-                }
+                if (target == null) { delay(1000); continue }
+                val reply = withContext(Dispatchers.IO) { try { link.send(target, jpeg) } catch (_: Exception) { null } }
                 if (reply == null) {
-                    pc = null    // connection lost: rediscover, keep the photo
-                    withContext(Dispatchers.Main) { status.text = "PC not answering — photos are kept and will be sent" }
+                    pc = null    // lost the PC: stop taking photos; what's waiting (2 at most) goes when it's back
+                    if (watcher.enabled) pauseWatching("Lost the PC · press Resume when it's back")
+                    status.text = "PC not answering · reconnecting…"
                     delay(1500)
                     continue
                 }
-                sent++
-                file.delete()
-                synchronized(queued) { queued.remove(file.name) }
-                showReply(reply)
-                showConnected()
+                if (gen == generation) handleReply(reply)
                 break
             }
+            waiting = maxOf(0, waiting - 1)
+            if (waiting < maxWaiting) watcher.captureFinished()
+            showConnected()
         }
     }
 
-    private fun showReply(r: PcLink.ScanReply) {
+    private fun handleReply(r: PcLink.ScanReply) {
         val beep = prefs.getBoolean("beep", true)
-        if (!r.ok || r.name == null) {
-            resultName.text = "⚠ ${r.error ?: "No card found"}"
-            resultDetail.text = "Check the photo on the PC (${r.scan})."
-            if (beep) beeper.startTone(ToneGenerator.TONE_SUP_ERROR, 300)
-            addHistory("⚠ ${r.scan}  ${r.error ?: "no card"}")
-            return
+        when {
+            r.stop -> { stopSession(tellPc = false, why = "Stopped on the PC."); return }
+            r.paused -> { pauseWatching("Paused on the PC · press Resume to carry on"); return }
+            r.noCard -> {
+                resultName.text = "No card in that photo"
+                resultDetail.text = "Skipped: nothing was added on the PC."
+                return
+            }
+            !r.ok || r.name == null -> {
+                resultName.text = "⚠ ${r.error ?: "Couldn't read that one"}"
+                resultDetail.text = "Check it on the PC."
+                if (beep) beeper.startTone(ToneGenerator.TONE_SUP_ERROR, 300)
+                return
+            }
         }
+        sent = if (r.count > 0) r.count else sent + 1
+        lastScan = r.scan
         val check = !r.pinned || r.finishUnsure
         val setLine = listOfNotNull(r.setCode, r.number?.let { "#$it" }).joinToString(" ")
         val price = r.price?.let { String.format(Locale.US, " · $%.2f", it) } ?: ""
@@ -320,20 +458,18 @@ class MainActivity : AppCompatActivity() {
             append("\n")
             append(
                 when {
-                    !r.pinned -> "Not sure — verify it on the PC"
+                    r.sameAsLast -> "Same printing as the last card. Tap Undo if it was taken twice."
+                    !r.pinned -> "Not sure: verify it on the PC"
                     r.finishUnsure -> "Check the finish on the PC (foil?)"
                     else -> "📌 ${r.pinReason ?: "pinned"}"
                 }
             )
         }
         if (beep) {
-            if (check) beeper.startTone(ToneGenerator.TONE_PROP_NACK, 250) else beeper.startTone(ToneGenerator.TONE_PROP_ACK, 150)
+            if (check || r.sameAsLast) beeper.startTone(ToneGenerator.TONE_PROP_NACK, 250) else beeper.startTone(ToneGenerator.TONE_PROP_ACK, 150)
         }
-        addHistory((if (check) "⚠ " else "✓ ") + "${r.name}  $setLine")
-    }
-
-    private fun addHistory(line: String) {
-        val lines = (listOf(line) + history.text.lines()).filter { it.isNotBlank() }.take(40)
+        val lines = (listOf((if (check) "⚠ " else "✓ ") + "${r.name}  $setLine" + if (r.sameAsLast) "  (same as last)" else "") +
+            history.text.lines()).filter { it.isNotBlank() }.take(40)
         history.text = lines.joinToString("\n")
     }
 
@@ -344,16 +480,16 @@ class MainActivity : AppCompatActivity() {
         val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(pad, pad / 2, pad, 0) }
         val hostLabel = TextView(this).apply { text = "PC address (leave blank to find it automatically)" }
         val host = EditText(this).apply { hint = "e.g. 192.168.1.20"; setText(prefs.getString("host", "")); isSingleLine = true }
-        val keep = CheckBox(this).apply { text = "Keep a copy in Pictures/MTG Scans"; isChecked = prefs.getBoolean("keepCopy", true) }
+        val keep = CheckBox(this).apply { text = "Also keep each photo in Pictures/MTG Scans"; isChecked = prefs.getBoolean("keepCopy", false) }
         val beep = CheckBox(this).apply { text = "Beep on each result"; isChecked = prefs.getBoolean("beep", true) }
         val torch = CheckBox(this).apply { text = "Phone flashlight on (can cause glare)"; isChecked = prefs.getBoolean("torch", false) }
-        val stableLabel = TextView(this).apply { text = "Wait before auto photo (ms): longer if photos come out blurry" }
+        val stableLabel = TextView(this).apply { text = "Wait before each photo (ms): longer if photos come out blurry" }
         val stable = EditText(this).apply {
             setText(prefs.getLong("stableMs", 450L).toString()); inputType = android.text.InputType.TYPE_CLASS_NUMBER
         }
         val tips = TextView(this).apply {
-            text = "\nTips: pinch to zoom so the card fills most of the screen; tap to focus. " +
-                "Use a dark, plain background. Start learns the empty bed, so press it with nothing on the bed."
+            text = "\nEdit card box: drag it over the stand's card pocket, a little bigger than the card. Only what's " +
+                "inside the box is watched and sent. Pinch to zoom, tap to focus. Let go of each card before the photo."
             textSize = 12f
         }
         listOf(hostLabel, host, keep, beep, torch, stableLabel, stable, tips).forEach { box.addView(it) }
@@ -373,8 +509,11 @@ class MainActivity : AppCompatActivity() {
                 watcher.stableMs = prefs.getLong("stableMs", 450L)
                 camera?.cameraControl?.enableTorch(torch.isChecked)
             }
-            .setNeutralButton("Re-learn empty bed") { _, _ -> watcher.setEmptyBed() }
-            .setNegativeButton("Cancel", null)
+            .setNeutralButton("Edit card box") { _, _ ->
+                pauseWatching("Editing the card box · press Start when done")
+                overlay.editing = true
+            }
+            .setNegativeButton("Close", null)
             .show()
     }
 
