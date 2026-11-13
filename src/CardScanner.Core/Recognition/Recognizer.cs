@@ -299,12 +299,15 @@ public sealed class Recognizer : IDisposable
             flag = "Couldn't read the card's name or collector number — matched by picture only.";
         }
         scored.Sort((a, b) => b.Score.CompareTo(a.Score));
-        // Don't offer printings whose border colour contradicts the card (a black-bordered Alpha card when
-        // the photo clearly shows a white border), unless that's all there is.
+        // Printings whose border colour contradicts the photo go to the end of the list rather than
+        // disappearing: the border reading can be wrong (a loose sleeve showing background), and the right
+        // printing must still be pickable.
         // Picture-only extras are only shown when they're the best guess or the photo really looks like
         // them, so a Kjeldoran Dead doesn't come with random red cards attached.
-        var top = scored.Where((t, i) => i == 0 || !t.BorderMismatch)
-            .Where((t, i) => i == 0 || !pictureIds.Contains(t.P.Id) || t.Num || t.Sim >= 0.85f)
+        var shown = scored.Where((t, i) => i == 0 || !pictureIds.Contains(t.P.Id) || t.Num || t.Sim >= 0.85f).ToList();
+        var top = shown.Take(1)
+            .Concat(shown.Skip(1).Where(t => !t.BorderMismatch))
+            .Concat(shown.Skip(1).Where(t => t.BorderMismatch))
             .Take(topK).ToList();
 
         var cards = _catalog.GetMany(top.Select(t => t.P.Id).ToList());
