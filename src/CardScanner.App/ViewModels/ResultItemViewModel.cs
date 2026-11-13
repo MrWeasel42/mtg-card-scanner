@@ -126,7 +126,7 @@ public partial class ResultItemViewModel : ObservableObject
     {
         if (SelectedCard is not { } card) return;
         var keep = _finishByUser ? SelectedFinish?.Key : null;
-        var (key, reason, sure) = Finish.Detect(card, Result?.FoilFromCollector);
+        var (key, reason, sure) = Finish.Detect(card, Result?.FoilFromCollector, Result?.ShootingStarScore);
         FinishDetectedKey = key; FinishReason = reason;
         _settingFinish = true;
         FinishOptions = Finish.OptionsFor(card);

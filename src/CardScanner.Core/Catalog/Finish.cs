@@ -28,16 +28,27 @@ public static class Finish
     /// way, then the ★ (foil) / • (non-foil) printed between set code and language on newer cards.
     /// Otherwise it can't tell from a photo (that needs the machine's lighting) and says so.
     /// </summary>
-    public static (string Key, string Reason, bool Sure) Detect(CardInfo card, bool? collectorFoil)
+    public static (string Key, string Reason, bool Sure) Detect(CardInfo card, bool? collectorFoil, double? shootingStar = null)
     {
         var keys = Keys(card);
         if (keys.Count == 1)
             return (keys[0], keys[0] == "nonfoil" ? "only made as non-foil" : "only made as foil", true);
+        // 1999–2003 foils carry a shooting star at the bottom-left of the text box.
+        if (HasShootingStarEra(card) && shootingStar is { } st && keys.Contains("foil") && keys.Contains("nonfoil"))
+        {
+            if (st >= Vision.ShootingStar.FoilAt) return ("foil", "shooting star found", true);
+            if (st < Vision.ShootingStar.NonFoilBelow) return ("nonfoil", "no shooting star", true);
+        }
         if (collectorFoil == true && keys.Contains("foil")) return ("foil", "★ in the collector line", true);
         if (collectorFoil == true && keys.Contains("etched")) return ("etched", "★ in the collector line", true);
         if (collectorFoil == false && keys.Contains("nonfoil")) return ("nonfoil", "• in the collector line", true);
         return (keys.Contains("nonfoil") ? "nonfoil" : keys[0], "couldn't tell from the photo — check it", false);
     }
+
+    /// <summary>Urza's Legacy (Feb 1999) through Scourge (May 2003), old frame.</summary>
+    public static bool HasShootingStarEra(CardInfo card) =>
+        card.Frame == "1997" && string.CompareOrdinal(card.ReleasedAt, "1999-02-15") >= 0
+                             && string.CompareOrdinal(card.ReleasedAt, "2003-07-01") < 0;
 
     private static List<string> Keys(CardInfo card)
     {

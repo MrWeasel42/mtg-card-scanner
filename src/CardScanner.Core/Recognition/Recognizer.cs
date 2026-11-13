@@ -34,6 +34,8 @@ public sealed class RecognitionResult
     public bool? FoilFromCollector => Collector.Foil;
     /// <summary>Name, set and collector number all agree: about as sure as it gets.</summary>
     public bool Pinned { get; init; }
+    /// <summary>How much the bottom-left looks like the 1999–2003 foil shooting star (0..1).</summary>
+    public double ShootingStarScore { get; init; }
     /// <summary>What pinned it, in words (e.g. "name + set + number agree"), or null if not pinned.</summary>
     public string? PinReason { get; init; }
     /// <summary>Needs a human look, and why.</summary>
@@ -343,6 +345,7 @@ public sealed class Recognizer : IDisposable
             Collector = collector,
             BorderColor = border,
             Pinned = pinned,
+            ShootingStarScore = ShootingStar.Score(hi[view]),
             PinReason = pinReason,
             FlagReason = flag,
             Elapsed = sw.Elapsed,

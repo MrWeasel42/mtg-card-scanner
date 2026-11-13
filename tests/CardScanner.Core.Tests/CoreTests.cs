@@ -387,6 +387,22 @@ public class FinishTests
     [Fact] public void Star_means_foil() => Assert.Equal("foil", Finish.Detect(Card("nonfoil,foil"), true).Key);
     [Fact] public void Dot_means_nonfoil() => Assert.Equal("nonfoil", Finish.Detect(Card("nonfoil,foil"), false).Key);
 
+    private static CardInfo OldCard() =>
+        new("id", "Seedtime", "jud", "Judgment", "130", "2002-05-27", "1997", "nonfoil,foil", "", "", null, null, null, "");
+
+    [Fact] public void Shooting_star_means_foil() => Assert.Equal("foil", Finish.Detect(OldCard(), null, 0.85).Key);
+    [Fact] public void No_shooting_star_means_nonfoil() => Assert.Equal(("nonfoil", true), (Finish.Detect(OldCard(), null, 0.30).Key, Finish.Detect(OldCard(), null, 0.30).Sure));
+    [Fact] public void Star_check_ignored_outside_1999_2003() => Assert.False(Finish.Detect(Card("nonfoil,foil"), null, 0.95).Sure);
+
+    [Fact]
+    public void No_star_on_a_card_without_one()
+    {
+        // A green card with some texture but no star.
+        using var plain = new Mat(1360, 976, OpenCvSharp.MatType.CV_8UC3);
+        Cv2.Randu(plain, new Scalar(30, 100, 30), new Scalar(60, 140, 60));
+        Assert.True(ShootingStar.Score(plain) < ShootingStar.NonFoilBelow);
+    }
+
     [Fact]
     public void Unknown_defaults_to_nonfoil_and_says_so()
     {
