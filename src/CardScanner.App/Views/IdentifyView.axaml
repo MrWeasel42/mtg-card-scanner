@@ -200,6 +200,16 @@
                       </Border>
                     </StackPanel>
                     <TextBlock Classes="muted" FontSize="12" Text="{Binding ReadText}" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <TextBlock Text="Finish:" VerticalAlignment="Center" FontWeight="SemiBold" />
+                      <ComboBox ItemsSource="{Binding FinishOptions}" SelectedItem="{Binding SelectedFinish}"
+                                IsEnabled="{Binding HasFinishChoice}" MinWidth="150" FontSize="13"
+                                ToolTip.Tip="Foil or not, for this printing. Only finishes this printing was made in are listed." />
+                      <TextBlock Text="{Binding FinishNote}" VerticalAlignment="Center" FontSize="12"
+                                 Classes="muted" IsVisible="{Binding !FinishUnsure}" />
+                      <TextBlock Text="{Binding FinishNote, StringFormat='⚠ {0}'}" VerticalAlignment="Center" FontSize="12"
+                                 Foreground="#FBBF24" IsVisible="{Binding FinishUnsure}" />
+                    </StackPanel>
                   </StackPanel>
 
                   <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasResult}">
@@ -276,8 +286,14 @@
         <DockPanel Margin="0,0,10,0">
           <TextBlock DockPanel.Dock="Top" Classes="muted" FontSize="12" FontWeight="SemiBold" LetterSpacing="1"
                      Text="YOUR PHOTO" HorizontalAlignment="Center" Margin="0,0,0,6" />
-          <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,8,0,0" Spacing="2">
+          <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,8,0,0" Spacing="6">
             <TextBlock Text="{Binding PhotoName}" FontSize="14" Classes="muted" HorizontalAlignment="Center" />
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" DataContext="{Binding Item}">
+              <TextBlock Text="Finish:" VerticalAlignment="Center" FontWeight="SemiBold" />
+              <ComboBox ItemsSource="{Binding FinishOptions}" SelectedItem="{Binding SelectedFinish}"
+                        IsEnabled="{Binding HasFinishChoice}" MinWidth="150" />
+              <TextBlock Text="{Binding FinishNote}" VerticalAlignment="Center" FontSize="12" Classes="muted" />
+            </StackPanel>
           </StackPanel>
           <Image Source="{Binding LeftShown}" Stretch="Uniform" />
         </DockPanel>

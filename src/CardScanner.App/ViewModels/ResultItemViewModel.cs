@@ -103,6 +103,47 @@ public partial class ResultItemViewModel : ObservableObject
             Candidates.Add(vm);
             if (vm.Rank > 1) Others.Add(vm);
         }
+        RefreshFinish();
+    }
+
+    // ---- Finish (foil / non-foil / etched) for the printing currently selected ----
+
+    private bool _finishByUser, _settingFinish;
+    private int _lastRank;
+
+    /// <summary>The printing this result currently stands for: the one you picked, else the top match.</summary>
+    public CardInfo? SelectedCard => (Candidates.FirstOrDefault(c => c.IsChosen) ?? Top)?.Card;
+
+    [ObservableProperty] private IReadOnlyList<Finish.Option> _finishOptions = [];
+    [ObservableProperty] private Finish.Option? _selectedFinish;
+    [ObservableProperty] private string _finishNote = "";
+    [ObservableProperty] private bool _finishUnsure;
+    public string FinishDetectedKey { get; private set; } = "";
+    public string FinishReason { get; private set; } = "";
+    public bool HasFinishChoice => FinishOptions.Count > 1;
+
+    private void RefreshFinish()
+    {
+        if (SelectedCard is not { } card) return;
+        var keep = _finishByUser ? SelectedFinish?.Key : null;
+        var (key, reason, sure) = Finish.Detect(card, Result?.FoilFromCollector);
+        FinishDetectedKey = key; FinishReason = reason;
+        _settingFinish = true;
+        FinishOptions = Finish.OptionsFor(card);
+        SelectedFinish = FinishOptions.FirstOrDefault(o => o.Key == keep) ?? FinishOptions.FirstOrDefault(o => o.Key == key);
+        _settingFinish = false;
+        FinishUnsure = !sure && FinishOptions.Count > 1;
+        FinishNote = FinishOptions.Count <= 1 ? $"({reason})" : sure ? $"detected: {reason}" : reason;
+        OnPropertyChanged(nameof(HasFinishChoice));
+    }
+
+    partial void OnSelectedFinishChanged(Finish.Option? value)
+    {
+        if (_settingFinish || value is null) return;
+        _finishByUser = true;
+        FinishUnsure = false;
+        FinishNote = value.Key == FinishDetectedKey ? $"detected: {FinishReason}" : "set by you";
+        if (Verdict != Verdict.None) _owner.Record(this, _lastRank);   // keep the log up to date
     }
 
     private ResultItemViewModel(string photo, string error, IdentifyViewModel owner)
@@ -129,6 +170,8 @@ public partial class ResultItemViewModel : ObservableObject
         Verdict = verdict ?? (chosen is null ? Verdict.NotListed : chosen.Rank == 1 ? Verdict.TopCorrect : Verdict.LowerCorrect);
         OnPropertyChanged(nameof(VerdictText));
         int rank = Verdict switch { Verdict.NameOnly => -1, _ => chosen?.Rank ?? 0 };
+        _lastRank = rank;
+        RefreshFinish();
         _owner.Record(this, rank);
     }
 

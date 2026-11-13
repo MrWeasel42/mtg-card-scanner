@@ -378,6 +378,31 @@ public class WhiteBorderTests
     }
 }
 
+public class FinishTests
+{
+    private static CardInfo Card(string finishes, string special = "") =>
+        new("id", "Island", "ltr", "The Lord of the Rings", "715", "2023-06-23", "2015", finishes, "", special, null, null, null, "");
+
+    [Fact] public void Foil_only_printing_is_foil() => Assert.Equal("foil", Finish.Detect(Card("foil", "surge foil"), null).Key);
+    [Fact] public void Star_means_foil() => Assert.Equal("foil", Finish.Detect(Card("nonfoil,foil"), true).Key);
+    [Fact] public void Dot_means_nonfoil() => Assert.Equal("nonfoil", Finish.Detect(Card("nonfoil,foil"), false).Key);
+
+    [Fact]
+    public void Unknown_defaults_to_nonfoil_and_says_so()
+    {
+        var (key, _, sure) = Finish.Detect(Card("nonfoil,foil"), null);
+        Assert.Equal("nonfoil", key);
+        Assert.False(sure);
+    }
+
+    [Fact]
+    public void Options_only_list_what_was_printed()
+    {
+        var o = Finish.OptionsFor(Card("foil,etched", "surge foil"));
+        Assert.Equal(["Foil (surge foil)", "Etched foil"], o.Select(x => x.Label));
+    }
+}
+
 public class CardBorderTests
 {
     private static Mat CardWithBorder(Scalar border, Scalar inside)
