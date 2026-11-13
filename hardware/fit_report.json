@@ -1,0 +1,306 @@
+[
+ {
+  "label": "Feed motor vs track motor",
+  "overlap": 0.0,
+  "gap": 3.7,
+  "need": 2.0,
+  "ok": true,
+  "note": "two NEMA 17s side by side on the back wall"
+ },
+ {
+  "label": "Feed-motor standoff vs track-motor standoff",
+  "overlap": 0.0,
+  "gap": 3.7,
+  "need": 0.5,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Feed motor vs feeder base",
+  "overlap": 0.0,
+  "gap": 8.17,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Track motor vs feeder base",
+  "overlap": 0.0,
+  "gap": 8.17,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Feed coupler (D19 x 25) vs standoff walls",
+  "overlap": 0.0,
+  "gap": 2.0,
+  "need": 0.5,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Track coupler vs standoff",
+  "overlap": 0.0,
+  "gap": 2.0,
+  "need": 0.5,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Cross-shaft pulley (front) vs base walls",
+  "overlap": 0.0,
+  "gap": 0.05,
+  "need": 0.5,
+  "ok": false,
+  "note": "GT2 20T, flange D16 x 16 long"
+ },
+ {
+  "label": "Start pulleys on stub shaft (front) vs base",
+  "overlap": 803.81,
+  "gap": 0.0,
+  "need": 0.3,
+  "ok": false,
+  "note": ""
+ },
+ {
+  "label": "Cross-shaft pulley (back) vs base walls",
+  "overlap": 0.0,
+  "gap": 0.05,
+  "need": 0.5,
+  "ok": false,
+  "note": "GT2 20T, flange D16 x 16 long"
+ },
+ {
+  "label": "Start pulleys on stub shaft (back) vs base",
+  "overlap": 803.81,
+  "gap": 0.0,
+  "need": 0.3,
+  "ok": false,
+  "note": ""
+ },
+ {
+  "label": "Feed-shaft pulley (122 mm loop) vs base",
+  "overlap": 0.0,
+  "gap": 0.0,
+  "need": 0.3,
+  "ok": false,
+  "note": ""
+ },
+ {
+  "label": "Feed pulley vs exit pulley (belt span)",
+  "overlap": 0.0,
+  "gap": 25.19,
+  "need": 5.0,
+  "ok": true,
+  "note": "centres 41 mm apart for the 122 mm loop"
+ },
+ {
+  "label": "Feed roller with O-ring tyres (D31.6) vs base",
+  "overlap": 0.0,
+  "gap": 1.0,
+  "need": 0.5,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Exit roller with tyres (D23.6) vs base",
+  "overlap": 0.0,
+  "gap": 2.0,
+  "need": 0.5,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Feed roller top above the hopper floor",
+  "overlap": 0,
+  "gap": 0.8,
+  "need": 0.5,
+  "ok": true,
+  "note": "target 0.5-1.5 mm"
+ },
+ {
+  "label": "Exit roller top above the floor",
+  "overlap": 0,
+  "gap": 0.8,
+  "need": 0.5,
+  "ok": true,
+  "note": "target 0.5-1.5 mm"
+ },
+ {
+  "label": "Pi 5 + cables vs feeder base",
+  "overlap": 0.0,
+  "gap": 1.0,
+  "need": 1.0,
+  "ok": true,
+  "note": "plugs at the front window"
+ },
+ {
+  "label": "SKR Pico + plugs (on 40 mm standoffs) vs base",
+  "overlap": 0.0,
+  "gap": 5.0,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "SKR Pico + plugs vs shafts/pulleys",
+  "overlap": 0.0,
+  "gap": 41.47,
+  "need": 3.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "SKR Pico vs Pi 5 (airflow gap)",
+  "overlap": 0.0,
+  "gap": 19.4,
+  "need": 15.0,
+  "ok": true,
+  "note": "Pi cooler needs air"
+ },
+ {
+  "label": "PSU (+25 mm wire space) vs scan module",
+  "overlap": 0.0,
+  "gap": 32.0,
+  "need": 3.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "PSU vs bin 1",
+  "overlap": 0.0,
+  "gap": 24.0,
+  "need": 5.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "PSU vs feeder base",
+  "overlap": 0.0,
+  "gap": 5.0,
+  "need": 2.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "PSU vs its cradles",
+  "overlap": 0.0,
+  "gap": 0.0,
+  "need": 0.0,
+  "ok": true,
+  "note": "snug fit is intended"
+ },
+ {
+  "label": "Bin 1 servo body vs its wall",
+  "overlap": 0.0,
+  "gap": 20.3,
+  "need": 0.2,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 1 beam emitter in its pocket",
+  "overlap": 0.0,
+  "gap": 0.0,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 1 door opened 60 deg vs bin top",
+  "overlap": 0.0,
+  "gap": 7.28,
+  "need": 3.0,
+  "ok": true,
+  "note": "doors open 60 deg; cards slide off from ~35 deg"
+ },
+ {
+  "label": "Bin 1 bin vs side walls",
+  "overlap": 0.0,
+  "gap": 6.32,
+  "need": 2.0,
+  "ok": true,
+  "note": "bin slides out the front"
+ },
+ {
+  "label": "Bin 2 servo body vs its wall",
+  "overlap": 0.0,
+  "gap": 20.3,
+  "need": 0.2,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 2 beam emitter in its pocket",
+  "overlap": 0.0,
+  "gap": 0.0,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 2 door opened 60 deg vs bin top",
+  "overlap": 0.0,
+  "gap": 7.28,
+  "need": 3.0,
+  "ok": true,
+  "note": "doors open 60 deg; cards slide off from ~35 deg"
+ },
+ {
+  "label": "Bin 2 bin vs side walls",
+  "overlap": 0.0,
+  "gap": 6.32,
+  "need": 2.0,
+  "ok": true,
+  "note": "bin slides out the front"
+ },
+ {
+  "label": "End bin vs end module walls",
+  "overlap": 0.0,
+  "gap": 6.32,
+  "need": 2.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "HQ camera at lens height 160 mm vs hood",
+  "overlap": 0.0,
+  "gap": 47.0,
+  "need": 2.0,
+  "ok": true,
+  "note": "hangs from the roof on 4 M3 screws"
+ },
+ {
+  "label": "HQ camera at lens height 205 mm vs hood",
+  "overlap": 0.0,
+  "gap": 2.0,
+  "need": 2.0,
+  "ok": true,
+  "note": "hangs from the roof on 4 M3 screws"
+ },
+ {
+  "label": "Display in cradle vs bay cover / base",
+  "overlap": 0.0,
+  "gap": 21.0,
+  "need": 0.0,
+  "ok": true,
+  "note": "display sits in the cradle, tilted 25 deg"
+ },
+ {
+  "label": "Back wire channel fill, full 9-bin build",
+  "overlap": 0,
+  "gap": 35.4,
+  "need": 40,
+  "ok": true,
+  "note": "67 conductors of 26 AWG in 10 x 18 mm; keep under 40%"
+ },
+ {
+  "label": "Dupont 3-pin plug through the channel",
+  "overlap": 0,
+  "gap": 2.4,
+  "need": 1.0,
+  "ok": true,
+  "note": "7.6 x 2.6 mm plug in a 10 x 18 mm channel"
+ }
+]
