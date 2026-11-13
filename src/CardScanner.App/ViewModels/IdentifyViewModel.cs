@@ -277,9 +277,11 @@ public partial class IdentifyViewModel : ObservableObject
             using var w = new StreamWriter(_logPath, append: true);
             if (newFile)
                 w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason,list_symbol_score,shooting_star_score,outline_method,detail_pick,detail_margin,straightened");
-            var top = item.Result?.Best;
-            var second = item.Result?.Candidates.Skip(1).FirstOrDefault();
-            var right = rank > 0 ? item.Result!.Candidates[rank - 1] : null;
+            // What you saw: the current top (after any detail-check reordering), not the first guess.
+            var top = item.Top?.Source;
+            var second = item.Candidates.Skip(1).FirstOrDefault()?.Source;
+            // rank is the position in the list as shown (after any detail-check reordering)
+            var right = rank > 0 && rank <= item.Candidates.Count ? item.Candidates[rank - 1].Source : null;
             string rightName = right?.Card.Name ?? (rank == -1 ? top?.Card.Name ?? "" : "");
             string[] cols =
             [
@@ -289,10 +291,10 @@ public partial class IdentifyViewModel : ObservableObject
                 (top?.Score ?? 0).ToString("0.0000", CultureInfo.InvariantCulture),
                 (item.Result?.NameMargin ?? 0).ToString("0.0000", CultureInfo.InvariantCulture),
                 (item.Result?.CardOutlineFound ?? false).ToString(), (item.Result?.UpsideDown ?? false).ToString(),
-                item.WasFlipped.ToString(), (item.Result?.Pinned ?? false).ToString(), item.Result?.FlagReason ?? "",
+                item.WasFlipped.ToString(), item.IsPinned.ToString(), item.FlagReason ?? "",
                 item.Result?.NameRead ?? "", item.Result?.Collector.Raw ?? "", item.Result?.FoilFromCollector?.ToString() ?? "",
                 ((int)(item.Result?.Elapsed.TotalMilliseconds ?? 0)).ToString(),
-                item.Result?.PinReason ?? "", item.Result?.BorderColor ?? "",
+                item.PinReason ?? "", item.Result?.BorderColor ?? "",
                 second?.Card.SetCode ?? "", second?.Card.CollectorNumber ?? "",
                 (second?.Score ?? 0).ToString("0.0000", CultureInfo.InvariantCulture),
                 typeof(IdentifyViewModel).Assembly.GetName().Version?.ToString(3) ?? "",

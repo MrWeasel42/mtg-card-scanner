@@ -307,6 +307,7 @@ public sealed class Recognizer : IDisposable
                 - (borderMismatch && !pinnedByCollector ? BorderPenalty : 0)
                 + (isList && listSeen ? ListBonus : 0)
                 - (isList && listAbsent ? ListPenalty : 0)
+                - (isList && !listSeen && !listAbsent ? 0.05 : 0)   // unsure: lean to the far more common original
                 - (!isList && listSeen ? ListPenalty : 0);
             scored.Add((p, score, sim, ns > 0, num, set, borderMismatch && !pinnedByCollector, yearMatch));
         }
@@ -347,6 +348,9 @@ public sealed class Recognizer : IDisposable
         string? pinReason = pinned ? "name + set + number agree" : null;
         bool bestIsList = best?.Card.IsListReprint == true;
         if (pinned && bestIsList) pinReason = "name + set + number + List symbol";
+        // A List printing is only proven by actually seeing the symbol (Niv-Mizzet, Parun was pinned to The
+        // List on a tie with its original printing).
+        if (bestIsList && !listSeen) { pinned = false; pinReason = null; }
         // The original printing and its List reprint print the same set code and number: only the List
         // symbol tells them apart, so don't pin the original unless the symbol is clearly absent.
         bool listDoubt = !bestIsList && !listAbsent && best is not null

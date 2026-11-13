@@ -73,7 +73,7 @@ public partial class ResultItemViewModel : ObservableObject
     public double DetailMargin { get; private set; }
 
     public bool IsPinned => Result?.Pinned == true || _detailPinned;
-    private string? PinReason => Result?.Pinned == true ? Result.PinReason : _detailPinned ? "card details (set symbol, text box, artist line)" : null;
+    public string? PinReason => Result?.Pinned == true ? Result.PinReason : _detailPinned ? "card details (set symbol, text box, artist line)" : null;
     /// <summary>Pins that lean on more than a printed set code: worth a closer look when spot-checking.</summary>
     public bool IsSoftPin => IsPinned && PinReason is { } r && !r.StartsWith("name + set");
     public string PinText => IsSoftPin ? $"📌 Pinned by {PinReason}" : "📌 Pinned: name + set + number agree";
@@ -95,6 +95,15 @@ public partial class ResultItemViewModel : ObservableObject
         var scores = await Task.Run(() => DetailCompare.Score(jpeg, group.Select(c => (c.Card.Id, c.ImagePath!))));
         if (scores.Count < 2 || Verdict != Verdict.None) return;
         var ranked = scores.OrderByDescending(x => x.Score).ToList();
+        // Summer Magic is pixel-identical to Revised (and Anthologies to 5th...): a small lead for one of
+        // those rare reprints is noise, so the common printing keeps the spot.
+        static bool Rare(CandidateViewModel c) => c.Card.SetCode is "sum" or "ath" or "brb" or "btd" or "dkm" or "ced" or "cei";
+        var byId = group.ToDictionary(c => c.Card.Id);
+        if (Rare(byId[ranked[0].Id]) && ranked[0].Score - ranked.Skip(1).FirstOrDefault(x => !Rare(byId[x.Id])).Score < DetailCompare.PinMargin)
+        {
+            var common = ranked.FirstOrDefault(x => !Rare(byId[x.Id]));
+            if (common.Id is not null) { ranked.Remove(common); ranked.Insert(0, common); }
+        }
         var pick = group.First(c => c.Card.Id == ranked[0].Id);
         DetailMargin = ranked[0].Score - ranked[1].Score;
         DetailPick = $"{pick.Card.SetCode} {pick.Card.CollectorNumber}";

@@ -57,12 +57,12 @@ public sealed class PrintedMark
 
 /// <summary>
 /// The List symbol (a small planeswalker mark) printed bottom-left on The List reprints, next to the
-/// collector line (modern frames) or in the black border (old frames). Measured on 336 photos: the 4 List
-/// cards scored 0.77–1.0, every other card 0.65 or less.
+/// collector line (modern frames) or in the black border (old frames). Measured over two graded runs of
+/// 335 photos: List cards 0.77–1.0, every other card 0.65 or less.
 /// </summary>
 public static class ListSymbol
 {
-    public const double SeenAt = 0.72, AbsentBelow = 0.60;
+    public const double SeenAt = 0.72, AbsentBelow = 0.68;
     private static readonly PrintedMark Mark = new("list_symbol.png", new Rect2d(0, 0.88, 0.14, 0.12), 31, 0.8, 0.9, 1.0, 1.1, 1.25);
     public static double Score(Mat card) => Mark.Score(card);
 }
