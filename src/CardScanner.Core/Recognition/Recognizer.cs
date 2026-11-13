@@ -187,8 +187,10 @@ public sealed class Recognizer : IDisposable
         var collector = ReadCollector(hi[view]);
         // Set code read but no printing has any of the numbers read ("HOB★EN" with the number row missed,
         // "L.0278"): read the small print again from a sharper, 2x-resolution straightening.
+        // Same when the set code reads but the ★/• (foil / non-foil) between it and the language didn't.
         if (detected.Found && collector.SetCodes.Count > 0
-            && !collector.SetCodes.Any(sc => collector.Numbers.Any(n => _cards.PrintingsAt(sc, n).Count > 0)))
+            && (collector.Foil is null
+                || !collector.SetCodes.Any(sc => collector.Numbers.Any(n => _cards.PrintingsAt(sc, n).Count > 0))))
         {
             using var sharp2 = CardDetector.Warp(photo, detected.Corners, HiW * 2, HiH * 2);
             using var turned2 = new Mat();
