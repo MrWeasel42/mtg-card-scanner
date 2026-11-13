@@ -179,6 +179,18 @@ public sealed class Recognizer : IDisposable
                 .DefaultIfEmpty(ImageWeight * _index.Search(vecs[v], 1)[0].Score)
                 .Max();
             view = Best(1) > Best(0) ? 1 : 0;
+            // No name readable either way (hand-lettered Secret Lair names, some showcase frames): the
+            // picture alone can be fooled. The collector line ("R 2279 SLD • EN") only reads the right way up.
+            if (hits.Count == 0)
+            {
+                bool Readable(int v)
+                {
+                    var c = ReadCollector(hi[v]);
+                    return c.SetCodes.Any(sc => c.Numbers.Any(n => _cards.PrintingsAt(sc, n).Count > 0));
+                }
+                bool up = Readable(0), down = Readable(1);
+                if (up != down) view = up ? 0 : 1;
+            }
         }
         var vec = vecs[view];
         var viewHits = hits.Where(h => h.View == view).ToList();
