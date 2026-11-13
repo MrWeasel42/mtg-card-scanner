@@ -1,21 +1,5 @@
 [
  {
-  "label": "Feed motor vs track motor",
-  "overlap": 0.0,
-  "gap": 3.7,
-  "need": 2.0,
-  "ok": true,
-  "note": "two NEMA 17s side by side on the back wall"
- },
- {
-  "label": "Feed-motor standoff vs track-motor standoff",
-  "overlap": 0.0,
-  "gap": 3.7,
-  "need": 0.5,
-  "ok": true,
-  "note": ""
- },
- {
   "label": "Feed motor vs feeder base",
   "overlap": 0.0,
   "gap": 8.17,
@@ -24,15 +8,23 @@
   "note": ""
  },
  {
-  "label": "Track motor vs feeder base",
+  "label": "Feed coupler (D19 x 25) vs its standoff",
+  "overlap": 0.0,
+  "gap": 2.0,
+  "need": 0.5,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Track motor vs end module, end cap, end bin",
   "overlap": 0.0,
   "gap": 8.17,
   "need": 1.0,
   "ok": true,
-  "note": ""
+  "note": "on a 30 mm standoff on the end module's back wall"
  },
  {
-  "label": "Feed coupler (D19 x 25) vs standoff walls",
+  "label": "Track coupler vs its standoff",
   "overlap": 0.0,
   "gap": 2.0,
   "need": 0.5,
@@ -40,60 +32,108 @@
   "note": ""
  },
  {
-  "label": "Track coupler vs standoff",
+  "label": "Track-motor standoff vs end cap",
   "overlap": 0.0,
-  "gap": 2.0,
+  "gap": 1.0,
   "need": 0.5,
   "ok": true,
   "note": ""
  },
  {
-  "label": "Cross-shaft pulley (front) vs base walls",
+  "label": "Start idler (front) vs feeder base posts, tower, gate, pressure roller",
   "overlap": 0.0,
-  "gap": 0.05,
-  "need": 0.5,
-  "ok": false,
-  "note": "GT2 20T, flange D16 x 16 long"
+  "gap": 0.3,
+  "need": 0.3,
+  "ok": true,
+  "note": "flange to post wall"
  },
  {
-  "label": "Start pulleys on stub shaft (front) vs base",
-  "overlap": 803.81,
-  "gap": 0.0,
+  "label": "Drive pulley (front) vs end module",
+  "overlap": 0.0,
+  "gap": 0.3,
   "need": 0.3,
-  "ok": false,
+  "ok": true,
   "note": ""
  },
  {
-  "label": "Cross-shaft pulley (back) vs base walls",
+  "label": "Start idler (back) vs feeder base posts, tower, gate, pressure roller",
   "overlap": 0.0,
-  "gap": 0.05,
-  "need": 0.5,
-  "ok": false,
-  "note": "GT2 20T, flange D16 x 16 long"
+  "gap": 0.3,
+  "need": 0.3,
+  "ok": true,
+  "note": "flange to post wall"
  },
  {
-  "label": "Start pulleys on stub shaft (back) vs base",
-  "overlap": 803.81,
-  "gap": 0.0,
+  "label": "Drive pulley (back) vs end module",
+  "overlap": 0.0,
+  "gap": 0.3,
   "need": 0.3,
-  "ok": false,
+  "ok": true,
   "note": ""
+ },
+ {
+  "label": "Fin path (front belt, whole loop) vs every fixed part",
+  "overlap": 0.0,
+  "gap": 0.25,
+  "need": 0.2,
+  "ok": true,
+  "note": "fins run 0.3 mm over the floor, past the tower, gate, pressure roller, hood tunnel and end cap"
+ },
+ {
+  "label": "Belt bottom run (front) vs walls (rests on the ledge)",
+  "overlap": 0.0,
+  "gap": 0.05,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Fin path (back belt, whole loop) vs every fixed part",
+  "overlap": 0.0,
+  "gap": 0.25,
+  "need": 0.2,
+  "ok": true,
+  "note": "fins run 0.3 mm over the floor, past the tower, gate, pressure roller, hood tunnel and end cap"
+ },
+ {
+  "label": "Belt bottom run (back) vs walls (rests on the ledge)",
+  "overlap": 0.0,
+  "gap": 0.05,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Fin lands behind the exit-roller nip",
+  "overlap": 0,
+  "gap": 5.0,
+  "need": 4.0,
+  "ok": true,
+  "note": "the card's tail leaves the nip at X 136; fins touch down at X 131"
+ },
+ {
+  "label": "Belt loop = whole number of 105 mm fin pitches",
+  "overlap": 0,
+  "gap": 1050.0,
+  "need": 1050,
+  "ok": true,
+  "note": "1050.0 mm = 10 x 105; +6 bins adds 12 pitches"
  },
  {
   "label": "Feed-shaft pulley (122 mm loop) vs base",
   "overlap": 0.0,
-  "gap": 0.0,
+  "gap": 1.0,
   "need": 0.3,
-  "ok": false,
-  "note": ""
+  "ok": true,
+  "note": "pulley set 1 mm off the wall"
  },
  {
-  "label": "Feed pulley vs exit pulley (belt span)",
+  "label": "Exit-shaft pulley vs base",
   "overlap": 0.0,
-  "gap": 25.19,
-  "need": 5.0,
+  "gap": 0.8,
+  "need": 0.3,
   "ok": true,
-  "note": "centres 41 mm apart for the 122 mm loop"
+  "note": ""
  },
  {
   "label": "Feed roller with O-ring tyres (D31.6) vs base",
@@ -133,7 +173,7 @@
   "gap": 1.0,
   "need": 1.0,
   "ok": true,
-  "note": "plugs at the front window"
+  "note": "12 mm finger room at the USB end; the SKR talks over UART"
  },
  {
   "label": "SKR Pico + plugs (on 40 mm standoffs) vs base",
@@ -144,9 +184,9 @@
   "note": ""
  },
  {
-  "label": "SKR Pico + plugs vs shafts/pulleys",
+  "label": "SKR Pico + plugs vs roller shafts/pulleys",
   "overlap": 0.0,
-  "gap": 41.47,
+  "gap": 80.3,
   "need": 3.0,
   "ok": true,
   "note": ""
@@ -216,6 +256,14 @@
   "note": "doors open 60 deg; cards slide off from ~35 deg"
  },
  {
+  "label": "Bin 1 door (with lever) opened 60 deg vs tie bars + walls",
+  "overlap": 0.0,
+  "gap": 0.5,
+  "need": 0.4,
+  "ok": true,
+  "note": "0.5 mm end gap to the joint bridges"
+ },
+ {
   "label": "Bin 1 bin vs side walls",
   "overlap": 0.0,
   "gap": 6.32,
@@ -246,6 +294,14 @@
   "need": 3.0,
   "ok": true,
   "note": "doors open 60 deg; cards slide off from ~35 deg"
+ },
+ {
+  "label": "Bin 2 door (with lever) opened 60 deg vs tie bars + walls",
+  "overlap": 0.0,
+  "gap": 0.5,
+  "need": 0.4,
+  "ok": true,
+  "note": "0.5 mm end gap to the joint bridges"
  },
  {
   "label": "Bin 2 bin vs side walls",

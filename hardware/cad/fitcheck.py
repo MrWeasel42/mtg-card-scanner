@@ -1,6 +1,6 @@
 """Test-fit: every bought part at datasheet size, placed where it goes, checked against the printed parts.
 Reports overlap volume (must be 0) and the smallest gap (must meet the minimum for that pair)."""
-import json, sys
+import json, sys, math
 import cadquery as cq
 from sorter import *
 import bought as B
@@ -25,27 +25,60 @@ def check(label, part, against, min_gap, note=""):
     checks.append(dict(label=label, overlap=round(ov, 2), gap=round(gap, 2), need=min_gap, ok=ok, note=note))
 
 Y_BACK = 60.0
-# --- motors on standoffs (motor face 30 mm off the wall), couplers outside the wall
+# --- feed motor on its standoff (back wall of the feeder base); track motor on its standoff (back wall of the end module)
 feed_m = B.nema17().translate((FEED_X, Y_BACK + 30, FEED_Z))
-track_m = B.nema17().translate((TRACK_MOTOR_X, Y_BACK + 30, TRACK_MOTOR_Z))
-so_f = motor_standoff().translate((FEED_X, Y_BACK, FEED_Z)); so_t = motor_standoff().translate((TRACK_MOTOR_X, Y_BACK, TRACK_MOTOR_Z))
-cpl_f = cyl_y(FEED_X, FEED_Z, 9.5, Y_BACK + 2.5, Y_BACK + 27.5); cpl_t = cyl_y(TRACK_MOTOR_X, TRACK_MOTOR_Z, 9.5, Y_BACK + 2.5, Y_BACK + 27.5)
+so_f = motor_standoff().translate((FEED_X, Y_BACK, FEED_Z))
+cpl_f = cyl_y(FEED_X, FEED_Z, 9.5, Y_BACK + 2.5, Y_BACK + 27.5)
 base = P["feeder_base"]
-check("Feed motor vs track motor", feed_m, track_m, 2.0, "two NEMA 17s side by side on the back wall")
-check("Feed-motor standoff vs track-motor standoff", so_f, so_t, 0.5)
 check("Feed motor vs feeder base", feed_m, base, 1.0)
-check("Track motor vs feeder base", track_m, base, 1.0)
-check("Feed coupler (D19 x 25) vs standoff walls", cpl_f, so_f.cut(box(-500, 500, -500, 500, -500, 500)).union(so_f) , 0.5)
-check("Track coupler vs standoff", cpl_t, so_t, 0.5)
-# --- pulleys / belts inside the base
+check("Feed coupler (D19 x 25) vs its standoff", cpl_f, so_f, 0.5)
+xe = BIN_X[1] + PITCH / 2
+endm = pr("end_side_back", "end_side_front", "end_cap", "bin_2")
+trk_m = B.nema17().translate((END_SHAFT_X, WALL_OUT + 30, PUL_Z))
+so_t = motor_standoff().translate((END_SHAFT_X, WALL_OUT, PUL_Z))
+cpl_t = cyl_y(END_SHAFT_X, PUL_Z, 9.5, WALL_OUT + 2.5, WALL_OUT + 27.5)
+check("Track motor vs end module, end cap, end bin", trk_m, endm, 1.0, "on a 30 mm standoff on the end module's back wall")
+check("Track coupler vs its standoff", cpl_t, so_t, 0.5)
+check("Track-motor standoff vs end cap", so_t, P["end_cap"], 0.5)
+# --- belt pulleys (printed 30T, flanges D24) at both ends of the loop
 for sgn in (-1, 1):
-    pl = cyl_y(TRACK_MOTOR_X, TRACK_MOTOR_Z, 8, *sorted((sgn * 41.0, sgn * 57.0)))
-    check(f"Cross-shaft pulley ({'back' if sgn>0 else 'front'}) vs base walls", pl, base, 0.5, "GT2 20T, flange D16 x 16 long")
-    stub = cyl_y(FIN_START_X, PATH - 1, 8, *sorted((sgn * 39.5, sgn * 56.5)))
-    check(f"Start pulleys on stub shaft ({'back' if sgn>0 else 'front'}) vs base", stub, base.cut(cyl_y(FIN_START_X, PATH - 1, 2.6, -70, 70)), 0.3)
-feed_pulley = cyl_y(FEED_X, FEED_Z, 8, -56, -40); exit_pulley = cyl_y(EXIT_X, EXIT_Z, 8, -56, -40)
-check("Feed-shaft pulley (122 mm loop) vs base", feed_pulley, base, 0.3)
-check("Feed pulley vs exit pulley (belt span)", feed_pulley, exit_pulley, 5.0, "centres 41 mm apart for the 122 mm loop")
+    nm = "back" if sgn > 0 else "front"
+    y0, y1 = sorted((sgn * 35.8, sgn * 48.2))
+    st = cyl_y(FIN_START_X, PUL_Z, 12.0, y0, y1)
+    check(f"Start idler ({nm}) vs feeder base posts, tower, gate, pressure roller", st,
+          pr("feeder_base", "raw_tower", "gate_plate", "exit_roller_top"), 0.3, "flange to post wall")
+    dr = cyl_y(END_SHAFT_X, PUL_Z, 12.0, y0, y1)
+    check(f"Drive pulley ({nm}) vs end module", dr, pr("end_side_back", "end_side_front", "end_cap"), 0.3)
+# --- everywhere a fin goes: straight runs + the arcs round both pulleys
+RF = PUL_Z - PATH - 0.3                                   # fin tip radius round a pulley (16.7)
+def fin_path(sgn):
+    y0, y1 = sorted((sgn * FIN_REACH_Y, sgn * 43.75))
+    low = box(FIN_START_X, END_SHAFT_X, y0, y1, PATH + 0.3, BELT_BACK_LOW)
+    top_b = PUL_Z + PUL_R + 0.45
+    high = box(FIN_START_X, END_SHAFT_X, y0, y1, top_b, top_b + (BELT_BACK_LOW - PATH - 0.3))
+    arcs = cyl_y(FIN_START_X, PUL_Z, RF, y0, y1).union(cyl_y(END_SHAFT_X, PUL_Z, RF, y0, y1)).cut(
+           cyl_y(FIN_START_X, PUL_Z, PUL_R + 0.4, y0 - 1, y1 + 1)).cut(cyl_y(END_SHAFT_X, PUL_Z, PUL_R + 0.4, y0 - 1, y1 + 1))
+    return low.union(high).union(arcs.cut(box(FIN_START_X, END_SHAFT_X, -99, 99, PUL_Z - PUL_R, PUL_Z + PUL_R)))
+fixed = None
+for k, v in P.items():
+    if k.startswith("door_") or k in ("screen_cradle",):
+        continue
+    fixed = v if fixed is None else fixed.union(v)
+for sgn in (-1, 1):
+    check(f"Fin path ({'back' if sgn>0 else 'front'} belt, whole loop) vs every fixed part", fin_path(sgn), fixed, 0.2,
+          "fins run 0.3 mm over the floor, past the tower, gate, pressure roller, hood tunnel and end cap")
+    y0, y1 = sorted((sgn * BELT_Y0, sgn * BELT_Y1))
+    lowb = box(FIN_START_X, END_SHAFT_X, y0, y1, BELT_BACK_LOW + 0.05, BELT_BACK_LOW + 1.38)
+    check(f"Belt bottom run ({'back' if sgn>0 else 'front'}) vs walls (rests on the ledge)", lowb, fixed, 0.0)
+checks.append(dict(label="Fin lands behind the exit-roller nip", overlap=0, gap=round(EXIT_X - FIN_START_X, 2), need=4.0,
+                   ok=EXIT_X - FIN_START_X >= 4.0, note="the card's tail leaves the nip at X 136; fins touch down at X 131"))
+loop = 2 * (END_SHAFT_X - FIN_START_X) + 2 * math.pi * PUL_R
+checks.append(dict(label="Belt loop = whole number of 105 mm fin pitches", overlap=0, gap=round(loop, 2), need=FIN_PITCHES * 105,
+                   ok=abs(loop - FIN_PITCHES * 105) < 0.01, note=f"{loop:.1f} mm = {FIN_PITCHES} x 105; +6 bins adds 12 pitches"))
+# --- feed-to-exit roller loop (122 mm) on the front, inside the base
+feed_pulley = cyl_y(FEED_X, FEED_Z, 8, -55, -39); exit_pulley = cyl_y(EXIT_X, EXIT_Z, 8, -55, -39)
+check("Feed-shaft pulley (122 mm loop) vs base", feed_pulley, base, 0.3, "pulley set 1 mm off the wall")
+check("Exit-shaft pulley vs base", exit_pulley, base, 0.3)
 # --- rollers vs floor openings
 fr = cyl_y(FEED_X, FEED_Z, 15.8, -20, 20); er = cyl_y(EXIT_X, EXIT_Z, 11.8, -15, 15)
 check("Feed roller with O-ring tyres (D31.6) vs base", fr, base, 0.5)
@@ -57,10 +90,10 @@ tray_z = RAIL_Z + 17.2 + 3
 pi = B.pi5().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, tray_z + 5))
 skr = B.skr_pico().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, tray_z + 5 + 40))
 inner_free = box(4, 146, -56, 56, RAIL_Z + 6, PATH - 4)
-shafts = cyl_y(FEED_X, FEED_Z, 9.5, -60, 60).union(cyl_y(EXIT_X, EXIT_Z, 9.5, -60, 60)).union(cyl_y(TRACK_MOTOR_X, TRACK_MOTOR_Z, 8, -60, 60))
-check("Pi 5 + cables vs feeder base", pi, base, 1.0, "plugs at the front window")
+shafts = cyl_y(FEED_X, FEED_Z, 9.5, -60, 60).union(cyl_y(EXIT_X, EXIT_Z, 9.5, -60, 60))
+check("Pi 5 + cables vs feeder base", pi, base, 1.0, "12 mm finger room at the USB end; the SKR talks over UART")
 check("SKR Pico + plugs (on 40 mm standoffs) vs base", skr, base, 1.0)
-check("SKR Pico + plugs vs shafts/pulleys", skr, shafts, 3.0)
+check("SKR Pico + plugs vs roller shafts/pulleys", skr, shafts, 3.0)
 check("SKR Pico vs Pi 5 (airflow gap)", skr.cut(box(-100,300,-100,100,-100,tray_z+5+40)), B.pi5().translate((8.5 + 12 - 3.5, -50, tray_z + 5)).cut(box(-100,0,-100,100,-100,100)), 15.0, "Pi cooler needs air")
 # --- PSU under the scanner
 psu = B.lrs100().translate((PSU_X0, 0, RAIL_Z + 5))
@@ -80,6 +113,9 @@ for i, xb in enumerate(BIN_X[:2]):
     # door swing: leaf rotated 60 deg about the hinge vs the bin below
     leaf = box(x0 + 2, x0 + 103, -34.8, 34.8, PATH - 2.4, PATH).rotate((0, 34.5, PATH - 3), (1, 34.5, PATH - 3), 60)
     check(f"Bin {i+1} door opened 60 deg vs bin top", leaf, P[f"bin_{i}"], 3.0, "doors open 60 deg; cards slide off from ~35 deg")
+    leafd = P[f"door_{i}"].rotate((0, 34.5, PATH - 3), (1, 34.5, PATH - 3), 60)
+    check(f"Bin {i+1} door (with lever) opened 60 deg vs tie bars + walls", leafd,
+          pr(*[k for k in P if k.startswith("tie_bar")], f"bin_side_front_{i}"), 0.4, "0.5 mm end gap to the joint bridges")
     check(f"Bin {i+1} bin vs side walls", P[f"bin_{i}"], pr(f"bin_side_back_{i}", f"bin_side_front_{i}"), 2.0, "bin slides out the front")
 check("End bin vs end module walls", P["bin_2"], pr("end_side_front", "end_side_back", "end_cap"), 2.0)
 # --- camera in the hood
