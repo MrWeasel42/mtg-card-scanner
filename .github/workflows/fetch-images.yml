@@ -1,0 +1,31 @@
+name: Fetch catalog images (research)
+
+# Research only: downloads the public Scryfall images listed in tools/collector_survey/fetch_ids.txt
+# and shares them as one zip on the ci-preview prerelease, for testing comparisons offline.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download
+        run: |
+          mkdir imgs
+          while IFS=$'\t' read -r id url; do
+            large="${url/\/normal\//\/large\/}"
+            curl -sfL --retry 3 -A "mtg-card-scanner-research/1.0" "$large" -o "imgs/$id.jpg" || curl -sfL -A "mtg-card-scanner-research/1.0" "$url" -o "imgs/$id.jpg" || true
+            sleep 0.1
+          done < tools/collector_survey/fetch_ids.txt
+          ls imgs | wc -l
+          zip -qr catalog_images.zip imgs
+      - name: Share (ci-preview prerelease)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view ci-preview >/dev/null 2>&1 || gh release create ci-preview --prerelease --latest=false --title "CI preview" --notes "Automated build output. Not a download for users."
+          gh release upload ci-preview catalog_images.zip --clobber
