@@ -49,6 +49,13 @@ for sgn in (-1, 1):
           pr("feeder_base", "raw_tower", "gate_plate", "exit_roller_top"), 0.3, "flange to post wall")
     dr = cyl_y(END_SHAFT_X, PUL_Z, 12.0, y0, y1)
     check(f"Drive pulley ({nm}) vs end module", dr, pr("end_side_back", "end_side_front", "end_cap"), 0.3)
+    hy0, hy1 = sorted((sgn * 28.5, sgn * 35.5))
+    hub = cyl_y(END_SHAFT_X, PUL_Z, 8.0, hy0, hy1)
+    check(f"Drive pulley hub ({nm}, inner side) vs end module, end ramp, bins", hub,
+          pr("end_side_back", "end_side_front", "end_cap", "end_ramp", "bin_2"), 1.0, "hub faces the track; was hitting the 625 seat")
+bridge_r = PUL_Z - (PATH + RAIL_H + 0.5)
+checks.append(dict(label="Drive hub (r 8) inside the fin bridge's radius round the pulley", overlap=0, gap=round(bridge_r - 8.0, 2), need=2.0,
+                   ok=bridge_r - 8.0 >= 2.0, note="fins ride round with the pulley; grub screw sits below the hub surface"))
 # --- everywhere a fin goes: straight runs + the arcs round both pulleys
 RF = PUL_Z - (PATH - GROOVE_D + 0.5)                 # finger tip radius round a pulley (17.7)
 RB = PUL_Z - (PATH + RAIL_H + 0.5)                   # bridge underside radius (14.0)
@@ -113,13 +120,19 @@ check("Full card stack (550 raw) vs hopper walls", stack, P["raw_tower"], 0.5, "
 # --- electronics bay
 tray_z = RAIL_Z + 17.2 + 3
 pi = B.pi5().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, tray_z + 5))
-skr = B.skr_pico().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, tray_z + 5 + 40))
+skr = B.skr_pico().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, tray_z + 5 + 1.6 + 40))
 inner_free = box(4, 146, -56, 56, RAIL_Z + 6, PATH - 4)
 shafts = cyl_y(FEED_X, FEED_Z, 9.5, -60, 60).union(cyl_y(EXIT_X, EXIT_Z, 9.5, -60, 60))
 check("Pi 5 + cables vs feeder base", pi, base, 1.0, "12 mm finger room at the USB end; the SKR talks over UART")
 check("SKR Pico + plugs (on 40 mm standoffs) vs base", skr, base, 1.0)
 check("SKR Pico + plugs vs roller shafts/pulleys", skr, shafts, 3.0)
-check("SKR Pico vs Pi 5 (airflow gap)", skr.cut(box(-100,300,-100,100,-100,tray_z+5+40)), B.pi5().translate((8.5 + 12 - 3.5, -50, tray_z + 5)).cut(box(-100,0,-100,100,-100,100)), 15.0, "Pi cooler needs air")
+posts = None
+for dx in (0, 58):
+    for dy in (0, 49):
+        c = skr_post().translate((8.5 + 12 + dx, -50 + 3.5 + dy, tray_z + 5 + 1.6))
+        posts = c if posts is None else posts.union(c)
+check("Printed SKR posts vs feeder base, shafts", posts, base.union(shafts), 1.0)
+check("SKR Pico vs Pi 5 (airflow gap)", skr.cut(box(-100,300,-100,100,-100,tray_z+5+1.6+40)), B.pi5().translate((8.5 + 12 - 3.5, -50, tray_z + 5)).cut(box(-100,0,-100,100,-100,100)), 15.0, "Pi cooler needs air")
 # --- PSU under the scanner
 psu = B.lrs100().translate((PSU_X0, 0, RAIL_Z + 5))
 scan = pr("scan_side_front", "scan_side_back", "scan_floor")
@@ -165,9 +178,15 @@ for i, xb in enumerate(BIN_X):
     check(f"Bin {i+1} level sensor view (15 deg cone) vs everything incl. open door", cone, hit, 0.5,
           "set the VL53L1X to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum")
 # --- camera in the hood
-for d in (160.0, 205.0):
+for d in (CAM_D_MIN, CAM_D_MAX):
+    cp = camera_plate().translate((SCAN_X, 0, PATH + d + 44 - 4))
+    check(f"Camera plate + tabs at lens height {d:.0f} mm vs hood (ribs)", cp, P["hood"], 0.2, "tab to rib 0.3 mm, closes when the M3 x 10 is tightened")
+    zc = PATH + d + 44 + CAM_HOLE_DZ
+    checks.append(dict(label=f"Hanger screw inside the rib slot at {d:.0f} mm", overlap=0, gap=round(min(zc - CAM_SLOT_Z0, CAM_SLOT_Z1 - zc), 2), need=0.0,
+                       ok=CAM_SLOT_Z0 - 0.01 <= zc <= CAM_SLOT_Z1 + 0.01, note="slot runs the whole 158-205 range"))
+for d in (CAM_D_MIN, CAM_D_MAX):
     cam = B.hq_camera().translate((SCAN_X, 0, PATH + d + 44))
-    check(f"HQ camera at lens height {d:.0f} mm vs hood", cam, P["hood"], 2.0, "hangs from the roof on 4 M3 screws")
+    check(f"HQ camera at lens height {d:.0f} mm vs hood", cam, P["hood"], 2.0, "clamped to the slotted roof ribs")
 # --- screen
 check("Screen wall mount (between hopper and hood) vs front wire channel", P["mount_wall_gap"], P["scan_side_front"].cut(box(120, 230, -60, -54.9, PATH - 40, PATH)), 0.5)
 check("Display in cradle vs bay cover / base", B.display().translate((0, 0, 0)).translate((75, -63 - 4 - 14 - 3, 60)), pr("feeder_base", "bay_cover"), 0.0, "display sits in the cradle, tilted 25 deg")

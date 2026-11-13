@@ -56,6 +56,14 @@
   "note": ""
  },
  {
+  "label": "Drive pulley hub (front, inner side) vs end module, end ramp, bins",
+  "overlap": 0.0,
+  "gap": 9.0,
+  "need": 1.0,
+  "ok": true,
+  "note": "hub faces the track; was hitting the 625 seat"
+ },
+ {
   "label": "Start idler (back) vs feeder base posts, tower, gate, pressure roller",
   "overlap": 0.0,
   "gap": 0.3,
@@ -70,6 +78,22 @@
   "need": 0.3,
   "ok": true,
   "note": ""
+ },
+ {
+  "label": "Drive pulley hub (back, inner side) vs end module, end ramp, bins",
+  "overlap": 0.0,
+  "gap": 9.0,
+  "need": 1.0,
+  "ok": true,
+  "note": "hub faces the track; was hitting the 625 seat"
+ },
+ {
+  "label": "Drive hub (r 8) inside the fin bridge's radius round the pulley",
+  "overlap": 0,
+  "gap": 6.0,
+  "need": 2.0,
+  "ok": true,
+  "note": "fins ride round with the pulley; grub screw sits below the hub surface"
  },
  {
   "label": "Fin path (front belt, whole loop) vs every fixed part",
@@ -234,15 +258,23 @@
  {
   "label": "SKR Pico + plugs vs roller shafts/pulleys",
   "overlap": 0.0,
-  "gap": 80.3,
+  "gap": 78.7,
   "need": 3.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Printed SKR posts vs feeder base, shafts",
+  "overlap": 0.0,
+  "gap": 9.75,
+  "need": 1.0,
   "ok": true,
   "note": ""
  },
  {
   "label": "SKR Pico vs Pi 5 (airflow gap)",
   "overlap": 0.0,
-  "gap": 19.4,
+  "gap": 21.0,
   "need": 15.0,
   "ok": true,
   "note": "Pi cooler needs air"
@@ -424,12 +456,44 @@
   "note": "set the VL53L1X to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum"
  },
  {
-  "label": "HQ camera at lens height 160 mm vs hood",
+  "label": "Camera plate + tabs at lens height 158 mm vs hood (ribs)",
   "overlap": 0.0,
-  "gap": 47.0,
+  "gap": 0.3,
+  "need": 0.2,
+  "ok": true,
+  "note": "tab to rib 0.3 mm, closes when the M3 x 10 is tightened"
+ },
+ {
+  "label": "Hanger screw inside the rib slot at 158 mm",
+  "overlap": 0,
+  "gap": 0.0,
+  "need": 0.0,
+  "ok": true,
+  "note": "slot runs the whole 158-205 range"
+ },
+ {
+  "label": "Camera plate + tabs at lens height 205 mm vs hood (ribs)",
+  "overlap": 0.0,
+  "gap": 0.3,
+  "need": 0.2,
+  "ok": true,
+  "note": "tab to rib 0.3 mm, closes when the M3 x 10 is tightened"
+ },
+ {
+  "label": "Hanger screw inside the rib slot at 205 mm",
+  "overlap": 0,
+  "gap": 0.0,
+  "need": 0.0,
+  "ok": true,
+  "note": "slot runs the whole 158-205 range"
+ },
+ {
+  "label": "HQ camera at lens height 158 mm vs hood",
+  "overlap": 0.0,
+  "gap": 15.6,
   "need": 2.0,
   "ok": true,
-  "note": "hangs from the roof on 4 M3 screws"
+  "note": "clamped to the slotted roof ribs"
  },
  {
   "label": "HQ camera at lens height 205 mm vs hood",
@@ -437,7 +501,7 @@
   "gap": 2.0,
   "need": 2.0,
   "ok": true,
-  "note": "hangs from the roof on 4 M3 screws"
+  "note": "clamped to the slotted roof ribs"
  },
  {
   "label": "Screen wall mount (between hopper and hood) vs front wire channel",

@@ -1,0 +1,330 @@
+{
+ "feeder_base": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "Upright, 15% gyroid, 4 walls. ~19 h.",
+  "x": 150.0,
+  "y": 144.0,
+  "z": 225.0
+ },
+ "raw_tower": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "Upright, 3 walls. L-shaped: back + exit walls, leans 3 deg back and 3 deg toward the exit.",
+  "x": 119.2,
+  "y": 94.4,
+  "z": 184.2
+ },
+ "gate_plate": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "Foot down. Glue a 1.5 mm silicone pad strip under the foot.",
+  "x": 9.0,
+  "y": 27.6,
+  "z": 36.0
+ },
+ "feed_roller": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "Flat on its end, 100% infill. Fit three 24 x 3.5 mm O-rings.",
+  "x": 28.0,
+  "y": 40.0,
+  "z": 28.0
+ },
+ "exit_roller": {
+  "qty": 2,
+  "mat": "PETG",
+  "note": "Flat on its end, 100% infill. Two 16 x 3.5 mm O-rings each.",
+  "x": 20.0,
+  "y": 30.0,
+  "z": 20.0
+ },
+ "pressure_arm": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "Flat.",
+  "x": 60.0,
+  "y": 48.0,
+  "z": 10.0
+ },
+ "stack_weight": {
+  "qty": 1,
+  "mat": "PLA",
+  "note": "Add 4 M8 washers in the pocket.",
+  "x": 86.0,
+  "y": 61.0,
+  "z": 40.0
+ },
+ "fin": {
+  "qty": 24,
+  "mat": "PETG",
+  "note": "12 + 12 mirrored (10 per side + spares). On its side, 0.12 mm layers. Glue a 3 x 3 mm silicone square in the face pocket.",
+  "x": 5.0,
+  "y": 16.8,
+  "z": 7.7
+ },
+ "belt_drill_jig": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "Ridges up. 2 mm drill through the guide holes.",
+  "x": 130.0,
+  "y": 18.0,
+  "z": 9.0
+ },
+ "fin_gauge": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "Flat.",
+  "x": 12.0,
+  "y": 83.5,
+  "z": 8.5
+ },
+ "track_pulley_idler": {
+  "qty": 2,
+  "mat": "PETG",
+  "note": "Axis vertical, 0.12 mm layers, 100% infill. 2 x 685ZZ each. Test-fit the belt first.",
+  "x": 24.0,
+  "y": 13.0,
+  "z": 24.0
+ },
+ "track_pulley_drive": {
+  "qty": 2,
+  "mat": "PETG",
+  "note": "Hub down on the plate, 0.12 mm layers, 100% infill. Hub faces the track (inward). M3 nut + M3 x 4 grub.",
+  "x": 24.0,
+  "y": 20.0,
+  "z": 24.0
+ },
+ "sensor_clip": {
+  "qty": 4,
+  "mat": "PETG",
+  "note": "Holds an Adafruit break-beam half (20 x 10 x 8 housing).",
+  "x": 36.0,
+  "y": 12.0,
+  "z": 16.0
+ },
+ "motor_standoff": {
+  "qty": 2,
+  "mat": "PETG",
+  "note": "Standing on a side wall, 5 walls. One for the feed motor, one for the track motor. M3 x 8 to the motor, M3 x 10 to the wall.",
+  "x": 42.3,
+  "y": 30.0,
+  "z": 42.3
+ },
+ "scan_side_front": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "On its outer face.",
+  "x": 180.0,
+  "y": 38.2,
+  "z": 225.0
+ },
+ "scan_side_back": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "On its outer face.",
+  "x": 180.0,
+  "y": 38.2,
+  "z": 225.0
+ },
+ "scan_floor": {
+  "qty": 1,
+  "mat": "PLA matte black",
+  "note": "Top face DOWN on the smooth side of the plate: flat, slick, dull.",
+  "x": 179.0,
+  "y": 69.6,
+  "z": 10.0
+ },
+ "hood": {
+  "qty": 1,
+  "mat": "PLA matte black",
+  "note": "Upside down (roof on the plate), tree supports for the tunnel only. ~16 h.",
+  "x": 155.0,
+  "y": 150.0,
+  "z": 256.0
+ },
+ "camera_plate": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "Tabs up. 2 M3 inserts in the tabs; clamps to the hood ribs with 2 x M3 x 10.",
+  "x": 68.6,
+  "y": 62.0,
+  "z": 14.0
+ },
+ "polarizer_cap": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "",
+  "x": 39.0,
+  "y": 34.0,
+  "z": 10.0
+ },
+ "bin_side_back": {
+  "qty": 2,
+  "mat": "PETG",
+  "note": "On its outer face; one per bin module.",
+  "x": 105.0,
+  "y": 58.0,
+  "z": 225.0
+ },
+ "bin_side_front": {
+  "qty": 2,
+  "mat": "PETG",
+  "note": "On its outer face; one per bin module.",
+  "x": 105.0,
+  "y": 38.2,
+  "z": 245.0
+ },
+ "door": {
+  "qty": 2,
+  "mat": "PETG",
+  "note": "Top face down on the smooth plate side (slick surface).",
+  "x": 94.0,
+  "y": 83.6,
+  "z": 12.0
+ },
+ "servo_link": {
+  "qty": 2,
+  "mat": "PETG",
+  "note": "",
+  "x": 26.0,
+  "y": 6.0,
+  "z": 3.0
+ },
+ "tie_bar": {
+  "qty": 4,
+  "mat": "PETG",
+  "note": "Floor plate face DOWN on the smooth side of the plate (slick top).",
+  "x": 10.0,
+  "y": 93.6,
+  "z": 22.0
+ },
+ "bin": {
+  "qty": 3,
+  "mat": "PLA",
+  "note": "Open side up, 2 walls, 10% infill. Big front window + a fill mark every 100 cards. ~5 h each.",
+  "x": 98.0,
+  "y": 79.0,
+  "z": 135.0
+ },
+ "end_side_front": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "",
+  "x": 105.0,
+  "y": 37.0,
+  "z": 245.0
+ },
+ "end_side_back": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "",
+  "x": 105.0,
+  "y": 37.0,
+  "z": 225.0
+ },
+ "end_cap": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "",
+  "x": 4.0,
+  "y": 108.0,
+  "z": 100.0
+ },
+ "end_ramp": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "Ramp face DOWN on the smooth side of the plate (slick), tree supports under the flange.",
+  "x": 93.5,
+  "y": 49.2,
+  "z": 59.0
+ },
+ "electronics_tray": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "Flat.",
+  "x": 133.0,
+  "y": 108.0,
+  "z": 8.0
+ },
+ "skr_post": {
+  "qty": 4,
+  "mat": "PETG",
+  "note": "Upright, 100% infill. Holds the SKR Pico 40 mm over the Pi.",
+  "x": 6.0,
+  "y": 6.0,
+  "z": 40.0
+ },
+ "bay_cover": {
+  "qty": 1,
+  "mat": "PLA matte black",
+  "note": "Flat, outside face down.",
+  "x": 136.0,
+  "y": 3.0,
+  "z": 89.0
+ },
+ "psu_cradle": {
+  "qty": 2,
+  "mat": "PETG",
+  "note": "On its back.",
+  "x": 18.0,
+  "y": 144.0,
+  "z": 60.0
+ },
+ "inlet_plate": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "Flat. Cutout 47.5 x 27.5 mm for a snap-in C14 inlet; check yours.",
+  "x": 116.0,
+  "y": 4.0,
+  "z": 68.0
+ },
+ "channel_cover": {
+  "qty": 6,
+  "mat": "PLA",
+  "note": "On its back. Clips over the wire channels.",
+  "x": 104.0,
+  "y": 4.0,
+  "z": 22.0
+ },
+ "screen_cradle": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "Face down. Check the display size on arrival. GoPro tab on the back.",
+  "x": 199.5,
+  "y": 40.5,
+  "z": 137.0
+ },
+ "mount_bay": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "Screen mount on the electronics bay front (default spot).",
+  "x": 124.0,
+  "y": 25.5,
+  "z": 19.0
+ },
+ "mount_wall": {
+  "qty": 2,
+  "mat": "PETG",
+  "note": "Bolts to any module wall: between hopper and scanner, or on the back for an arm over the track.",
+  "x": 104.0,
+  "y": 26.5,
+  "z": 20.0
+ },
+ "mount_roof": {
+  "qty": 1,
+  "mat": "PETG",
+  "note": "Optional: screen on top of the hood.",
+  "x": 60.0,
+  "y": 19.0,
+  "z": 25.5
+ },
+ "gopro_arm": {
+  "qty": 2,
+  "mat": "PETG",
+  "note": "100% infill. Or use store-bought GoPro extension arms.",
+  "x": 16.0,
+  "y": 19.0,
+  "z": 125.0
+ }
+}

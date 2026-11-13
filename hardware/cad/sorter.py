@@ -49,7 +49,7 @@ GATE = 0.45                       # raw-card gate opening, set with the adjuster
 TOWER_LEAN = 3.0                  # degrees the hopper leans back (+Y)
 PSU_L, PSU_W, PSU_H = 129.0, 97.0, 30.0   # Mean Well LRS-100-24 (L x W x H); terminal block on one 97 mm end
 PSU_X0 = 180.0                    # PSU case starts here; its terminals face -X with 25 mm for the wires
-CAM_D = 200.0                     # lens front to card, adjustable 160-205 mm (the 6 mm lens focuses from 200 mm)
+CAM_D = 200.0                     # lens front to card, adjustable 158-205 mm (the 6 mm lens focuses from 200 mm)
 CHAN_Z0, CHAN_Z1 = 28.0, 50.0     # back wire channel: 10 x 18 mm inside (fits the full 9-bin loom at <40% fill)
 CHAN_F0, CHAN_F1 = 150.0, 172.0   # front channel runs higher, above the bin bays
 END_BIN_D = 113.0; END_BIN_Y = -18.5   # end bin: Y +38 .. -75
@@ -335,7 +335,7 @@ def fin_gauge():
 def track_pulley(drive=False):
     """Printed 30-tooth GT2 pulley for the 10 mm belt, with a 4.5 x 2 mm groove round the middle for the fin
     screw heads. Idler: two 685ZZ bearings (5 x 11 x 5) pressed in, spins on a fixed 5 mm stub.
-    Drive: 5 mm D bore, hub with an M3 grub screw (captive nut). Axis along Y, centred at the origin."""
+    Drive: 5 mm bore, inner hub with an M3 x 4 grub screw (captive nut). Axis along Y, centred at the origin."""
     r_od = PUL_R - 0.254                               # GT2 outside radius
     face = 11.0
     p = cyl_y(0, 0, r_od, -face / 2, face / 2)
@@ -352,9 +352,14 @@ def track_pulley(drive=False):
         y0f, y1f = sorted((sgn * face / 2, sgn * (face / 2 + 1.0)))
         p = p.union(cyl_y(0, 0, 12.0, y0f, y1f))
     if drive:
-        p = p.union(cyl_y(0, 0, 8.0, face / 2 + 1.0, face / 2 + 8.0))
+        # hub on the inner side (it would hit the 625 bearing seat in the end wall on the outer side). Fins
+        # ride round with the pulley, and the hub (r 8) stays inside the bridge's 14 mm radius.
+        yh0, yh1 = -(face / 2 + 8.0), -(face / 2 + 1.0)
+        p = p.union(cyl_y(0, 0, 8.0, yh0, yh1))
         p = p.cut(cyl_y(0, 0, 2.55, -20, 20))
-        p = p.cut(cyl_z(0, face / 2 + 4.5, 1.6, 0, 9)).cut(box(-2.9, 2.9, face / 2 + 3.2, face / 2 + 5.8, 3.0, 5.6))
+        yg = (yh0 + yh1) / 2
+        p = p.cut(cyl_z(0, yg, 1.6, 0, 9))                                   # M3 x 4 grub, sits below the hub surface
+        p = p.cut(box(-2.9, 2.9, yh0 - 1, yg + 1.3, 3.0, 5.6))               # M3 nut slides in from the hub end
     else:
         p = p.cut(cyl_y(0, 0, 5.55, -10, 10)).union(cyl_y(0, 0, 5.55, -0.5, 0.5).cut(cyl_y(0, 0, 4.0, -1, 1)))
     return p
@@ -368,22 +373,32 @@ def sensor_clip():
     return c
 
 def motor_standoff():
-    """Holds a NEMA 17 30 mm off the feeder base's back wall so the 5x5 coupler sits outside the wall
-    (bearing inside, pulley on the shaft inside). Windows on two sides to reach the coupler set screws.
+    """Holds a NEMA 17 30 mm off the wall so the 5x5 coupler sits outside the wall. Two 4 mm plates joined by
+    side walls, open top and bottom: an L-key reaches every screw head and the coupler set screws from above.
+    Motor face plate: 4 x M3 x 8 into the motor. Wall plate: 4 x M3 x 10 into the wall's heat-set inserts.
     Frame in its own coordinates: wall side at y=0, motor face at y=30."""
-    L = 30.0
+    L, T = 30.0, 4.0
     m = box(-21.15, 21.15, 0, L, -21.15, 21.15)
-    m = m.cut(cyl_y(0, 0, 11.5, -1, L + 1))
-    m = m.cut(box(-12, 12, 4, L - 4, -22, 22))           # set-screw windows (top and bottom)
-    m = m.cut(box(-22, 22, 4, L - 4, -12, 12))
+    m = m.cut(box(-18.4, 18.4, T, L - T, -22, 22))            # open top + bottom between the plates
+    m = m.cut(cyl_y(0, 0, 11.5, -1, L + 1))                   # motor boss / shaft / coupler
     for dx in (-15.5, 15.5):
         for dz in (-15.5, 15.5):
-            m = m.cut(cyl_y(dx, dz, M3 / 2, -1, L + 1))  # M3 x 40 screws pass straight through into the wall inserts
+            m = m.cut(cyl_y(dx, dz, M3 / 2, -1, L + 1))       # short screws, heads inside
+    # fillets between the side walls and the plates
+    for sx in (-1, 1):
+        for yy in (T, L - T):
+            m = m.union(box(*sorted((sx * 18.4, sx * 15.4)), yy - 3 if yy > T else yy, yy + 3 if yy == T else yy, -21.15, -18.8))
+            m = m.union(box(*sorted((sx * 18.4, sx * 15.4)), yy - 3 if yy > T else yy, yy + 3 if yy == T else yy, 18.8, 21.15))
     return m
 
 # ============================================================================ SCANNER
 SCAN_X0, SCAN_X1 = 150.0, 330.0  # scan module footprint along X (under the hood)
 HOOD_X0, HOOD_X1 = 200.0, 355.0
+CAM_RIB_X0 = 34.6    # camera hanger ribs at |X - SCAN_X| 34.6..38.6
+CAM_HOLE_DZ = 5.0    # tab insert centre, above the camera PCB's underside
+CAM_D_MIN, CAM_D_MAX = 158.0, 205.0
+CAM_SLOT_Z0 = PATH + 44 + CAM_D_MIN + CAM_HOLE_DZ   # lens tip is 44 below the PCB underside
+CAM_SLOT_Z1 = PATH + 44 + CAM_D_MAX + CAM_HOLE_DZ
 HOOD_H = 266.0        # lens-to-card 160-205 mm with 2 mm over the camera at the top; prints 256 tall (Neptune 4 Pro: 265)
 
 def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True, bay=False):
@@ -481,11 +496,15 @@ def hood():
         for sg in (-1, 1):
             y0p, y1p = sorted((sg * WALL_IN_UP, sg * 72.5))
             h = h.union(box(xa, xb, y0p, y1p, WALL_TOP, WALL_TOP + 5))
-    # camera hangs from the roof on 4 x M3 x 80 screws through camera_plate: nuts above and below set the
-    # lens height anywhere from 160 to 205 mm above the card. Slot for the camera ribbon.
-    for dx in (-26, 26):
-        for dy in (-26, 26):
-            h = h.cut(cyl_z(SCAN_X + dx, dy, M3 / 2, PATH + HOOD_H - 4, PATH + HOOD_H + 1))
+    # camera hanger: two ribs hang from the roof with a vertical slot each; camera_plate's tabs carry inserts,
+    # 2 x M3 x 10 through the slots set the lens height anywhere from 158 to 207 mm above the card.
+    zr = PATH + HOOD_H - 3
+    for sx in (-1, 1):
+        xa, xb = sorted((SCAN_X + sx * CAM_RIB_X0, SCAN_X + sx * (CAM_RIB_X0 + 4)))
+        h = h.union(box(xa, xb, -10, 10, CAM_SLOT_Z0 - 4.5, zr + 0.5))
+        h = h.cut(box(xa - 1, xb + 1, -1.7, 1.7, CAM_SLOT_Z0, CAM_SLOT_Z1))
+        for zz in (CAM_SLOT_Z0, CAM_SLOT_Z1):
+            h = h.cut(cyl_x(0, zz, 1.7, xa - 1, xb + 1))
     h = h.cut(box(SCAN_X - 12, SCAN_X + 12, 30, 34, PATH + HOOD_H - 4, PATH + HOOD_H + 1))
     # LED channel ledges (aluminium channel 17 x 8 mm) at 90 mm above the card, all round
     zled = PATH + 90
@@ -501,15 +520,19 @@ def hood():
     return h
 
 def camera_plate():
-    """Carries the HQ camera (M2.5 on 30 x 30) and hangs from the hood roof on 4 x M3 screws (52 mm square)."""
+    """Carries the HQ camera (4 x M2.5 x 6 on 30 x 30, under the PCB; the lens mount drops through the hole).
+    Two tabs with M3 heat-set inserts clamp to the slotted ribs on the hood roof (M3 x 10 from outside).
+    Local frame: plate z 0..4, top face against the camera PCB."""
     p = box(-31, 31, -31, 31, 0, 4)
+    for sx in (-1, 1):
+        xa, xb = sorted((sx * (CAM_RIB_X0 - 6.3), sx * (CAM_RIB_X0 - 0.3)))
+        p = p.union(box(xa, xb, -8, 8, 0, 14))
+        xi0, xi1 = sorted((sx * (CAM_RIB_X0 - 0.3 + 1), sx * (CAM_RIB_X0 - 6.3 - 1)))
+        p = p.cut(cyl_x(0, CAM_HOLE_DZ + 4, M3_INSERT / 2, xi0, xi1))
     p = p.cut(cyl_z(0, 0, 18.5, -1, 5))
     for dx in (-15, 15):
         for dy in (-15, 15):
             p = p.cut(cyl_z(dx, dy, 1.35, -1, 5))
-    for dx in (-26, 26):
-        for dy in (-26, 26):
-            p = p.cut(cyl_z(dx, dy, M3 / 2, -1, 5))
     return p
 
 def polarizer_cap():
@@ -650,9 +673,12 @@ def electronics_tray():
     t = box(0, 133, -54, 54, 0, T)
     for dx in (0, 58):
         for dy in (0, 49):
-            t = t.cut(cyl_z(12 + dx, -50 + 3.5 + dy, 1.35, -1, T + 1))
-            t = t.union(cyl_z(12 + dx, -50 + 3.5 + dy, 3, T, T + 5).cut(cyl_z(12 + dx, -50 + 3.5 + dy, 1.35, T - 1, T + 6)))
-    # SKR Pico stacks above the Pi on 4 x 40 mm M2.5 standoffs (bought) in the same 58 x 49 pattern
+            xh, yh = 12 + dx, -50 + 3.5 + dy
+            t = t.union(cyl_z(xh, yh, 3, T, T + 5))
+            t = t.cut(cyl_z(xh, yh, 1.4, -1, T + 6))
+            t = t.cut(cyl_z(xh, yh, 2.6, -1, 2.6))          # counterbore: M2.5 x 12 heads sit flush underneath
+    # SKR Pico stacks above the Pi on 4 printed skr_post columns: an M2.5 x 12 from under the tray goes up
+    # through the tray post and the Pi and threads into the column; the SKR screws on top with M2.5 x 6.
     for x in range(80, 131, 10):
         for y in range(10, 51, 10):
             t = t.cut(cyl_z(x, y, 1.7, -1, T + 1))
@@ -663,6 +689,13 @@ def electronics_tray():
         for y in (-52, 52):
             t = t.cut(box(x, x + 3, y - 1.5, y + 1.5, -1, T + 1))
     return t
+
+def skr_post():
+    """40 mm printed column (Pi top face to SKR underside) for the SKR Pico over the Pi 5. Plain self-tapping
+    holes for M2.5 at both ends. Prints upright; 4 needed."""
+    p = cyl_z(0, 0, 3.0, 0, 40)
+    p = p.cut(cyl_z(0, 0, 1.05, -1, 9)).cut(cyl_z(0, 0, 1.05, 31, 41))
+    return p
 
 def bay_cover():
     """Front cover of the electronics bay: vent slots + a 30 mm fan position. 4 x M3."""
@@ -814,14 +847,14 @@ PRINTED = {
     "belt_drill_jig":  (belt_drill_jig, 1, "PETG", "Ridges up. 2 mm drill through the guide holes."),
     "fin_gauge":       (fin_gauge, 1, "PETG", "Flat."),
     "track_pulley_idler": (lambda: track_pulley(False), 2, "PETG", "Axis vertical, 0.12 mm layers, 100% infill. 2 x 685ZZ each. Test-fit the belt first."),
-    "track_pulley_drive": (lambda: track_pulley(True), 2, "PETG", "Hub up, 0.12 mm layers, 100% infill. M3 nut + grub screw."),
+    "track_pulley_drive": (lambda: track_pulley(True), 2, "PETG", "Hub down on the plate, 0.12 mm layers, 100% infill. Hub faces the track (inward). M3 nut + M3 x 4 grub."),
     "sensor_clip":     (sensor_clip, 4, "PETG", "Holds an Adafruit break-beam half (20 x 10 x 8 housing)."),
-    "motor_standoff":  (motor_standoff, 2, "PETG", "On its side, 5 walls. One for the feed motor, one for the track motor (end module)."),
+    "motor_standoff":  (motor_standoff, 2, "PETG", "Standing on a side wall, 5 walls. One for the feed motor, one for the track motor. M3 x 8 to the motor, M3 x 10 to the wall."),
     "scan_side_front": (lambda: side_frame(SCAN_X0, SCAN_X1, -1, bin_opening=False), 1, "PETG", "On its outer face."),
     "scan_side_back":  (lambda: scan_side_back(), 1, "PETG", "On its outer face."),
     "scan_floor":      (scan_floor, 1, "PLA matte black", "Top face DOWN on the smooth side of the plate: flat, slick, dull."),
     "hood":            (hood, 1, "PLA matte black", "Upside down (roof on the plate), tree supports for the tunnel only. ~16 h."),
-    "camera_plate":    (camera_plate, 1, "PETG", ""),
+    "camera_plate":    (camera_plate, 1, "PETG", "Tabs up. 2 M3 inserts in the tabs; clamps to the hood ribs with 2 x M3 x 10."),
     "polarizer_cap":   (polarizer_cap, 1, "PETG", ""),
     "bin_side_back":   (lambda: bin_module_side(1), 2, "PETG", "On its outer face; one per bin module."),
     "bin_side_front":  (lambda: bin_module_side(-1), 2, "PETG", "On its outer face; one per bin module."),
@@ -834,6 +867,7 @@ PRINTED = {
     "end_cap":         (end_cap, 1, "PETG", ""),
     "end_ramp":        (end_ramp, 1, "PETG", "Ramp face DOWN on the smooth side of the plate (slick), tree supports under the flange."),
     "electronics_tray":(electronics_tray, 1, "PETG", "Flat."),
+    "skr_post":        (skr_post, 4, "PETG", "Upright, 100% infill. Holds the SKR Pico 40 mm over the Pi."),
     "bay_cover":       (bay_cover, 1, "PLA matte black", "Flat, outside face down."),
     "psu_cradle":      (psu_cradle, 2, "PETG", "On its back."),
     "inlet_plate":     (inlet_plate, 1, "PETG", "Flat. Cutout 47.5 x 27.5 mm for a snap-in C14 inlet; check yours."),
