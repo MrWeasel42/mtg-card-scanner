@@ -20,6 +20,8 @@ public partial class IdentifyView : UserControl
         LeftPane.PointerExited += (_, _) => HideLenses();
         RightPane.PointerExited += (_, _) => HideLenses();
         AddButton.Click += OnAddClicked;
+        CardsHost.SizeChanged += (_, _) => Resize();
+        LeftImg.PropertyChanged += (_, e) => { if (e.Property == Image.SourceProperty) Resize(); };
     }
 
     // Keyboard shortcuts in the compare view: Esc closes, arrows switch options, Enter picks.
@@ -83,6 +85,24 @@ public partial class IdentifyView : UserControl
         });
         var paths = files.Select(f => f.TryGetLocalPath()).OfType<string>().ToList();
         if (paths.Count > 0) await vm.AddFilesAsync(paths);
+    }
+
+    // ---- Card sizing: both pictures the same size, as big as the space allows, captions right underneath ----
+
+    /// <summary>Room kept under the pictures for the captions (name, set, price, rarity / finish).</summary>
+    private const double CaptionRoom = 175, LabelRoom = 26, Gap = 120;
+
+    private void Resize()
+    {
+        var host = CardsHost.Bounds;
+        if (host.Width <= 0 || host.Height <= 0) return;
+        double aspect = LeftImg.Source is { Size: { Width: > 0, Height: > 0 } sz } ? sz.Width / sz.Height : 63.0 / 88.0;
+        double h = Math.Min(host.Height - LabelRoom - CaptionRoom, (host.Width - Gap) / 2 / aspect);
+        h = Math.Max(h, 80);
+        double w = h * aspect;
+        foreach (var img in new[] { LeftImg, RightImg }) { img.Width = w; img.Height = h; }
+        foreach (var cap in new[] { LeftCaption, RightCaption }) cap.Width = Math.Max(w, 240);
+        HideLenses();
     }
 
     // ---- Magnifier: a lens that follows the mouse over either card, showing the same spot on both ----

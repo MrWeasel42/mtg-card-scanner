@@ -419,21 +419,16 @@
         </DockPanel>
       </Border>
 
-      <!-- The two cards, side by side with a fixed gap; labels centered under each card -->
-      <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,120,*" Margin="24,14">
-        <DockPanel HorizontalAlignment="Right">
-          <TextBlock DockPanel.Dock="Top" Classes="muted" FontSize="12" FontWeight="SemiBold" LetterSpacing="1"
+      <!-- The two cards, side by side with a fixed gap, sized to the window in code (Resize) so both line up and
+           the captions sit right under the pictures at any window size -->
+      <Panel Name="CardsHost" Grid.Row="1" Grid.Column="1" Margin="24,14">
+        <Grid ColumnDefinitions="Auto,120,Auto" RowDefinitions="Auto,Auto,Auto" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <TextBlock Classes="muted" FontSize="12" FontWeight="SemiBold" LetterSpacing="1"
                      Text="YOUR PHOTO" HorizontalAlignment="Center" Margin="0,0,0,6" />
-          <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,8,0,0" Spacing="4">
-            <TextBlock Text="{Binding PhotoName}" FontSize="14" Classes="muted" HorizontalAlignment="Center" IsVisible="{Binding IsTopLayout}" />
-            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" DataContext="{Binding Item}">
-              <TextBlock Text="Finish:" VerticalAlignment="Center" FontWeight="SemiBold" />
-              <ComboBox ItemsSource="{Binding FinishOptions}" SelectedItem="{Binding SelectedFinish}"
-                        IsEnabled="{Binding HasFinishChoice}" MinWidth="150" />
-            </StackPanel>
-            <TextBlock DataContext="{Binding Item}" Text="{Binding FinishNote}" FontSize="12" Classes="muted" HorizontalAlignment="Center" />
-          </StackPanel>
-          <Panel Name="LeftPane" Background="Transparent">
+          <TextBlock Grid.Column="2" Classes="teal" FontSize="12" FontWeight="SemiBold" LetterSpacing="1"
+                     Text="REFERENCE IMAGE" HorizontalAlignment="Center" Margin="0,0,0,6" />
+
+          <Panel Grid.Row="1" Name="LeftPane" Background="Transparent">
             <Image Name="LeftImg" Source="{Binding LeftShown}" Stretch="Uniform" />
             <Canvas IsHitTestVisible="False">
               <Border Name="LeftLens" Width="360" Height="360" ClipToBounds="True" IsVisible="False" CornerRadius="12"
@@ -442,20 +437,7 @@
               </Border>
             </Canvas>
           </Panel>
-        </DockPanel>
-        <DockPanel Grid.Column="2" HorizontalAlignment="Left">
-          <TextBlock DockPanel.Dock="Top" Classes="teal" FontSize="12" FontWeight="SemiBold" LetterSpacing="1"
-                     Text="REFERENCE IMAGE" HorizontalAlignment="Center" Margin="0,0,0,6" />
-          <!-- Which printing this is, right under the picture -->
-          <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,8,0,0" Spacing="2">
-            <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
-            <TextBlock Text="{Binding Subtitle}" FontSize="16" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
-            <TextBlock Classes="gold" Text="{Binding Extra}" FontSize="15" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
-            <Border Classes="pill" HorizontalAlignment="Center" Margin="0,4,0,0" Background="{Binding RarityBackground}" BorderBrush="{Binding RarityBorder}" BorderThickness="1" IsVisible="{Binding HasRarity}">
-              <TextBlock Text="{Binding Rarity}" FontSize="13" FontWeight="Bold" Foreground="{Binding RarityForeground}" />
-            </Border>
-          </StackPanel>
-          <Panel Name="RightPane" Background="Transparent">
+          <Panel Grid.Row="1" Grid.Column="2" Name="RightPane" Background="Transparent">
             <Image Name="RightImg" Source="{Binding RightShown}" Stretch="Uniform" />
             <Canvas IsHitTestVisible="False">
               <Border Name="RightLens" Width="360" Height="360" ClipToBounds="True" IsVisible="False" CornerRadius="12"
@@ -464,8 +446,29 @@
               </Border>
             </Canvas>
           </Panel>
-        </DockPanel>
-      </Grid>
+
+          <!-- Under your photo: scan number (top layout) and the Finish -->
+          <StackPanel Grid.Row="2" Name="LeftCaption" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0" Spacing="4">
+            <TextBlock Text="{Binding PhotoName}" FontSize="14" Classes="muted" HorizontalAlignment="Center" IsVisible="{Binding IsTopLayout}" />
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" DataContext="{Binding Item}">
+              <TextBlock Text="Finish:" VerticalAlignment="Center" FontWeight="SemiBold" />
+              <ComboBox ItemsSource="{Binding FinishOptions}" SelectedItem="{Binding SelectedFinish}"
+                        IsEnabled="{Binding HasFinishChoice}" MinWidth="150" />
+            </StackPanel>
+            <TextBlock DataContext="{Binding Item}" Text="{Binding FinishNote}" FontSize="12" Classes="muted"
+                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+          </StackPanel>
+          <!-- Under the reference image: which printing this is -->
+          <StackPanel Grid.Row="2" Grid.Column="2" Name="RightCaption" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0" Spacing="2">
+            <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Subtitle}" FontSize="16" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+            <TextBlock Classes="gold" Text="{Binding Extra}" FontSize="15" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+            <Border Classes="pill" HorizontalAlignment="Center" Margin="0,4,0,0" Background="{Binding RarityBackground}" BorderBrush="{Binding RarityBorder}" BorderThickness="1" IsVisible="{Binding HasRarity}">
+              <TextBlock Text="{Binding Rarity}" FontSize="13" FontWeight="Bold" Foreground="{Binding RarityForeground}" />
+            </Border>
+          </StackPanel>
+        </Grid>
+      </Panel>
 
       <!-- Buttons along the bottom ("Tags on top" layout) -->
       <StackPanel Grid.Row="2" Grid.Column="1" Spacing="10" HorizontalAlignment="Center" IsVisible="{Binding IsTopLayout}">

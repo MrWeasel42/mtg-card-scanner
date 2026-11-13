@@ -132,6 +132,8 @@ public partial class IdentifyViewModel : ObservableObject
         "Set" => items.OrderBy(r => r.ShownCard?.SetName ?? "~").ThenBy(r => r.ShownCard?.CollectorNumber.PadLeft(5, '0')),
         // Newest first: in Done, the card you marked most recently; elsewhere the newest scan.
         _ when Filter == ReviewFilter.Done => items.OrderByDescending(r => r.VerifiedAt ?? DateTime.MinValue),
+        // Pinned tab: the "worth a glance" pins (no printed set code behind them) come first.
+        _ when Filter == ReviewFilter.Good => items.OrderByDescending(r => r.IsSoftPin).ThenByDescending(r => r.ScanNumber),
         _ => items.OrderByDescending(r => r.ScanNumber),
     };
 
@@ -153,15 +155,14 @@ public partial class IdentifyViewModel : ObservableObject
         _ => true,
     };
 
+    private bool _bulk;   // "Mark all pinned correct": filter once at the end, not once per card
+
     internal void ApplyFilter()
     {
+        if (_bulk) return;
         foreach (var r in Results) r.IsShown = Matches(r, Filter) && r.MatchesSearch(SearchText) && MatchesRarity(r) && MatchesPrice(r);
         var list = Sorted(Results.Where(r => r.IsShown)).ToList();
-        if (!list.SequenceEqual(Shown))
-        {
-            Shown.Clear();
-            foreach (var r in list) Shown.Add(r);
-        }
+        SyncShown(list);
         int Count(ReviewFilter f) => Results.Count(r => Matches(r, f));
         int q = Count(ReviewFilter.Queue);
         QueueLabel = $"To verify ({q})";
@@ -180,12 +181,35 @@ public partial class IdentifyViewModel : ObservableObject
         };
     }
 
+    /// <summary>Update the visible list in place (remove / move / insert) instead of rebuilding it, so
+    /// marking a card doesn't redraw hundreds of cards (that made "This is the one" feel sluggish).</summary>
+    private void SyncShown(List<ResultItemViewModel> list)
+    {
+        if (list.SequenceEqual(Shown)) return;
+        var keep = list.ToHashSet();
+        for (int i = Shown.Count - 1; i >= 0; i--)
+            if (!keep.Contains(Shown[i])) Shown.RemoveAt(i);
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (i < Shown.Count && Shown[i] == list[i]) continue;
+            int at = Shown.IndexOf(list[i]);
+            if (at >= 0) Shown.Move(at, i);
+            else Shown.Insert(i, list[i]);
+        }
+    }
+
     /// <summary>Marks every pinned card that isn't marked yet as correct, in one go.</summary>
     [RelayCommand]
     private void AcceptGood()
     {
-        foreach (var r in Results.Where(r => Matches(r, ReviewFilter.Good) && r.Top is not null).ToList())
-            r.Choose(r.Top);
+        _bulk = true;
+        try
+        {
+            foreach (var r in Results.Where(r => Matches(r, ReviewFilter.Good) && r.Top is not null).ToList())
+                r.Choose(r.Top);
+        }
+        finally { _bulk = false; }
+        UpdateScore();
         ApplyFilter();
     }
 
