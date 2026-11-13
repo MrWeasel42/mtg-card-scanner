@@ -273,6 +273,12 @@ public sealed class Recognizer : IDisposable
         foreach (var (id, _) in _index.Search(vec, PictureCandidates))
             if (_cards.ById(id) is { } p && !pool.ContainsKey(id)) { pool[id] = p; pictureIds.Add(id); }
 
+        // "No set code" also covers a set code misread from the artist / copyright text that matches none of
+        // the possible printings (Incendiary Command read "nc1" out of "Inc. 179/301").
+        bool SetHit(PrintingKey p) => collector.SetCodes.Contains(p.SetCode.ToLowerInvariant())
+            || (collector.SetCodes.Contains("prm") && p.SetType == "promo")
+            || (p.SetCode is "plst" or "ulst" && p.Number.Split('-') is [var os, _] && collector.SetCodes.Contains(os.ToLowerInvariant()));
+        bool noSetCode = collector.SetCodes.Count == 0 || !pool.Values.Any(SetHit);
         var scored = new List<(PrintingKey P, double Score, float Sim, bool Name, bool Num, bool Set, bool BorderMismatch, bool Year)>();
         foreach (var p in pool.Values)
         {
@@ -281,7 +287,7 @@ public sealed class Recognizer : IDisposable
             double ns = p.Name.Split(" // ").Append(p.Name).Select(CardIndex.Normalize)
                 .Select(k => nameScore.GetValueOrDefault(k)).Max();
             bool num = collector.Numbers.Contains(p.Number.ToLowerInvariant().TrimStart('0'))
-                || (collector.SetCodes.Count == 0 && collector.CopyrightDigitsContain(p.Number));
+                || (noSetCode && collector.CopyrightDigitsContain(p.Number));
             bool set = collector.SetCodes.Contains(p.SetCode.ToLowerInvariant())
                 // Many promos print a generic "PRM" instead of their own set code (Reliquary Tower PF23).
                 || (collector.SetCodes.Contains("prm") && p.SetType == "promo");
@@ -290,7 +296,7 @@ public sealed class Recognizer : IDisposable
             if (isList && p.Number.Split('-') is [var origSet, var origNum])
             {
                 num |= collector.Numbers.Contains(origNum.ToLowerInvariant().TrimStart('0'))
-                       || (collector.SetCodes.Count == 0 && collector.CopyrightDigitsContain(origNum));
+                       || (noSetCode && collector.CopyrightDigitsContain(origNum));
                 set |= collector.SetCodes.Contains(origSet.ToLowerInvariant());
             }
             bool pinnedByCollector = num && set;
@@ -353,24 +359,43 @@ public sealed class Recognizer : IDisposable
         if (bestIsList && !listSeen) { pinned = false; pinReason = null; }
         // The original printing and its List reprint print the same set code and number: only the List
         // symbol tells them apart, so don't pin the original unless the symbol is clearly absent.
-        bool listDoubt = !bestIsList && !listAbsent && best is not null
-            && candidates.Any(c => c.Card.IsListReprint && c.Card.Name == best.Card.Name);
+        bool listDoubtFor(string name) => !bestIsList && !listAbsent && candidates.Any(c => c.Card.IsListReprint && c.Card.Name == name);
+        bool listDoubt = best is not null && listDoubtFor(best.Card.Name);
         // Retro-frame cards print a number but no set code. If the name and number together point at
         // exactly one printing, that's as good as a set + number match.
         // When the number alone fits two printings (8th and 9th Edition Scathe Zombies are both #160),
         // the printed copyright year (1993-2005) can settle it.
-        if (!pinned && best is { NameMatched: true, NumberMatched: true } && collector.SetCodes.Count == 0)
+        // The List symbol settles original vs List reprint (same number): drop whichever it rules out.
+        bool ListFits(PrintingKey p) => (p.SetCode is "plst" or "ulst") ? !listAbsent : !listSeen;
+        if (!pinned && best is { NameMatched: true, NumberMatched: true } && noSetCode)
         {
             // 7th–9th Edition foils are listed as separate "★" printings with the same number ("139" and
             // "139★"): they're the same card, so count them once.
             static string Group(PrintingKey p) => p.SetCode + "|" + p.Number.TrimEnd('★');
-            var same = scored.Where(t => t.Name && t.Num && t.P.Name == best.Card.Name)
+            var same = scored.Where(t => t.Name && t.Num && t.P.Name == best.Card.Name && (ListFits(t.P) || t.P.Id == best.Card.Id))
                 .GroupBy(t => Group(t.P)).Select(g => g.First()).ToList();
             var bestGroup = Group(scored.First(t => t.P.Id == best.Card.Id).P);
             if (same.Count == 1) { pinned = true; pinReason = "name + number (no set code printed)"; }
             else if (same.Count(t => t.Year) == 1 && same.First(t => Group(t.P) == bestGroup).Year)
             { pinned = true; pinReason = "name + number + copyright year"; }
         }
+        // 2003-2014 frames print a copyright year and "179/301" but no set code. When the number didn't read,
+        // the year alone can still single out one printing (Creeping Renaissance: ISD 2011 vs C18 2018).
+        if (!pinned && best is { NameMatched: true } && noSetCode && collector.CopyrightYear is not null
+            && (!bestIsList || listSeen))
+        {
+            static string Group2(PrintingKey p) => p.SetCode + "|" + p.Number.TrimEnd('★');
+            var named = scored.Where(t => t.Name && t.P.Name == best.Card.Name && ListFits(t.P))
+                .GroupBy(t => Group2(t.P)).Select(g => g.First()).ToList();
+            var yearOnes = named.Where(t => t.Year).ToList();
+            if (yearOnes.Count == 1 && yearOnes[0].P.Id == best.Card.Id && !(listDoubtFor(best.Card.Name)))
+            { pinned = true; pinReason = "name + copyright year (the only printing from that year)"; }
+        }
+        // List reprints whose number didn't read: the symbol is clearly there and the card has only one
+        // List printing (Thieves' Auction, Street Wraith).
+        if (!pinned && bestIsList && listSeen && best is { NameMatched: true }
+            && scored.Count(t => t.P.Name == best.Card.Name && t.P.SetCode is "plst" or "ulst") == 1)
+        { pinned = true; pinReason = "name + List symbol (its only List printing)"; }
         // Old cards with no number: if the measured border rules out every printing of this card but one
         // (a white-bordered Nicol Bolas can only be Chronicles), that's the answer.
         if (!pinned && border is not null && best is { NameMatched: true })

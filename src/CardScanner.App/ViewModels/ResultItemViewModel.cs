@@ -215,7 +215,9 @@ public partial class ResultItemViewModel : ObservableObject
     {
         if (SelectedCard is not { } card) return;
         var keep = _finishByUser ? SelectedFinish?.Key : null;
-        var (key, reason, sure) = Finish.Detect(card, Result?.FoilFromCollector, Result?.ShootingStarScore);
+        bool? foilMark = Result?.FoilFromCollector ?? (_starSeen ? true : null);
+        var (key, reason, sure) = Finish.Detect(card, foilMark, Result?.ShootingStarScore);
+        if (_starSeen && Result?.FoilFromCollector is null && key == "foil") reason = "★ found in the photo";
         FinishDetectedKey = key; FinishReason = reason;
         _settingFinish = true;
         FinishOptions = Finish.OptionsFor(card);
@@ -279,8 +281,23 @@ public partial class ResultItemViewModel : ObservableObject
         }
         try { await StraightenAsync(); }
         catch (Exception ex) { Log.Error($"Straighten {Photo}", ex); }
+        try { await CheckStarAsync(); }
+        catch (Exception ex) { Log.Error($"Star check {Photo}", ex); }
         try { await RunDetailCheckAsync(); }
         catch (Exception ex) { Log.Error($"Detail check {Photo}", ex); }
+    }
+
+    /// <summary>The text reader missed the ★ / • : look for a ★ shape in the (straightened) photo.</summary>
+    private bool _starSeen;
+    private async Task CheckStarAsync()
+    {
+        if (Result is null || Result.FoilFromCollector is not null || !FinishUnsure) return;
+        var jpeg = _cardJpeg ?? Result.CardImageJpeg;
+        var score = await Task.Run(() => StarMark.Score(jpeg));
+        if (!StarMark.LooksFoil(score)) return;
+        _starSeen = true;
+        RefreshFinish();
+        _owner.ApplyFilter();
     }
 
     /// <summary>Line the photo up with the top match's catalog image to get a properly square crop.</summary>
