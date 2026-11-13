@@ -50,7 +50,14 @@ TOWER_LEAN = 3.0                  # degrees the hopper leans back (+Y)
 PSU_L, PSU_W, PSU_H = 129.0, 97.0, 30.0   # Mean Well LRS-100-24 (L x W x H); terminal block on one 97 mm end
 PSU_X0 = 180.0                    # PSU case starts here; its terminals face -X with 25 mm for the wires
 CAM_D = 200.0                     # lens front to card, adjustable 160-205 mm (the 6 mm lens focuses from 200 mm)
-CHAN_Z0, CHAN_Z1 = 28.0, 50.0     # wire channel: 10 x 18 mm inside (fits the full 9-bin loom at <40% fill)
+CHAN_Z0, CHAN_Z1 = 28.0, 50.0     # back wire channel: 10 x 18 mm inside (fits the full 9-bin loom at <40% fill)
+CHAN_F0, CHAN_F1 = 150.0, 172.0   # front channel runs higher, above the bin bays
+END_BIN_D = 113.0; END_BIN_Y = -18.5   # end bin: Y +38 .. -75
+BIN_Y = -37.0                     # bins sit forward: inner back wall at Y -1, right under the open door's low edge
+BAY_TOP = 140.0                   # front wall is open below this between 2.5 mm posts so the bins slide out the front
+POST_T = 2.5
+RAIL2_Y = 24.0                    # second back rail (under the doors) replaces the front rail under the bin modules
+TOF_X = 33.0                      # bin-level ToF sensor (Pololu VL53L1X carrier, 13 x 18 mm) position in each module
 
 FEED_X, FEED_Z, FEED_R = 95.0, PATH - 15.0, 16.0     # feed roller (O-ring tyres, OD 32)
 EXIT_X, EXIT_Z, EXIT_R = 136.0, PATH - 11.0, 12.0    # exit roller pair; 122 mm GT2 closed loop from the feed shaft
@@ -382,7 +389,7 @@ SCAN_X0, SCAN_X1 = 150.0, 330.0  # scan module footprint along X (under the hood
 HOOD_X0, HOOD_X1 = 200.0, 355.0
 HOOD_H = 266.0        # lens-to-card 160-205 mm with 2 mm over the camera at the top; prints 256 tall (Neptune 4 Pro: 265)
 
-def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True):
+def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True, bay=False):
     """One side of a track module (side = -1 front, +1 back). Wall + top strip with belt run + foot.
     Floor edge is at |Y| = 35; belt loop at |Y| 41..47 (top run on the rib, return run in the lower slot)."""
     s = side
@@ -406,10 +413,11 @@ def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True):
     f = rail_slots(f, x0, x1, ys=(s * RAIL_Y,))
     # wire channel on the outside face (servo, sensor and LED looms), open at both ends so it runs through
     # every module; snap-on cover = channel_cover
+    cz0, cz1 = (CHAN_Z0, CHAN_Z1) if s > 0 else (CHAN_F0, CHAN_F1)
     yc0, yc1 = sorted((s * WALL_OUT, s * (WALL_OUT + 12)))
-    f = f.union(box(x0, x1, yc0, yc1, CHAN_Z0, CHAN_Z1))
+    f = f.union(box(x0, x1, yc0, yc1, cz0, cz1))
     yi0, yi1 = sorted((s * (WALL_OUT + 0.01), s * (WALL_OUT + 10)))
-    f = f.cut(box(x0 - 1, x1 + 1, yi0, yi1, CHAN_Z0 + 2, CHAN_Z1 - 2))
+    f = f.cut(box(x0 - 1, x1 + 1, yi0, yi1, cz0 + 2, cz1 - 2))
     # lightening window + panel clips (final shell clips onto these bosses)
     if bin_opening:
         f = f.cut(box(x0 + 12, x1 - 12, yw0 - 1, yw1 + 1, RAIL_Z + 20, PATH - 40))
@@ -421,6 +429,27 @@ def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True):
             f = f.cut(cyl_x(s * (WALL_IN + WALL_OUT) / 2, z, M3 / 2, xe - 8, xe + 8))
         f = f.cut(cyl_x(s * (WALL_IN_UP + WALL_OUT) / 2, PATH + 30, M3 / 2, xe - 8, xe + 8))
     f = f.cut(cyl_y(x0 + 2, PATH - 17.5, M3 / 2, yw0 - 1, yw1 + 1))     # tie-bar screw
+    if bay and s < 0:
+        # open bay below BAY_TOP so the bin slides out the front; 2.5 mm posts at each end down to the desk
+        f = f.cut(box(x0 + POST_T, x1 - POST_T, -(RAIL_Y + 11), -(WALL_IN - 1), -1, BAY_TOP))
+        for xa in (x0, x1 - POST_T):
+            f = f.union(box(xa, xa + POST_T, -(WALL_OUT + 17), -WALL_IN, 0, BAY_TOP))
+            f = f.union(box(xa, xa + POST_T, -(WALL_OUT + 17), -WALL_IN, BAY_TOP - 1, CHAN_F0))
+        f = f.cut(box(x0 - 1, x1 + 1, -(RAIL_Y + 11), -(WALL_OUT + 0.01), -1, RAIL_Z + 7).cut(
+                  box(x0 - 2, x1 + 2, -(WALL_OUT + 17), -WALL_IN, -1, 0)))   # no front rail foot here
+        for xa in (x0, x1 - POST_T):   # posts sit on the desk on small pads (rubber feet)
+            f = f.union(box(xa, xa + POST_T, -(WALL_OUT + 17), -WALL_IN, 0, 3))
+        # bin-level sensor: VL53L1X carrier slides into a pocket under the strip, looking straight down at
+        # Y -42 (into the stack), wires out through the wall to the front channel
+        tb = box(x0 + TOF_X - 11, x0 + TOF_X + 11, -WALL_IN, -35.5, PATH - 19, PATH - 12)
+        tb = tb.cut(box(x0 + TOF_X - 9.2, x0 + TOF_X + 9.2, -48.6, -35.4, PATH - 17.2, PATH - 14.8))
+        tb = tb.cut(cyl_z(x0 + TOF_X, -42.0, 3.5, PATH - 20, PATH - 17))
+        f = f.union(tb)
+        f = f.cut(box(x0 + TOF_X - 3, x0 + TOF_X + 3, -(WALL_OUT + 1), -(WALL_IN - 1), PATH - 17.2, PATH - 14.8))
+    if bay and s > 0:
+        # foot reaching in to the second back rail under the doors
+        f = f.union(box(x0, x1, RAIL2_Y - 10, WALL_IN, RAIL_Z, RAIL_Z + 6))
+        f = rail_slots(f, x0, x1, ys=(RAIL2_Y,))
     return f
 
 def scan_side_back():
@@ -521,7 +550,7 @@ def bin_module_side(side):
     """Side frame for one 105 mm bin module. Back side (+1) carries the hinge, servo and LED emitter;
     front side (-1) carries the door rest ledge and the receiver."""
     x0, x1 = 0.0, PITCH
-    f = side_frame(x0, x1, side)
+    f = side_frame(x0, x1, side, bay=True)
     s = side
     if s > 0:
         # hinge knuckle row under the strip edge, pin at Y = +34.5, Z = PATH - 3
@@ -555,10 +584,10 @@ def tie_bar():
         t = t.cut(cyl_y(2, PATH - 17.5, M3_INSERT / 2, *sorted((s * (WALL_IN - 7), s * WALL_IN))))
     return t
 
-def bin_box(height=135.0):
+def bin_box(height=135.0, depth=76.0):
     """Removable bin: outside 98 x 76 mm, inside 94 x 72 mm (3.7 x 2.8 in), 135 mm (5.3 in) tall: ~400 raw cards.
     Front lip doubles as the drawer front; the final shell adds a flush face."""
-    W, D, H = 98.0, 76.0, height
+    W, D, H = 98.0, depth, height
     b = box(-W / 2, W / 2, -D / 2, D / 2, 0, H).edges("|Z").fillet(3)
     b = b.cut(box(-W / 2 + 2, W / 2 - 2, -D / 2 + 2, D / 2 - 2, 2, H + 1).edges("|Z").fillet(1))
     b = b.union(box(-W / 2, W / 2, -D / 2 - 3, -D / 2, 0, 18))                 # pull lip
@@ -575,7 +604,7 @@ def end_side(side):
     """End module side: one full pitch (105 mm) so the end-of-line bin sits fully under it; carries the end
     idler pulley stub shaft. There's no floor here: cards are pushed off the end of the last door."""
     x0, x1 = 0.0, PITCH
-    f = side_frame(x0, x1, side, bin_opening=False, rails=False)
+    f = side_frame(x0, x1, side, bin_opening=False, rails=False, bay=(side < 0))
     s = side
     xs = END_SHAFT_X - (BIN_X[1] + PITCH / 2)            # drive shaft position in this module (86.5)
     f = f.cut(cyl_y(xs, PUL_Z, 2.75, -WALL_OUT - 1, WALL_OUT + 1))
@@ -782,7 +811,8 @@ PRINTED = {
     "door":            (door, 2, "PETG", "Top face down on the smooth plate side (slick surface)."),
     "servo_link":      (servo_link, 2, "PETG", ""),
     "tie_bar":         (tie_bar, 4, "PETG", "Floor plate face DOWN on the smooth side of the plate (slick top)."),
-    "bin":             (bin_box, 3, "PLA", "Open side up, 2 walls, 10% infill. Big front window + a fill mark every 100 cards. ~5 h each."),
+    "end_bin":         (lambda: bin_box(depth=END_BIN_D), 1, "PLA", "Open side up, 2 walls, 10% infill. Deeper: catches cards pushed off the end of the track."),
+    "bin":             (bin_box, 2, "PLA", "Open side up, 2 walls, 10% infill. Big front window + a fill mark every 100 cards. ~5 h each."),
     "end_side_front":  (lambda: end_side(-1), 1, "PETG", ""),
     "end_side_back":   (lambda: end_side(1), 1, "PETG", ""),
     "end_cap":         (end_cap, 1, "PETG", ""),
@@ -819,7 +849,10 @@ def placed():
         P[f"bin_side_front_{i}"] = bin_module_side(-1).translate((x0, 0, 0))
         P[f"door_{i}"] = door().translate((x0 + 5.5, 0, PATH))
     for i, xb in enumerate(BIN_X):
-        P[f"bin_{i}"] = bin_box().translate((xb, 0, 0.0))
+        if i < 2:
+            P[f"bin_{i}"] = bin_box().translate((xb, BIN_Y, 0.0))
+        else:   # end bin catches cards pushed off the end (centred), front lined up with the others
+            P[f"bin_{i}"] = bin_box(depth=END_BIN_D).translate((xb, END_BIN_Y, 0.0))
     P["electronics_tray"] = electronics_tray().translate((8.5, 0, RAIL_Z + 17.2))
     P["bay_cover"] = bay_cover().translate((7, -63, RAIL_Z + 6))
     for xc in (PSU_X0 + 8, PSU_X0 + PSU_L - 26):
@@ -832,7 +865,7 @@ def placed():
     P["screen_cradle"] = (screen_cradle().translate((0, -3 - 12, -(SCREEN_H + 4) / 2))
                           .rotate((0, 0, 0), (0, 0, 1), 180).translate((0, 0, 0))
                           .rotate((0, 0, 0), (1, 0, 0), 25).translate(piv))
-    P["mount_wall_gap"] = mount_wall().rotate((0, 0, 0), (0, 0, 1), 180).translate((175, -WALL_OUT - 9, PATH - 25))
+    P["mount_wall_gap"] = mount_wall().rotate((0, 0, 0), (0, 0, 1), 180).translate((175, -WALL_OUT - 9, PATH - 21))
     xe = BIN_X[1] + PITCH / 2
     P["end_side_front"] = end_side(-1).translate((xe, 0, 0))
     P["end_side_back"] = end_side(1).translate((xe, 0, 0))

@@ -136,13 +136,31 @@ for i, xb in enumerate(BIN_X[:2]):
     leafd = P[f"door_{i}"].rotate((0, 34.5, PATH - 3), (1, 34.5, PATH - 3), 60)
     check(f"Bin {i+1} door (with lever) opened 60 deg vs tie bars + walls", leafd,
           pr(*[k for k in P if k.startswith("tie_bar")], f"bin_side_front_{i}"), 0.4, "0.5 mm end gap to the joint bridges")
-    check(f"Bin {i+1} bin vs side walls", P[f"bin_{i}"], pr(f"bin_side_back_{i}", f"bin_side_front_{i}"), 2.0, "bin slides out the front")
-check("End bin vs end module walls", P["bin_2"], pr("end_side_front", "end_side_back", "end_cap"), 2.0)
+    check(f"Bin {i+1} vs its module (posts, back wall, sensor mount)", P[f"bin_{i}"], pr(f"bin_side_back_{i}", f"bin_side_front_{i}"), 0.8, "slides out the front between the 2.5 mm posts")
+check("End bin vs end module walls, posts, end cap", P["bin_2"], pr("end_side_front", "end_side_back", "end_cap"), 0.8)
+# --- bins forward: card landing room, second rail, level sensors
+rail2 = box(BIN_X[0] - PITCH / 2, BIN_X[1] + PITCH / 2, RAIL2_Y - 10, RAIL2_Y + 10, 0, RAIL_Z)
+check("Second back rail (Y +24) vs bins", rail2, pr("bin_0", "bin_1", "bin_2"), 2.0, "runs under the doors behind the bins; stops at the end module")
+open_edge_y = 34.5 - 69.3 * math.cos(math.radians(60))
+checks.append(dict(label="Open bin in front of the door's low edge (card landing room)", overlap=0, gap=round(open_edge_y - (BIN_Y - 36.0), 1), need=63.0,
+                   ok=open_edge_y - (BIN_Y - 36.0) >= 63.0, note="was 34 mm with the bins centred; a card is 63 mm wide"))
+for i, xb in enumerate(BIN_X):
+    x0 = xb - PITCH / 2
+    zt, zb = PATH - 19.0, 3.0
+    r = (zt - zb) * math.tan(math.radians(7.5))
+    cone = cq.Workplane("XY").add(cq.Solid.makeCone(r, 0.3, zt - zb, cq.Vector(x0 + TOF_X, -42.0, zb), cq.Vector(0, 0, 1)))
+    others = {k: v for k, v in P.items() if not k.startswith("door_")}
+    hit = pr(*others.keys())
+    for k in [k for k in P if k.startswith("door_")]:
+        hit = hit.union(P[k].rotate((0, 34.5, PATH - 3), (1, 34.5, PATH - 3), 60))
+    check(f"Bin {i+1} level sensor view (15 deg cone) vs everything incl. open door", cone, hit, 0.5,
+          "set the VL53L1X to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum")
 # --- camera in the hood
 for d in (160.0, 205.0):
     cam = B.hq_camera().translate((SCAN_X, 0, PATH + d + 44))
     check(f"HQ camera at lens height {d:.0f} mm vs hood", cam, P["hood"], 2.0, "hangs from the roof on 4 M3 screws")
 # --- screen
+check("Screen wall mount (between hopper and hood) vs front wire channel", P["mount_wall_gap"], P["scan_side_front"].cut(box(120, 230, -60, -54.9, PATH - 40, PATH)), 0.5)
 check("Display in cradle vs bay cover / base", B.display().translate((0, 0, 0)).translate((75, -63 - 4 - 14 - 3, 60)), pr("feeder_base", "bay_cover"), 0.0, "display sits in the cradle, tilted 25 deg")
 # --- wiring
 loom_back = 8 * 3 + 8 * 2 + 9 * 3          # servo + emitter + bin-full conductors, full 9-bin build

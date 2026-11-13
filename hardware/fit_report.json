@@ -304,12 +304,12 @@
   "note": "0.5 mm end gap to the joint bridges"
  },
  {
-  "label": "Bin 1 bin vs side walls",
+  "label": "Bin 1 vs its module (posts, back wall, sensor mount)",
   "overlap": 0.0,
-  "gap": 6.32,
-  "need": 2.0,
+  "gap": 1.0,
+  "need": 0.8,
   "ok": true,
-  "note": "bin slides out the front"
+  "note": "slides out the front between the 2.5 mm posts"
  },
  {
   "label": "Bin 2 servo body vs its wall",
@@ -344,20 +344,60 @@
   "note": "0.5 mm end gap to the joint bridges"
  },
  {
-  "label": "Bin 2 bin vs side walls",
+  "label": "Bin 2 vs its module (posts, back wall, sensor mount)",
   "overlap": 0.0,
-  "gap": 6.32,
-  "need": 2.0,
+  "gap": 1.0,
+  "need": 0.8,
   "ok": true,
-  "note": "bin slides out the front"
+  "note": "slides out the front between the 2.5 mm posts"
  },
  {
-  "label": "End bin vs end module walls",
+  "label": "End bin vs end module walls, posts, end cap",
   "overlap": 0.0,
-  "gap": 6.32,
-  "need": 2.0,
+  "gap": 1.0,
+  "need": 0.8,
   "ok": true,
   "note": ""
+ },
+ {
+  "label": "Second back rail (Y +24) vs bins",
+  "overlap": 0.0,
+  "gap": 3.5,
+  "need": 2.0,
+  "ok": true,
+  "note": "runs under the doors behind the bins; stops at the end module"
+ },
+ {
+  "label": "Open bin in front of the door's low edge (card landing room)",
+  "overlap": 0,
+  "gap": 72.8,
+  "need": 63.0,
+  "ok": true,
+  "note": "was 34 mm with the bins centred; a card is 63 mm wide"
+ },
+ {
+  "label": "Bin 1 level sensor view (15 deg cone) vs everything incl. open door",
+  "overlap": 0.0,
+  "gap": 1.0,
+  "need": 0.5,
+  "ok": true,
+  "note": "set the VL53L1X to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum"
+ },
+ {
+  "label": "Bin 2 level sensor view (15 deg cone) vs everything incl. open door",
+  "overlap": 0.0,
+  "gap": 1.0,
+  "need": 0.5,
+  "ok": true,
+  "note": "set the VL53L1X to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum"
+ },
+ {
+  "label": "Bin 3 level sensor view (15 deg cone) vs everything incl. open door",
+  "overlap": 0.0,
+  "gap": 1.0,
+  "need": 0.5,
+  "ok": true,
+  "note": "set the VL53L1X to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum"
  },
  {
   "label": "HQ camera at lens height 160 mm vs hood",
@@ -374,6 +414,14 @@
   "need": 2.0,
   "ok": true,
   "note": "hangs from the roof on 4 M3 screws"
+ },
+ {
+  "label": "Screen wall mount (between hopper and hood) vs front wire channel",
+  "overlap": 0.0,
+  "gap": 2.0,
+  "need": 0.5,
+  "ok": true,
+  "note": ""
  },
  {
   "label": "Display in cradle vs bay cover / base",

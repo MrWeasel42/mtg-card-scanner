@@ -13,8 +13,9 @@ for k, v in P.items():
     put(k, v, kind)
 # bought parts (for the picture only)
 L = LENGTH
-for y in (-RAIL_Y, RAIL_Y):
-    put(f"rail_{int(y)}", box(-5, L + 5, y - 10, y + 10, 0, 20), "alu")
+put("rail_back", box(-5, L + 5, RAIL_Y - 10, RAIL_Y + 10, 0, 20), "alu")
+put("rail_front", box(-5, SCAN_X1, -RAIL_Y - 10, -RAIL_Y + 10, 0, 20), "alu")
+put("rail_back2", box(BIN_X[0] - PITCH / 2, BIN_X[1] + PITCH / 2, RAIL2_Y - 10, RAIL2_Y + 10, 0, 20), "alu")
 put("motor_feed", box(FEED_X - 21, FEED_X + 21, 60, 108, FEED_Z - 21, FEED_Z + 21), "motor")
 put("motor_track", box(END_SHAFT_X - 21, END_SHAFT_X + 21, WALL_OUT + 30, WALL_OUT + 78, PUL_Z - 21, PUL_Z + 21), "motor")
 put("standoff_feed", motor_standoff().translate((FEED_X, 60, FEED_Z)), "petg")
@@ -42,8 +43,9 @@ for s in (-1, 1):
 put("stack", box(TOWER_X0 + 0.7, TOWER_X0 + 88.7, -31.5, 31.5, PATH, PATH + 120), "stack")
 put("card_scan", box(SCAN_X - 44, SCAN_X + 44, -31.5, 31.5, PATH, PATH + 0.6), "card")
 put("card_bin1", box(BIN_X[0] - 44, BIN_X[0] + 44, -31.5, 31.5, PATH, PATH + 0.6), "card")
+BY = [BIN_Y, BIN_Y, END_BIN_Y]
 for i, h in enumerate((60, 25, 90)):
-    put(f"cards_in_bin{i}", box(BIN_X[i] - 44, BIN_X[i] + 44, -31.5, 31.5, 2, 2 + h * 0.3), "stack")
+    put(f"cards_in_bin{i}", box(BIN_X[i] - 44, BIN_X[i] + 44, BY[i] - 31.5, BY[i] + 31.5, 2, 2 + h * 0.3), "stack")
 # the 7 in display in its cradle (picture only)
 bay_y = -63.0; bay_z = RAIL_Z + 6 + 66; piv = (75, bay_y - 4 - 14, bay_z)
 disp = (box(-94.75, 94.75, -15, 0, -7, 113).translate((0, -3 - 12, -(SCREEN_H + 4) / 2))
@@ -55,6 +57,7 @@ put("psu", box(PSU_X0, PSU_X0 + PSU_L, -PSU_H / 2, PSU_H / 2, RAIL_Z + 5, RAIL_Z
 put("camera", box(SCAN_X - 19, SCAN_X + 19, -19, 19, PATH + CAM_D + 44, PATH + CAM_D + 56).union(cyl_z(SCAN_X, 0, 15, PATH + CAM_D, PATH + CAM_D + 44)), "motor")
 # servos on the back walls
 for xb in BIN_X[:2]:
+    put(f"tof_{int(xb)}", box(xb - PITCH / 2 + TOF_X - 9, xb - PITCH / 2 + TOF_X + 9, -48.5, -35.5, PATH - 17, PATH - 15), "servo")
     put(f"servo_{int(xb)}", box(xb - 11.5, xb + 11.5, WALL_OUT + 4, WALL_OUT + 16, PATH - 44, PATH - 32), "servo")
 json.dump(items, open(os.path.join(out, "items.json"), "w"))
 print(len(items), "parts; length", L)
