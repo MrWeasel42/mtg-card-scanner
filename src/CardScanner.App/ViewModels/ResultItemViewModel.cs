@@ -226,6 +226,24 @@ public partial class ResultItemViewModel : ObservableObject
         OnPropertyChanged(nameof(HasFinishChoice));
     }
 
+    // ---- Condition: set by hand, NM unless you say otherwise. Doesn't count as verifying the card. ----
+    public IReadOnlyList<string> Conditions => ConditionList;
+    public static readonly IReadOnlyList<string> ConditionList = ["Near Mint", "Lightly Played", "Moderately Played", "Heavily Played", "Damaged"];
+    public static string ConditionCode(string c) => c switch
+    {
+        "Lightly Played" => "LP", "Moderately Played" => "MP", "Heavily Played" => "HP", "Damaged" => "DMG", _ => "NM",
+    };
+    [ObservableProperty] private string _condition = "Near Mint";
+    [ObservableProperty] private bool _altered;
+    [ObservableProperty] private bool _misprint;
+    partial void OnConditionChanged(string value) => RecordIfVerified();
+    partial void OnAlteredChanged(bool value) => RecordIfVerified();
+    partial void OnMisprintChanged(bool value) => RecordIfVerified();
+    private void RecordIfVerified() { if (Verdict != Verdict.None) _owner.Record(this, _lastRank); }
+
+    /// <summary>The printing on screen for this card: what you picked, or the top match.</summary>
+    public CardInfo? ShownCard => (Chosen ?? Top)?.Card;
+
     partial void OnSelectedFinishChanged(Finish.Option? value)
     {
         if (_settingFinish || value is null) return;
@@ -322,6 +340,12 @@ public partial class CandidateViewModel(Candidate candidate, int rank, ResultIte
     public int Rank { get; } = rank;
     public string Name => Card.Name;
     public string SetLabel => Card.SetLabel;
+    public string Rarity => Card.RarityLabel;
+    public bool HasRarity => Rarity.Length > 0;
+    public IBrush RarityBrush => new SolidColorBrush(Color.Parse(Card.Rarity switch
+    {
+        "uncommon" => "#B8C4D6", "rare" => "#E5C25B", "mythic" => "#F97316", "special" or "bonus" => "#C084FC", _ => "#94A3B8",
+    }));
     public string Extra
     {
         get

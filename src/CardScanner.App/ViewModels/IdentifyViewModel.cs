@@ -37,7 +37,7 @@ public partial class IdentifyViewModel : ObservableObject
         _recognizer = recognizer;
         _paths = paths;
         _thumbs = new ThumbnailCache(paths);
-        _logPath = Path.Combine(paths.LogsDir, "identify_results_v4.csv");
+        _logPath = Path.Combine(paths.LogsDir, "identify_results_v5.csv");
         _settings = UiSettings.Load(paths);
         Results.CollectionChanged += (_, _) => { OnPropertyChanged(nameof(HasResults)); ApplyFilter(); };
     }
@@ -70,6 +70,19 @@ public partial class IdentifyViewModel : ObservableObject
     [ObservableProperty] private string _searchText = "";
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
+    /// <summary>Rarity filter next to the search box (rarity of the printing on screen).</summary>
+    public IReadOnlyList<string> RarityOptions => RarityList;
+    private static readonly IReadOnlyList<string> RarityList = ["All rarities", "Common", "Uncommon", "Rare", "Mythic", "Special / bonus"];
+    [ObservableProperty] private string _rarityFilter = "All rarities";
+    partial void OnRarityFilterChanged(string value) => ApplyFilter();
+
+    private bool MatchesRarity(ResultItemViewModel r) => RarityFilter switch
+    {
+        "All rarities" => true,
+        "Special / bonus" => r.ShownCard?.Rarity is "special" or "bonus",
+        var f => string.Equals(r.ShownCard?.Rarity, f, StringComparison.OrdinalIgnoreCase),
+    };
+
     /// <summary>What the list shows: the open tab, matching the search. Done lists the most recently
     /// marked card first so a mis-click is easy to find; the other tabs list newest scans first.</summary>
     public ObservableCollection<ResultItemViewModel> Shown { get; } = [];
@@ -90,7 +103,7 @@ public partial class IdentifyViewModel : ObservableObject
 
     internal void ApplyFilter()
     {
-        foreach (var r in Results) r.IsShown = Matches(r, Filter) && r.MatchesSearch(SearchText);
+        foreach (var r in Results) r.IsShown = Matches(r, Filter) && r.MatchesSearch(SearchText) && MatchesRarity(r);
         var want = Results.Where(r => r.IsShown);
         if (Filter == ReviewFilter.Done) want = want.OrderByDescending(r => r.VerifiedAt ?? DateTime.MinValue);
         var list = want.ToList();
@@ -107,7 +120,7 @@ public partial class IdentifyViewModel : ObservableObject
         FinishLabel = $"✨ Check finish ({Count(ReviewFilter.Finish)})";
         AllLabel = $"All ({Results.Count})";
         CanAcceptGood = Count(ReviewFilter.Good) > 0;
-        EmptyFilterText = !HasResults ? "" : Count(Filter) > 0 ? (Shown.Count == 0 ? $"Nothing in this tab matches “{SearchText.Trim()}”." : "") : Filter switch
+        EmptyFilterText = !HasResults ? "" : Count(Filter) > 0 ? (Shown.Count == 0 ? "Nothing in this tab matches the search / rarity filter." : "") : Filter switch
         {
             ReviewFilter.Queue => "Queue's clear, nothing left to verify. 🎉 Peek at the Pinned tab if you want to double-check those.",
             ReviewFilter.Good => "No unmarked pinned cards left.",
@@ -322,7 +335,7 @@ public partial class IdentifyViewModel : ObservableObject
             bool newFile = !File.Exists(_logPath);
             using var w = new StreamWriter(_logPath, append: true);
             if (newFile)
-                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason,list_symbol_score,shooting_star_score,outline_method,detail_pick,detail_margin,straightened");
+                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason,list_symbol_score,shooting_star_score,outline_method,detail_pick,detail_margin,straightened,rarity,condition,altered,misprint");
             // What you saw: the current top (after any detail-check reordering), not the first guess.
             var top = item.Top?.Source;
             var second = item.Candidates.Skip(1).FirstOrDefault()?.Source;
@@ -350,6 +363,8 @@ public partial class IdentifyViewModel : ObservableObject
                 item.Result?.OutlineMethod ?? "",
                 item.DetailPick, item.DetailMargin.ToString("0.000", CultureInfo.InvariantCulture),
                 item.Straightened.ToString(),
+                (right?.Card ?? top?.Card)?.Rarity ?? "", ResultItemViewModel.ConditionCode(item.Condition),
+                item.Altered.ToString(), item.Misprint.ToString(),
             ];
             w.WriteLine(string.Join(",", cols.Select(Csv)));
         }

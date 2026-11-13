@@ -121,8 +121,10 @@
                 Command="{Binding AcceptGoodCommand}" IsEnabled="{Binding CanAcceptGood}"
                 ToolTip.Tip="Marks every card in the Pinned tab as the correct printing, so they're logged too." />
       </WrapPanel>
-      <TextBox Text="{Binding SearchText}" Watermark="🔍 Search this tab: card name, set, or scan number" MaxWidth="520"
-               HorizontalAlignment="Left" Width="520" />
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBox Text="{Binding SearchText}" Watermark="🔍 Search this tab: card name, set, or scan number" Width="440" />
+        <ComboBox ItemsSource="{Binding RarityOptions}" SelectedItem="{Binding RarityFilter}" MinWidth="150" />
+      </StackPanel>
       <TextBlock Classes="muted" Text="{Binding EmptyFilterText}" TextWrapping="Wrap"
                  IsVisible="{Binding EmptyFilterText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
     </StackPanel>
@@ -183,6 +185,9 @@
                         <TextBlock Text="{Binding Name}" FontSize="24" FontWeight="Bold" TextWrapping="Wrap" />
                         <TextBlock Text="{Binding SetLabel}" TextWrapping="Wrap" />
                         <TextBlock Classes="gold" Text="{Binding Extra}" TextWrapping="Wrap" />
+                        <Border Classes="pill" HorizontalAlignment="Left" BorderBrush="{Binding RarityBrush}" IsVisible="{Binding HasRarity}">
+                          <TextBlock Text="{Binding Rarity}" FontSize="12" FontWeight="SemiBold" Foreground="{Binding RarityBrush}" />
+                        </Border>
                         <Border Classes="pill" HorizontalAlignment="Left" Margin="0,4,0,0">
                           <TextBlock Classes="muted" FontSize="12" Text="{Binding ScoreText}" />
                         </Border>
@@ -304,6 +309,17 @@
             <TextBlock DataContext="{Binding Item}" Classes="teal" FontSize="12" Text="{Binding DetailNote, StringFormat='🔎 {0}'}" TextAlignment="Center"
                        IsVisible="{Binding DetailNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" TextWrapping="Wrap" />
             <TextBlock DataContext="{Binding Item}" Classes="muted" FontSize="11" Text="{Binding ReadText}" TextWrapping="Wrap" TextAlignment="Center" />
+            <StackPanel DataContext="{Binding Item}" Spacing="6" HorizontalAlignment="Center" Orientation="Horizontal">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="Condition:" VerticalAlignment="Center" FontWeight="SemiBold" />
+                  <ComboBox ItemsSource="{Binding Conditions}" SelectedItem="{Binding Condition}" MinWidth="170"
+                            ToolTip.Tip="Near Mint unless you change it. Setting it doesn't count as verifying the card." />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="14">
+                  <CheckBox Content="Altered" IsChecked="{Binding Altered}" />
+                  <CheckBox Content="Misprint" IsChecked="{Binding Misprint}" />
+                </StackPanel>
+              </StackPanel>
       </StackPanel>
       <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Top">
         <ComboBox ItemsSource="{Binding LayoutOptions}" SelectedItem="{Binding LayoutChoice}" FontSize="12" MinWidth="160"
@@ -349,6 +365,18 @@
                 <TextBlock Classes="muted" FontSize="12" Text="{Binding Counter}" />
               </StackPanel>
               <TextBlock Text="{Binding PhotoName}" FontSize="16" Classes="muted" />
+              <Border Height="1" Background="#1E293B" />
+              <StackPanel DataContext="{Binding Item}" Spacing="6" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="Condition:" VerticalAlignment="Center" FontWeight="SemiBold" />
+                  <ComboBox ItemsSource="{Binding Conditions}" SelectedItem="{Binding Condition}" MinWidth="170"
+                            ToolTip.Tip="Near Mint unless you change it. Setting it doesn't count as verifying the card." />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="14">
+                  <CheckBox Content="Altered" IsChecked="{Binding Altered}" />
+                  <CheckBox Content="Misprint" IsChecked="{Binding Misprint}" />
+                </StackPanel>
+              </StackPanel>
               <Border Height="1" Background="#1E293B" />
             <WrapPanel DataContext="{Binding Item}" HorizontalAlignment="Left">
               <Border Classes="pill" Background="#1A22C55E" BorderBrush="#22C55E" IsVisible="{Binding IsPinned}" Margin="0,0,8,6">
@@ -404,6 +432,9 @@
             <TextBlock Text="{Binding Title}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
             <TextBlock Text="{Binding Subtitle}" FontSize="16" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
             <TextBlock Classes="gold" Text="{Binding Extra}" FontSize="15" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+            <Border Classes="pill" HorizontalAlignment="Center" Margin="0,4,0,0" BorderBrush="{Binding RarityBrush}" IsVisible="{Binding HasRarity}">
+              <TextBlock Text="{Binding Rarity}" FontSize="13" FontWeight="SemiBold" Foreground="{Binding RarityBrush}" />
+            </Border>
           </StackPanel>
           <Panel Name="RightPane" Background="Transparent">
             <Image Name="RightImg" Source="{Binding RightShown}" Stretch="Uniform" />

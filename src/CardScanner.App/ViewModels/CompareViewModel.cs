@@ -22,7 +22,7 @@ public partial class CompareViewModel : ObservableObject
     public ResultItemViewModel Item { get; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Title), nameof(Subtitle), nameof(Extra), nameof(Counter), nameof(RightShown), nameof(IsChosen))]
+    [NotifyPropertyChangedFor(nameof(Title), nameof(Subtitle), nameof(Extra), nameof(Rarity), nameof(HasRarity), nameof(RarityBrush), nameof(Counter), nameof(RightShown), nameof(IsChosen))]
     private CandidateViewModel _candidate;
 
     [ObservableProperty]
@@ -54,7 +54,8 @@ public partial class CompareViewModel : ObservableObject
 
     // ---- Layout: info + buttons in a panel on the left (default), on the right, or across the top ----
     private readonly Action<CompareLayout>? _saveLayout;
-    public static IReadOnlyList<string> LayoutOptions { get; } = ["Panel on the left", "Panel on the right", "Tags on top"];
+    public IReadOnlyList<string> LayoutOptions => LayoutList;
+    private static readonly IReadOnlyList<string> LayoutList = ["Panel on the left", "Panel on the right", "Tags on top"];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsTopLayout), nameof(IsPanelLayout), nameof(PanelColumn), nameof(LayoutChoice))]
@@ -67,8 +68,8 @@ public partial class CompareViewModel : ObservableObject
     public int PanelColumn => Layout == CompareLayout.Right ? 2 : 0;
     public string LayoutChoice
     {
-        get => LayoutOptions[Layout switch { CompareLayout.Right => 1, CompareLayout.Top => 2, _ => 0 }];
-        set => Layout = Array.IndexOf(LayoutOptions.ToArray(), value) switch { 1 => CompareLayout.Right, 2 => CompareLayout.Top, _ => CompareLayout.Left };
+        get => LayoutList[Layout switch { CompareLayout.Right => 1, CompareLayout.Top => 2, _ => 0 }];
+        set => Layout = Array.IndexOf(LayoutList.ToArray(), value) switch { 1 => CompareLayout.Right, 2 => CompareLayout.Top, _ => CompareLayout.Left };
     }
 
     // ---- Last card: back to the previous card to fix a mis-click ----
@@ -81,6 +82,9 @@ public partial class CompareViewModel : ObservableObject
     public string Title => Candidate.Name;
     public string Subtitle => Candidate.SetLabel;
     public string Extra => Candidate.Extra;
+    public string Rarity => Candidate.Rarity;
+    public bool HasRarity => Candidate.HasRarity;
+    public Avalonia.Media.IBrush RarityBrush => Candidate.RarityBrush;
     public string Counter => $"Option {Candidate.Rank} of {Item.Candidates.Count}";
     public bool IsChosen => Candidate.IsChosen;
     public string ZoomLabel => BottomOnly ? "🔍 Show whole card" : "🔍 Zoom: bottom of card";
