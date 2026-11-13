@@ -36,6 +36,8 @@ public sealed class RecognitionResult
     public bool Pinned { get; init; }
     /// <summary>How much the bottom-left looks like the 1999–2003 foil shooting star (0..1).</summary>
     public double ShootingStarScore { get; init; }
+    /// <summary>How much the bottom-left corner looks like The List's symbol (0..1).</summary>
+    public double ListSymbolScore { get; init; }
     /// <summary>What pinned it, in words (e.g. "name + set + number agree"), or null if not pinned.</summary>
     public string? PinReason { get; init; }
     /// <summary>Needs a human look, and why.</summary>
@@ -76,6 +78,8 @@ public sealed class Recognizer : IDisposable
     private const double BothBonus = 0.50; // set AND number both read: near-decisive
     private const double UnlikelyPenalty = 0.20;    // collector-only reprints, Summer Magic, 90s boxed reprints
     private const int PictureCandidates = 5;        // nearest pictures always considered
+    private const double ListBonus = 0.60;          // List symbol seen: the List printing
+    private const double ListPenalty = 0.30;        // List symbol clearly absent (or seen, for non-List printings)
     private const float MinPinSimilarity = 0.80f;   // picture match needed to pin without a readable name
     private const double BorderPenalty = 0.40;      // clearly white border vs a black-bordered printing, or vice versa
     private const double YearBonus = 0.25;          // copyright year printed on the card = the printing's release year
@@ -208,6 +212,8 @@ public sealed class Recognizer : IDisposable
             collector = collector.WithCopyrightNumbers(ReadCopyrightLine(view == 1 ? turned : sharp));
         }
         var border = detected.Found ? CardBorder.Classify(hi[view]) : null;
+        double listScore = ListSymbol.Score(hi[view]);
+        bool listSeen = listScore >= ListSymbol.SeenAt, listAbsent = listScore < ListSymbol.AbsentBelow;
 
         // 4. Score every printing that the name or the collector line points at.
         var nameScore = new Dictionary<string, double>();
@@ -235,6 +241,14 @@ public sealed class Recognizer : IDisposable
             bool num = collector.Numbers.Contains(p.Number.ToLowerInvariant().TrimStart('0'))
                 || (collector.SetCodes.Count == 0 && collector.CopyrightDigitsContain(p.Number));
             bool set = collector.SetCodes.Contains(p.SetCode.ToLowerInvariant());
+            // A List reprint prints its original set and number; the catalog numbers it "EMA-2".
+            bool isList = p.SetCode is "plst" or "ulst";
+            if (isList && p.Number.Split('-') is [var origSet, var origNum])
+            {
+                num |= collector.Numbers.Contains(origNum.ToLowerInvariant().TrimStart('0'))
+                       || (collector.SetCodes.Count == 0 && collector.CopyrightDigitsContain(origNum));
+                set |= collector.SetCodes.Contains(origSet.ToLowerInvariant());
+            }
             bool pinnedByCollector = num && set;
             bool borderMismatch = border switch
             {
@@ -246,7 +260,10 @@ public sealed class Recognizer : IDisposable
             double score = ImageWeight * sim + ns + (num ? NumberBonus : 0) + (set ? SetBonus : 0) + (pinnedByCollector ? BothBonus : 0)
                 + (yearMatch && !pinnedByCollector ? YearBonus : 0)
                 - (p.IsUnlikely && !pinnedByCollector ? UnlikelyPenalty : 0)
-                - (borderMismatch && !pinnedByCollector ? BorderPenalty : 0);
+                - (borderMismatch && !pinnedByCollector ? BorderPenalty : 0)
+                + (isList && listSeen ? ListBonus : 0)
+                - (isList && listAbsent ? ListPenalty : 0)
+                - (!isList && listSeen ? ListPenalty : 0);
             scored.Add((p, score, sim, ns > 0, num, set, borderMismatch && !pinnedByCollector, yearMatch));
         }
 
@@ -281,15 +298,26 @@ public sealed class Recognizer : IDisposable
         }
         bool pinned = best is { NameMatched: true, NumberMatched: true, SetMatched: true };
         string? pinReason = pinned ? "name + set + number agree" : null;
+        bool bestIsList = best?.Card.IsListReprint == true;
+        if (pinned && bestIsList) pinReason = "name + set + number + List symbol";
+        // The original printing and its List reprint print the same set code and number: only the List
+        // symbol tells them apart, so don't pin the original unless the symbol is clearly absent.
+        bool listDoubt = !bestIsList && !listAbsent && best is not null
+            && candidates.Any(c => c.Card.IsListReprint && c.Card.Name == best.Card.Name);
         // Retro-frame cards print a number but no set code. If the name and number together point at
         // exactly one printing, that's as good as a set + number match.
         // When the number alone fits two printings (8th and 9th Edition Scathe Zombies are both #160),
         // the printed copyright year (1993-2005) can settle it.
         if (!pinned && best is { NameMatched: true, NumberMatched: true } && collector.SetCodes.Count == 0)
         {
-            var same = scored.Where(t => t.Name && t.Num && t.P.Name == best.Card.Name).ToList();
+            // 7th–9th Edition foils are listed as separate "★" printings with the same number ("139" and
+            // "139★"): they're the same card, so count them once.
+            static string Group(PrintingKey p) => p.SetCode + "|" + p.Number.TrimEnd('★');
+            var same = scored.Where(t => t.Name && t.Num && t.P.Name == best.Card.Name)
+                .GroupBy(t => Group(t.P)).Select(g => g.First()).ToList();
+            var bestGroup = Group(scored.First(t => t.P.Id == best.Card.Id).P);
             if (same.Count == 1) { pinned = true; pinReason = "name + number (no set code printed)"; }
-            else if (same.Count(t => t.Year) == 1 && same.First(t => t.P.Id == best.Card.Id).Year)
+            else if (same.Count(t => t.Year) == 1 && same.First(t => Group(t.P) == bestGroup).Year)
             { pinned = true; pinReason = "name + number + copyright year"; }
         }
         // Old cards with no number: if the measured border rules out every printing of this card but one
@@ -321,6 +349,11 @@ public sealed class Recognizer : IDisposable
             if (flag?.StartsWith("Couldn't read the card's name") == true) flag = null;
         }
 
+        if (listDoubt) { pinned = false; pinReason = null; }
+        if (flag is null && best is not null && !pinned && !listSeen && !listAbsent
+            && candidates.Any(c => c.Card.IsListReprint && c.Card.Name == best.Card.Name))
+            flag = "Might be a List reprint — check the bottom-left corner for the List symbol.";
+
         // Look-alike printings with very different prices (e.g. Alpha/Beta/Unlimited/Revised duals,
         // which have no collector line): the picture alone shouldn't decide. Ask a human.
         if (flag is null && best is not null && !pinned)
@@ -346,6 +379,7 @@ public sealed class Recognizer : IDisposable
             BorderColor = border,
             Pinned = pinned,
             ShootingStarScore = ShootingStar.Score(hi[view]),
+            ListSymbolScore = listScore,
             PinReason = pinReason,
             FlagReason = flag,
             Elapsed = sw.Elapsed,

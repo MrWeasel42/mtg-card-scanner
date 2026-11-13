@@ -8,6 +8,7 @@
     <!-- Text-reading models (PaddleOCR, Apache-2.0), shipped with the app. -->
     <None Include="OcrModels\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="OcrModels" />
     <EmbeddedResource Include="Assets\shooting_star.png" LogicalName="shooting_star.png" />
+    <EmbeddedResource Include="Assets\list_symbol.png" LogicalName="list_symbol.png" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.*" />

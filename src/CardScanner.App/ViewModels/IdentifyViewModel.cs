@@ -35,7 +35,7 @@ public partial class IdentifyViewModel : ObservableObject
         _recognizer = recognizer;
         _paths = paths;
         _thumbs = new ThumbnailCache(paths);
-        _logPath = Path.Combine(paths.LogsDir, "identify_results_v3.csv");
+        _logPath = Path.Combine(paths.LogsDir, "identify_results_v4.csv");
         Results.CollectionChanged += (_, _) => { OnPropertyChanged(nameof(HasResults)); ApplyFilter(); };
     }
 
@@ -229,7 +229,7 @@ public partial class IdentifyViewModel : ObservableObject
             bool newFile = !File.Exists(_logPath);
             using var w = new StreamWriter(_logPath, append: true);
             if (newFile)
-                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason");
+                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason,list_symbol_score,shooting_star_score");
             var top = item.Result?.Best;
             var second = item.Result?.Candidates.Skip(1).FirstOrDefault();
             var right = rank > 0 ? item.Result!.Candidates[rank - 1] : null;
@@ -250,6 +250,8 @@ public partial class IdentifyViewModel : ObservableObject
                 (second?.Score ?? 0).ToString("0.0000", CultureInfo.InvariantCulture),
                 typeof(IdentifyViewModel).Assembly.GetName().Version?.ToString(3) ?? "",
                 item.SelectedFinish?.Key ?? "", item.FinishDetectedKey, item.FinishReason,
+                (item.Result?.ListSymbolScore ?? 0).ToString("0.000", CultureInfo.InvariantCulture),
+                (item.Result?.ShootingStarScore ?? 0).ToString("0.000", CultureInfo.InvariantCulture),
             ];
             w.WriteLine(string.Join(",", cols.Select(Csv)));
         }

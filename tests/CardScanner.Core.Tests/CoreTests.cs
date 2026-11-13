@@ -395,6 +395,14 @@ public class FinishTests
     [Fact] public void Star_check_ignored_outside_1999_2003() => Assert.False(Finish.Detect(Card("nonfoil,foil"), null, 0.95).Sure);
 
     [Fact]
+    public void No_list_symbol_on_a_plain_card()
+    {
+        using var plain = new Mat(1360, 976, OpenCvSharp.MatType.CV_8UC3);
+        Cv2.Randu(plain, new Scalar(10, 10, 10), new Scalar(40, 40, 40));
+        Assert.True(ListSymbol.Score(plain) < ListSymbol.SeenAt);
+    }
+
+    [Fact]
     public void No_star_on_a_card_without_one()
     {
         // A green card with some texture but no star.
