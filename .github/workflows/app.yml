@@ -119,5 +119,7 @@ jobs:
           Click **More info → Run anyway**.
 
           The first launch downloads the card catalog (about 210 MB).
+
+          **Phone scanner (Android):** download [MTGScanner.apk](https://github.com/MrWeasel42/mtg-card-scanner/releases/download/phone-app/MTGScanner.apk) on the phone and install it, then turn on **⚙ Settings → Phone link** in this app (same Wi-Fi).
           "@
           gh release create "v$v" dist\*.exe --target "${{ github.sha }}" --title "MTG Card Scanner $v" --notes $notes --latest
