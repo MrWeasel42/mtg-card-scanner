@@ -125,6 +125,27 @@ public sealed class Recognizer : IDisposable
     }
 
     /// <param name="forceUpsideDown">null = decide automatically; true/false = the user says which way up it is.</param>
+    /// <summary>
+    /// Re-straighten a result's photo by lining it up with the catalog image of a candidate (see
+    /// <see cref="CropRefine"/>). Returns the new straightened card as JPEG, or null if it couldn't lock on.
+    /// </summary>
+    public static byte[]? RefineCrop(RecognitionResult result, string referenceImagePath)
+    {
+        if (result.FilePath is null || string.IsNullOrEmpty(result.OutlineCorners)) return null;
+        var corners = result.OutlineCorners.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Split(',')).Select(xy => new Point2f(float.Parse(xy[0], System.Globalization.CultureInfo.InvariantCulture),
+                float.Parse(xy[1], System.Globalization.CultureInfo.InvariantCulture))).ToArray();
+        using var photo = Cv2.ImRead(result.FilePath, ImreadModes.Color);
+        using var reference = Cv2.ImRead(referenceImagePath, ImreadModes.Color);
+        if (photo.Empty() || reference.Empty()) return null;
+        var better = CropRefine.Refine(photo, corners, reference, result.UpsideDown);
+        if (better is null) return null;
+        using var card = CardDetector.Warp(photo, better, HiW, HiH);
+        if (result.UpsideDown) Cv2.Rotate(card, card, RotateFlags.Rotate180);
+        Cv2.ImEncode(".jpg", card, out var jpeg, new ImageEncodingParam(ImwriteFlags.JpegQuality, 92));
+        return jpeg;
+    }
+
     public RecognitionResult IdentifyFile(string path, int topK = 8, bool? forceUpsideDown = null)
     {
         using var photo = Cv2.ImRead(path, ImreadModes.Color); // applies phone rotation (EXIF)
@@ -399,7 +420,7 @@ public sealed class Recognizer : IDisposable
             CardImageJpeg = jpeg,
             CardOutlineFound = detected.Found,
             OutlineMethod = detected.Method,
-            OutlineCorners = string.Join(" ", detected.Corners.Select(c => $"{c.X:0},{c.Y:0}")),
+            OutlineCorners = string.Join(" ", detected.Corners.Select(c => FormattableString.Invariant($"{c.X:0.0},{c.Y:0.0}"))),
             UpsideDown = view == 1,
             OrientationForced = forceUpsideDown is not null,
             NameRead = viewHits.OrderByDescending(h => h.Score).FirstOrDefault()?.Raw,

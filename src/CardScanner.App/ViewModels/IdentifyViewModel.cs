@@ -185,6 +185,20 @@ public partial class IdentifyViewModel : ObservableObject
         catch (Exception ex) { Log.Error("Save crop diagnostics", ex); }
     }
 
+    /// <summary>Overwrite the saved crop with the overlay-straightened one (diagnostics).</summary>
+    internal void SaveStraightenedCrop(ResultItemViewModel item, byte[] jpeg)
+    {
+        try
+        {
+            if (item.Result is not { } r) return;
+            var dir = Path.Combine(_paths.LogsDir, "crops");
+            Directory.CreateDirectory(dir);
+            var safe = string.Concat($"{r.Folder}_{Path.GetFileNameWithoutExtension(r.Source)}".Split(Path.GetInvalidFileNameChars()));
+            File.WriteAllBytes(Path.Combine(dir, safe + "_straightened.jpg"), jpeg);
+        }
+        catch (Exception ex) { Log.Error("Save straightened crop", ex); }
+    }
+
     /// <summary>Re-identifies a photo with the card turned the other way up, replacing its result.</summary>
     internal async Task<ResultItemViewModel?> FlipAsync(ResultItemViewModel item)
     {
@@ -262,7 +276,7 @@ public partial class IdentifyViewModel : ObservableObject
             bool newFile = !File.Exists(_logPath);
             using var w = new StreamWriter(_logPath, append: true);
             if (newFile)
-                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason,list_symbol_score,shooting_star_score,outline_method,detail_pick,detail_margin");
+                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason,list_symbol_score,shooting_star_score,outline_method,detail_pick,detail_margin,straightened");
             var top = item.Result?.Best;
             var second = item.Result?.Candidates.Skip(1).FirstOrDefault();
             var right = rank > 0 ? item.Result!.Candidates[rank - 1] : null;
@@ -287,6 +301,7 @@ public partial class IdentifyViewModel : ObservableObject
                 (item.Result?.ShootingStarScore ?? 0).ToString("0.000", CultureInfo.InvariantCulture),
                 item.Result?.OutlineMethod ?? "",
                 item.DetailPick, item.DetailMargin.ToString("0.000", CultureInfo.InvariantCulture),
+                item.Straightened.ToString(),
             ];
             w.WriteLine(string.Join(",", cols.Select(Csv)));
         }

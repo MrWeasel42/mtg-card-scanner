@@ -19,10 +19,14 @@ public partial class ResultItemViewModel : ObservableObject
 
     public RecognitionResult? Result { get; }
     public string Photo { get; }
+    /// <summary>The straightened card as JPEG: from the outline at first, replaced by the overlay-straightened
+    /// version once the top match's catalog image is available.</summary>
+    private byte[]? _cardJpeg;
     /// <summary>Downsized copy for the list (saves memory).</summary>
-    public Bitmap? CardImage { get; }
+    [ObservableProperty] private Bitmap? _cardImage;
     /// <summary>Full-resolution straightened photo, loaded the first time the compare view needs it.</summary>
-    public Bitmap? FullImage => _fullImage ??= Images.Full(Result?.CardImageJpeg);
+    public Bitmap? FullImage => _fullImage ??= Images.Full(_cardJpeg);
+    public bool Straightened { get; private set; }
     public string? Error { get; }
     public bool HasError => Error is not null;
     public bool HasResult => Result is not null;
@@ -87,7 +91,7 @@ public partial class ResultItemViewModel : ObservableObject
         if (Result is null || Top is null || Verdict != Verdict.None) return;
         var group = Candidates.Where(c => c.Card.Name == Top.Card.Name && c.ImagePath is not null).ToList();
         if (group.Count < 2) return;
-        var jpeg = Result.CardImageJpeg;
+        var jpeg = _cardJpeg ?? Result.CardImageJpeg;
         var scores = await Task.Run(() => DetailCompare.Score(jpeg, group.Select(c => (c.Card.Id, c.ImagePath!))));
         if (scores.Count < 2 || Verdict != Verdict.None) return;
         var ranked = scores.OrderByDescending(x => x.Score).ToList();
@@ -153,7 +157,8 @@ public partial class ResultItemViewModel : ObservableObject
         _owner = owner;
         Result = result;
         Photo = string.IsNullOrEmpty(result.Folder) ? result.Source : $"{result.Folder} / {result.Source}";
-        CardImage = Images.Small(result.CardImageJpeg, 420);
+        _cardJpeg = result.CardImageJpeg;
+        CardImage = Images.Small(_cardJpeg, 420);
         int rank = 1;
         foreach (var c in result.Candidates)
         {
@@ -221,8 +226,25 @@ public partial class ResultItemViewModel : ObservableObject
             c.ImagePath = await cache.GetPathAsync(c.Card);
             c.Thumbnail = Images.SmallFromFile(c.ImagePath, 360);
         }
+        try { await StraightenAsync(); }
+        catch (Exception ex) { Log.Error($"Straighten {Photo}", ex); }
         try { await RunDetailCheckAsync(); }
         catch (Exception ex) { Log.Error($"Detail check {Photo}", ex); }
+    }
+
+    /// <summary>Line the photo up with the top match's catalog image to get a properly square crop.</summary>
+    private async Task StraightenAsync()
+    {
+        if (Result is null || Top?.ImagePath is not { } refPath) return;
+        var r = Result;
+        var jpeg = await Task.Run(() => Recognizer.RefineCrop(r, refPath));
+        if (jpeg is null) return;
+        _cardJpeg = jpeg;
+        _fullImage = null;
+        CardImage = Images.Small(jpeg, 420);
+        Straightened = true;
+        OnPropertyChanged(nameof(FullImage));
+        _owner.SaveStraightenedCrop(this, jpeg);
     }
 
     internal void Choose(CandidateViewModel? chosen, Verdict? verdict = null)

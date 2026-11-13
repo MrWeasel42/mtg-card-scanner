@@ -51,6 +51,7 @@ public static class WhiteBorder
 
         double ix0 = (W - w * s) / 2, iy0 = (H - h * s) / 2, ix1 = W - ix0, iy1 = H - iy0;
         var offs = new Dictionary<string, double>();
+        var notWhite = new List<string>();
         foreach (var side in new[] { "top", "bottom", "left", "right" })
         {
             var p = Profile(side);
@@ -58,7 +59,7 @@ public static class WhiteBorder
             if (p.Count <= b) return null;
             var ring = p.GetRange(a, b - a);
             var bV = Median(ring.Select(r => r.V)); var bT = Median(ring.Select(r => r.T)); var bS = Median(ring.Select(r => r.S));
-            if (bV < 150 || bS > 60 || bT > 8) return null; // not white card stock outside the outline
+            if (bV < 150 || bS > 60 || bT > 8) { notWhite.Add(side); continue; } // not white card stock here
             int? edge = null;
             for (int d = b; d < p.Count - 3; d++)
             {
@@ -70,6 +71,10 @@ public static class WhiteBorder
             if (edge is null) return null;
             offs[side] = edge.Value / s;
         }
+
+        // Three sides clearly white-bordered, the fourth tinted by the light (Iona): it takes their width.
+        if (offs.Count == 3 && notWhite.Count == 1) offs[notWhite[0]] = Median(offs.Values);
+        if (offs.Count < 4) return null;
 
         // Old white borders are the same width all round; a side that stops short (shadow, wear, a
         // stain) takes the width the two widest sides agree on.
