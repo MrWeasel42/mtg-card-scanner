@@ -142,6 +142,7 @@ public partial class ResultItemViewModel : ObservableObject
         if (_settingFinish || value is null) return;
         _finishByUser = true;
         FinishUnsure = false;
+        _owner.ApplyFilter();
         FinishNote = value.Key == FinishDetectedKey ? $"detected: {FinishReason}" : "set by you";
         if (Verdict != Verdict.None) _owner.Record(this, _lastRank);   // keep the log up to date
     }

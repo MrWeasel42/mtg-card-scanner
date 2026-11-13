@@ -109,6 +109,9 @@
         <Button Classes="tab" Classes.on="{Binding IsGood}" Content="{Binding GoodLabel}" Margin="0,0,8,6"
                 Command="{Binding SetFilterCommand}" CommandParameter="Good"
                 ToolTip.Tip="Name, set code and collector number all agree. Almost always right." />
+        <Button Classes="tab" Classes.on="{Binding IsFinish}" Content="{Binding FinishLabel}" Margin="0,0,8,6"
+                Command="{Binding SetFilterCommand}" CommandParameter="Finish"
+                ToolTip.Tip="Printing is pinned, but foil / non-foil couldn't be read from the photo. Set the Finish, or confirm Non-foil." />
         <Button Classes="tab" Classes.on="{Binding IsDone}" Content="{Binding DoneLabel}" Margin="0,0,8,6"
                 Command="{Binding SetFilterCommand}" CommandParameter="Done"
                 ToolTip.Tip="Cards you've already marked. Change your answer here if you need to." />

@@ -21,6 +21,9 @@ public sealed class RecognitionResult
     /// <summary>The straightened card (high resolution) as JPEG bytes, for showing in the app.</summary>
     public required byte[] CardImageJpeg { get; init; }
     public required bool CardOutlineFound { get; init; }
+    /// <summary>How the card's outline was found, and its corners in the photo (diagnostics).</summary>
+    public string OutlineMethod { get; init; } = "";
+    public string OutlineCorners { get; init; } = "";
     public required bool UpsideDown { get; init; }
     public required TimeSpan Elapsed { get; init; }
 
@@ -80,7 +83,7 @@ public sealed class Recognizer : IDisposable
     private const int PictureCandidates = 5;        // nearest pictures always considered
     private const double ListBonus = 0.60;          // List symbol seen: the List printing
     private const double ListPenalty = 0.30;        // List symbol clearly absent (or seen, for non-List printings)
-    private const float MinPinSimilarity = 0.80f;   // picture match needed to pin without a readable name
+    private const float MinPinSimilarity = 0.65f;   // picture match needed to pin without a readable name
     private const double BorderPenalty = 0.40;      // clearly white border vs a black-bordered printing, or vice versa
     private const double YearBonus = 0.25;          // copyright year printed on the card = the printing's release year
     private const double MinNameScore = 0.85;
@@ -242,7 +245,9 @@ public sealed class Recognizer : IDisposable
                 .Select(k => nameScore.GetValueOrDefault(k)).Max();
             bool num = collector.Numbers.Contains(p.Number.ToLowerInvariant().TrimStart('0'))
                 || (collector.SetCodes.Count == 0 && collector.CopyrightDigitsContain(p.Number));
-            bool set = collector.SetCodes.Contains(p.SetCode.ToLowerInvariant());
+            bool set = collector.SetCodes.Contains(p.SetCode.ToLowerInvariant())
+                // Many promos print a generic "PRM" instead of their own set code (Reliquary Tower PF23).
+                || (collector.SetCodes.Contains("prm") && p.SetType == "promo");
             // A List reprint prints its original set and number; the catalog numbers it "EMA-2".
             bool isList = p.SetCode is "plst" or "ulst";
             if (isList && p.Number.Split('-') is [var origSet, var origNum])
@@ -374,6 +379,8 @@ public sealed class Recognizer : IDisposable
             Candidates = candidates,
             CardImageJpeg = jpeg,
             CardOutlineFound = detected.Found,
+            OutlineMethod = detected.Method,
+            OutlineCorners = string.Join(" ", detected.Corners.Select(c => $"{c.X:0},{c.Y:0}")),
             UpsideDown = view == 1,
             OrientationForced = forceUpsideDown is not null,
             NameRead = viewHits.OrderByDescending(h => h.Score).FirstOrDefault()?.Raw,

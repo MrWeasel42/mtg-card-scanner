@@ -10,6 +10,8 @@ public sealed class DetectedCard : IDisposable
     /// <summary>Corners of the card in the original photo (TL, TR, BR, BL). Empty if no card outline was found.</summary>
     public required Point2f[] Corners { get; init; }
     public bool Found => Corners.Length == 4;
+    /// <summary>How the outline was found, for diagnostics: "outline", "refit", "+snap", "+white border"...</summary>
+    public string Method { get; init; } = "";
     public void Dispose() => Card.Dispose();
 }
 
@@ -37,17 +39,18 @@ public static class CardDetector
             // No outline found: assume the photo is already cropped to the card.
             var whole = new Mat();
             Cv2.Resize(photo, whole, new Size(Width, Height), 0, 0, InterpolationFlags.Cubic);
-            return new DetectedCard { Card = whole, Corners = [] };
+            return new DetectedCard { Card = whole, Corners = [], Method = "none (whole photo)" };
         }
 
         // A refit outline hugs the outside of the edge band (and any shadow): slide each side onto the
         // sharpest nearby edge.
-        if (refit) quad = SnapToEdges(small, quad);
+        string method = refit ? "refit" : "outline";
+        if (refit) { quad = SnapToEdges(small, quad); method += "+snap"; }
         // White-bordered card on a light background? The outline may be the frame inside the border.
-        quad = WhiteBorder.Extend(small, quad) ?? quad;
+        if (WhiteBorder.Extend(small, quad) is { } wider) { quad = wider; method += "+white border"; }
 
         var corners = quad.Select(p => new Point2f((float)(p.X / scale), (float)(p.Y / scale))).ToArray();
-        return new DetectedCard { Card = Warp(photo, corners), Corners = corners };
+        return new DetectedCard { Card = Warp(photo, corners), Corners = corners, Method = method };
     }
 
     /// <summary>

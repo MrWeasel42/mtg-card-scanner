@@ -8,7 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace CardScanner.App.ViewModels;
 
-public enum ReviewFilter { Queue, Good, Done, All }
+public enum ReviewFilter { Queue, Good, Finish, Done, All }
 
 /// <summary>
 /// "Identify photos" page: drop in photos, see the top matches, mark each one right or wrong.
@@ -44,17 +44,19 @@ public partial class IdentifyViewModel : ObservableObject
     // ---- Review queue: unsure cards show up, and drop off once verified ----
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsQueue), nameof(IsGood), nameof(IsDone), nameof(IsAll))]
+    [NotifyPropertyChangedFor(nameof(IsQueue), nameof(IsGood), nameof(IsFinish), nameof(IsDone), nameof(IsAll))]
     private ReviewFilter _filter = ReviewFilter.Queue;
 
     public bool IsQueue => Filter == ReviewFilter.Queue;
     public bool IsGood => Filter == ReviewFilter.Good;
+    public bool IsFinish => Filter == ReviewFilter.Finish;
     public bool IsDone => Filter == ReviewFilter.Done;
     public bool IsAll => Filter == ReviewFilter.All;
 
     [ObservableProperty] private string _queueLabel = "To verify";
     [ObservableProperty] private string _goodLabel = "📌 Pinned";
     [ObservableProperty] private string _doneLabel = "✓ Done";
+    [ObservableProperty] private string _finishLabel = "✨ Check finish";
     [ObservableProperty] private string _allLabel = "All";
     [ObservableProperty] private string _emptyFilterText = "";
     [ObservableProperty] private bool _canAcceptGood;
@@ -68,7 +70,9 @@ public partial class IdentifyViewModel : ObservableObject
     {
         // Anything the scanner couldn't pin down (flagged, unpinned, or failed), not yet marked.
         ReviewFilter.Queue => r.Verdict == Verdict.None && !r.IsPinned,
-        ReviewFilter.Good => r.Verdict == Verdict.None && r.IsPinned,
+        ReviewFilter.Good => r.Verdict == Verdict.None && r.IsPinned && !r.FinishUnsure,
+        // Printing pinned, but foil / non-foil couldn't be read: just check the finish.
+        ReviewFilter.Finish => r.Verdict == Verdict.None && r.IsPinned && r.FinishUnsure,
         ReviewFilter.Done => r.Verdict != Verdict.None,
         _ => true,
     };
@@ -81,6 +85,7 @@ public partial class IdentifyViewModel : ObservableObject
         QueueLabel = $"To verify ({q})";
         GoodLabel = $"📌 Pinned ({Count(ReviewFilter.Good)})";
         DoneLabel = $"✓ Done ({Count(ReviewFilter.Done)})";
+        FinishLabel = $"✨ Check finish ({Count(ReviewFilter.Finish)})";
         AllLabel = $"All ({Results.Count})";
         CanAcceptGood = Count(ReviewFilter.Good) > 0;
         EmptyFilterText = !HasResults || Count(Filter) > 0 ? "" : Filter switch
@@ -88,6 +93,7 @@ public partial class IdentifyViewModel : ObservableObject
             ReviewFilter.Queue => "Queue's clear, nothing left to verify. 🎉 Peek at the Pinned tab if you want to double-check those.",
             ReviewFilter.Good => "No unmarked pinned cards left.",
             ReviewFilter.Done => "Nothing marked yet.",
+            ReviewFilter.Finish => "No finishes left to check.",
             _ => "",
         };
     }
@@ -119,6 +125,7 @@ public partial class IdentifyViewModel : ObservableObject
                 {
                     var result = await Task.Run(() => _recognizer.IdentifyFile(file));
                     item = new ResultItemViewModel(result, this);
+                    SaveCropDiagnostics(result);
                 }
                 catch (Exception ex)
                 {
@@ -150,6 +157,32 @@ public partial class IdentifyViewModel : ObservableObject
                 yield return p;
             }
         }
+    }
+
+    /// <summary>
+    /// Keeps a copy of each straightened card (what the scanner actually looked at) in logs/crops, plus how
+    /// its outline was found, so crop problems can be investigated from the files alone.
+    /// </summary>
+    private void SaveCropDiagnostics(RecognitionResult result)
+    {
+        try
+        {
+            var dir = Path.Combine(_paths.LogsDir, "crops");
+            Directory.CreateDirectory(dir);
+            var safe = string.Concat($"{result.Folder}_{Path.GetFileNameWithoutExtension(result.Source)}".Split(Path.GetInvalidFileNameChars()));
+            File.WriteAllBytes(Path.Combine(dir, safe + ".jpg"), result.CardImageJpeg);
+            var index = Path.Combine(dir, "crops.csv");
+            bool newFile = !File.Exists(index);
+            using var w = new StreamWriter(index, append: true);
+            if (newFile) w.WriteLine("time,photo,outline_method,corners_tl_tr_br_bl,upside_down,app_version");
+            w.WriteLine(string.Join(",", new[]
+            {
+                DateTime.Now.ToString("s"), $"{result.Folder} / {result.Source}", result.OutlineMethod,
+                result.OutlineCorners, result.UpsideDown.ToString(),
+                typeof(IdentifyViewModel).Assembly.GetName().Version?.ToString(3) ?? "",
+            }.Select(Csv)));
+        }
+        catch (Exception ex) { Log.Error("Save crop diagnostics", ex); }
     }
 
     /// <summary>Re-identifies a photo with the card turned the other way up, replacing its result.</summary>
@@ -229,7 +262,7 @@ public partial class IdentifyViewModel : ObservableObject
             bool newFile = !File.Exists(_logPath);
             using var w = new StreamWriter(_logPath, append: true);
             if (newFile)
-                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason,list_symbol_score,shooting_star_score");
+                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason,list_symbol_score,shooting_star_score,outline_method");
             var top = item.Result?.Best;
             var second = item.Result?.Candidates.Skip(1).FirstOrDefault();
             var right = rank > 0 ? item.Result!.Candidates[rank - 1] : null;
@@ -252,6 +285,7 @@ public partial class IdentifyViewModel : ObservableObject
                 item.SelectedFinish?.Key ?? "", item.FinishDetectedKey, item.FinishReason,
                 (item.Result?.ListSymbolScore ?? 0).ToString("0.000", CultureInfo.InvariantCulture),
                 (item.Result?.ShootingStarScore ?? 0).ToString("0.000", CultureInfo.InvariantCulture),
+                item.Result?.OutlineMethod ?? "",
             ];
             w.WriteLine(string.Join(",", cols.Select(Csv)));
         }
