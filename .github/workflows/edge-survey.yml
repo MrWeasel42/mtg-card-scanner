@@ -1,0 +1,33 @@
+name: Card edge colour survey
+
+# Research only: which scan-floor colour contrasts best with every card's edge?
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Cards to sample (0 = every paper printing)"
+        default: "0"
+
+permissions:
+  contents: write
+
+jobs:
+  survey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests numpy opencv-python-headless
+      - name: Survey
+        working-directory: tools/edge_survey
+        run: python survey.py ${{ inputs.limit }} | tee edge_survey.log
+      - name: Share results (ci-preview prerelease)
+        working-directory: tools/edge_survey
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view ci-preview >/dev/null 2>&1 || gh release create ci-preview --prerelease --latest=false --title "CI preview" --notes "Automated build output. Not a download for users."
+          gh release upload ci-preview edge_survey.md edge_survey.log --clobber
