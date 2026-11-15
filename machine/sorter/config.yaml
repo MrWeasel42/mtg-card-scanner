@@ -1,8 +1,13 @@
-# Card sorter settings (3-bin prototype). Distances in mm.
+# Card sorter settings. Distances in mm. The PC app's session decides which bin each card goes to.
 
 pc:
   host: ""              # blank = find the PC automatically (PC app: Settings -> Phone link on)
   port: 8770
+  poll_s: 2             # how often to ask the PC while paused or waiting for cards
+
+bins:
+  max: 9
+  in_use: 3             # bins built, counted from the feeder; the last one is the end ramp (also Flagged)
 
 moonraker: "http://127.0.0.1:7125"
 
@@ -12,25 +17,26 @@ track:
   home_speed: 40
   home_search_mm: 1300        # a bit more than one belt loop (1220)
   home_to_station_mm: 94.5    # from the home sensor trigger to the next station; set with the fin gauge
-  stations: 5                 # 0 landing, 1 scan, 2 bin 1, 3 bin 2, 4 end ramp (bin 3)
 
 feed:
   speed: 60
   max_to_sensor_mm: 160       # card must reach the card-clear sensor within this, else hopper empty / misfeed
   max_card_mm: 140            # ...and clear it within this (raw card is 88 long), else jam
   after_clear_mm: 10          # carry on so the tail leaves the exit nip before a fin comes down
-  retries: 2                  # empty-hopper retries before stopping
+  retries: 2                  # tries before calling the hopper empty
+  empty_poll_s: 5             # hopper empty: try feeding again this often (never stops on its own)
 
 doors:
   open_ms: 350                # time to let the card fall
   beam_timeout_ms: 600        # break-beam must see the card within this, else retry once
   beam_broken_when_low: true  # Adafruit IR break-beam receiver output
-  servos:                     # PCA9685 channel and pulse widths (microseconds); tune each servo by hand
+  servos:                     # one door per bin except the last; PCA9685 channel, pulse widths (us), tune by hand
     - {bin: 1, channel: 0, closed_us: 1000, open_us: 1700, beam_gpio: 5}
     - {bin: 2, channel: 1, closed_us: 1000, open_us: 1700, beam_gpio: 6}
+    # 9-bin build: add bins 3..8 on channels 2..7 with their beam GPIOs (e.g. 13, 19, 26, 12, 16, 20)
 
 levels:                       # VL53L1X above each bin: distance to the top of the stack
-  xshut_gpio: [17, 27, 22]    # bins 1, 2, 3
+  xshut_gpio: [17, 27, 22]    # one per bin in use, bins 1, 2, 3 (9 bins: add 9 GPIOs)
   full_mm: 70                 # pause when the stack is closer than this
   check_every: 5              # cards
 
@@ -41,10 +47,3 @@ camera:
   gain: 1.0
   lights_pwm: 1.0
   settle_ms: 150              # after the track stops, before the photo
-
-# Which bin each card goes to: the first rule that matches wins. Bin 3 (end ramp) catches everything else.
-# Keys: ok, pinned, finish_unsure, min_price, max_price, set_codes, name_contains
-rules:
-  - {bin: 1, name: "Confirmed", ok: true, pinned: true, finish_unsure: false}
-  - {bin: 2, name: "Check on the PC", ok: true}
-  - {bin: 3, name: "No card / not read"}

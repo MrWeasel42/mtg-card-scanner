@@ -157,7 +157,7 @@ class SimMachine:
         self.jam_at = jam_at
         self.fed = 0
         self.light = 0.0
-        self.doors = {1: False, 2: False}
+        self.doors: dict[int, bool] = {}
         self.levels = [250, 250, 250]
         self.log: list[str] = []
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import socket
+import urllib.error
 import urllib.request
 
 
@@ -40,29 +41,68 @@ class PcLink:
         except OSError:
             return False
 
+    def _call(self, path: str, data: bytes | None = None, ctype: str = "text/plain", timeout: float = 10) -> dict:
+        req = urllib.request.Request(f"http://{self.host}:{self.port}{path}", data=data,
+                                     headers={"Content-Type": ctype}, method="POST" if data is not None else "GET")
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:          # 409 paused / stopped still carries a JSON answer
+            return json.load(e)
+
     def identify(self, jpeg: bytes) -> dict:
-        req = urllib.request.Request(f"http://{self.host}:{self.port}/api/scan", data=jpeg,
-                                     headers={"Content-Type": "image/jpeg"}, method="POST")
-        with urllib.request.urlopen(req, timeout=90) as r:
-            return json.load(r)
+        """The PC's answer, including the bin it chose (bin, binLabel, binWanted, binReason, flagged)."""
+        return self._call("/api/scan", jpeg, "image/jpeg", timeout=90)
+
+    def start(self) -> dict:
+        """Join the session open on the PC, or start one with the PC's last session setup."""
+        return self._call("/api/session/start", b"")
+
+    def status(self) -> dict:
+        try:
+            return self._call("/api/status")
+        except OSError:
+            return {"active": True, "paused": False, "stop": False}   # PC briefly away: keep waiting
 
 
 class SimPc:
-    """Answers like the PC app: most cards pinned, some unsure, a few unreadable."""
+    """Answers like the PC app with a 3-bin price session: Under $1 -> 1, $1-5 -> 2, rest and Flagged -> 3.
+    Says Stop after a few idle polls, so a --sim run ends once the hopper is empty."""
 
-    def __init__(self, seed: int = 2):
+    def __init__(self, seed: int = 2, idle_polls_to_stop: int = 3, bins_in_use: int = 3):
         import random
         self.rng = random.Random(seed)
         self.name = "SIM-PC"
         self.n = 0
+        self.polls = 0
+        self.idle_polls_to_stop = idle_polls_to_stop
+        self.bins_in_use = bins_in_use
 
     def connect(self) -> bool:
         return True
 
+    def start(self) -> dict:
+        return {"active": True, "session": "Sim session", "mode": "Catalog", "binsInUse": self.bins_in_use}
+
+    def status(self) -> dict:
+        self.polls += 1
+        stop = self.polls > self.idle_polls_to_stop
+        return {"active": not stop, "paused": False, "stop": stop}
+
     def identify(self, jpeg: bytes) -> dict:
         self.n += 1
+        self.polls = 0
+        end = self.bins_in_use
         r = self.rng.random()
         if r < 0.08:
-            return {"ok": False, "scan": f"Scan {self.n:04d}", "error": "No card found in the photo."}
+            return {"ok": False, "noCard": True, "scan": None, "error": "No card found in the photo.", "bin": end,
+                    "binLabel": "No card"}
+        price = round(self.rng.uniform(0.1, 20), 2)
+        pinned = r > 0.25
+        flagged = not pinned
+        wanted = 0 if flagged else (1 if price < 1 else 2 if price < 5 else 3 if price < 10 else 4)
+        b = end if flagged or wanted >= end else wanted
         return {"ok": True, "scan": f"Scan {self.n:04d}", "name": f"Card {self.n}", "setCode": "SIM", "number": str(self.n),
-                "pinned": r > 0.25, "finishUnsure": 0.25 < r < 0.35, "price": round(self.rng.uniform(0.1, 20), 2)}
+                "pinned": pinned, "finishUnsure": False, "price": price, "bin": b, "binWanted": wanted, "flagged": flagged,
+                "binLabel": "Flagged" if flagged else ["Under $1", "$1-5", "$5-10", "$10-25"][wanted - 1],
+                "binReason": "not sure" if flagged else f"${price:.2f}"}

@@ -23,9 +23,13 @@ class PcLink(private val context: Context) {
         val number: String?, val finish: String?, val finishUnsure: Boolean, val pinned: Boolean,
         val pinReason: String?, val price: Double?, val error: String?, val noCard: Boolean,
         val sameAsLast: Boolean, val count: Int, val paused: Boolean, val stop: Boolean,
+        /** Where the machine would drop it: bin 1 is the first door from the feeder, the last bin in use takes Flagged. */
+        val bin: Int = 0, val binLabel: String? = null, val binWanted: Int = 0, val binReason: String? = null,
+        val flagged: Boolean = false, val session: String? = null, val rarity: String? = null,
     )
 
-    data class Status(val active: Boolean, val paused: Boolean, val stop: Boolean, val count: Int)
+    data class Status(val active: Boolean, val paused: Boolean, val stop: Boolean, val count: Int,
+                      val session: String = "", val mode: String = "", val binsInUse: Int = 0)
 
     fun discover(timeoutMs: Int = 1500): Pc? {
         DatagramSocket().use { sock ->
@@ -83,7 +87,8 @@ class PcLink(private val context: Context) {
         call(Pc(host, port, ""), "GET", "/api/hello").optString("pc", "PC")
     } catch (_: Exception) { null }
 
-    private fun status(j: JSONObject) = Status(j.optBoolean("active"), j.optBoolean("paused"), j.optBoolean("stop"), j.optInt("count"))
+    private fun status(j: JSONObject) = Status(j.optBoolean("active"), j.optBoolean("paused"), j.optBoolean("stop"), j.optInt("count"),
+        j.optString("session", ""), j.optString("mode", ""), j.optInt("binsInUse"))
 
     fun status(pc: Pc): Status = status(call(pc, "GET", "/api/status"))
     fun startSession(pc: Pc): Status = status(call(pc, "POST", "/api/session/start", ByteArray(0)))
@@ -105,6 +110,8 @@ class PcLink(private val context: Context) {
             pinReason = s("pinReason"), price = if (j.isNull("price") || !j.has("price")) null else j.optDouble("price"),
             error = s("error"), noCard = j.optBoolean("noCard"), sameAsLast = j.optBoolean("sameAsLast"),
             count = j.optInt("count"), paused = j.optBoolean("paused"), stop = j.optBoolean("stop"),
+            bin = j.optInt("bin"), binLabel = s("binLabel"), binWanted = j.optInt("binWanted"), binReason = s("binReason"),
+            flagged = j.optBoolean("flagged"), session = s("session"), rarity = s("rarity"),
         )
     }
 }

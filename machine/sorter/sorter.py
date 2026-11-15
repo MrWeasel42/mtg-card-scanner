@@ -1,13 +1,17 @@
 """
 Card sorter main program (runs on the Pi 5).
 
-One cycle, with every fin sitting on a station (stations are 105 mm apart, one fin each):
-    0 landing -> 1 scan -> 2 bin 1 door -> 3 bin 2 door -> 4 end ramp (bin 3)
-  1. Card on the scan station: lights on, photo, send to the PC app, pick its bin from the rules.
-  2. Card over its bin's door: open the door, wait for the break-beam to see it fall, close.
-  3. Every few cards: check the bin levels; pause while a bin is full.
-  4. Feed the next card onto the landing station (feed until the card-clear sensor sees it, then until it clears).
-  5. Index the track one station. A card that reaches station 4 falls off the end into bin 3.
+The PC app decides every card's bin (its session's bin rules: price, colour, letters, rarity or set). The machine
+has up to 9 bins; `bins.in_use` says how many are built (the prototype: 3). Stations sit one fin pitch apart:
+    0 landing -> 1 scan -> 2 bin 1 door -> 3 bin 2 door -> ... -> in_use+1 end ramp (bin in_use, also Flagged)
+One cycle, every fin on a station:
+  1. Card on the scan station: lights on, photo, send to the PC, it answers with the bin.
+  2. Card over its bin's door: open, wait for the break-beam to see it fall, close.
+  3. Every few cards: check the bin levels; wait while a bin is full.
+  4. Feed the next card onto the landing station.
+  5. Index the track one station. A card that reaches the end ramp falls into the last bin.
+An empty hopper never ends the run: the track is cleared, then the machine waits for more cards. It ends when the
+session is stopped on the PC (the PC then shows the flagged cards to review and writes the CSV).
 
 Run:  python3 sorter.py            (on the machine)
       python3 sorter.py --sim 20   (anywhere: fake hardware and a fake PC, 20 cards)
@@ -35,58 +39,62 @@ class Card:
     n: int
     result: dict | None = None
     bin: int | None = None
-    rule: str = ""
+    why: str = ""
     times: dict = field(default_factory=dict)
 
 
 class Stop(Exception):
-    pass
+    """Something needs a person (jam, missed drop, no home)."""
 
 
-def pick_bin(rules: list[dict], r: dict) -> tuple[int, str]:
-    """First matching rule wins; the last bin catches everything."""
-    for rule in rules:
-        ok = True
-        for k, v in rule.items():
-            if k in ("bin", "name"):
-                continue
-            if k == "ok":
-                ok &= bool(r.get("ok")) == v
-            elif k == "pinned":
-                ok &= bool(r.get("pinned")) == v
-            elif k == "finish_unsure":
-                ok &= bool(r.get("finishUnsure")) == v
-            elif k == "min_price":
-                ok &= (r.get("price") or 0) >= v
-            elif k == "max_price":
-                ok &= (r.get("price") or 0) <= v
-            elif k == "set_codes":
-                ok &= (r.get("setCode") or "").upper() in [s.upper() for s in v]
-            elif k == "name_contains":
-                ok &= v.lower() in (r.get("name") or "").lower()
-            else:
-                raise ValueError(f"Unknown rule key: {k}")
-        if ok:
-            return int(rule["bin"]), rule.get("name", f"bin {rule['bin']}")
-    return 3, "default"
+class SessionOver(Exception):
+    """The session was stopped on the PC."""
 
 
 class Sorter:
     def __init__(self, cfg: dict, machine, doors, beams, levels, camera, pc, log_dir: str, sleep=time.sleep):
         self.cfg, self.m, self.doors, self.beams, self.levels, self.camera, self.pc = cfg, machine, doors, beams, levels, camera, pc
         self.sleep = sleep
-        n = cfg["track"]["stations"]
-        self.slots: list[Card | None] = [None] * n
+        self.in_use = int(cfg["bins"]["in_use"])
+        if not 2 <= self.in_use <= int(cfg["bins"]["max"]):
+            raise ValueError("bins.in_use must be 2..bins.max")
+        self.end_bin = self.in_use                        # last bin: off the end of the track, takes Flagged too
+        self.end_station = self.in_use + 1
+        self.slots: list[Card | None] = [None] * (self.end_station + 1)
         self.count = 0
-        self.hopper_empty = False
-        self.bin_counts = {1: 0, 2: 0, 3: 0}
+        self.stopping = False                             # the PC said stop: no more feeding, clear the track
+        self.bin_counts = {b: 0 for b in range(1, self.in_use + 1)}
         os.makedirs(log_dir, exist_ok=True)
         self.log_path = os.path.join(log_dir, f"sort_{dt.datetime.now():%Y%m%d_%H%M%S}.csv")
-        self._log = csv.writer(open(self.log_path, "w", newline=""))
-        self._log.writerow(["card", "bin", "rule", "scan", "name", "set", "number", "pinned", "finish_unsure", "price", "error"])
+        self._logf = open(self.log_path, "w", newline="")
+        self._log = csv.writer(self._logf)
+        self._log.writerow(["card", "bin", "bin_label", "bin_wanted", "why", "scan", "name", "set", "number",
+                            "pinned", "finish_unsure", "price", "error"])
 
     def say(self, msg: str) -> None:
         print(f"[{dt.datetime.now():%H:%M:%S}] {msg}", flush=True)
+
+    # ---------------------------------------------------------------- PC session
+    def join_session(self) -> None:
+        st = self.pc.start()
+        name = st.get("session") or "?"
+        self.say(f"Session: {name} ({st.get('mode', '')}). PC bins in use: {st.get('binsInUse')}, machine: {self.in_use}.")
+        if st.get("binsInUse") and int(st["binsInUse"]) != self.in_use:
+            self.say(f"WARNING: the PC session uses {st['binsInUse']} bins but this machine has {self.in_use}. "
+                     f"Cards for bins it doesn't have go to bin {self.end_bin}. Fix 'Bins in use' on the PC.")
+
+    def wait_while_paused(self) -> None:
+        said = False
+        while True:
+            st = self.pc.status()
+            if st.get("stop") or not st.get("active"):
+                raise SessionOver()
+            if not st.get("paused"):
+                return
+            if not said:
+                self.say("Paused on the PC. Waiting...")
+                said = True
+            self.sleep(self.cfg["pc"]["poll_s"])
 
     # ---------------------------------------------------------------- homing
     def home(self) -> None:
@@ -108,7 +116,6 @@ class Sorter:
                 self.m.move("feed", f["max_to_sensor_mm"], f["speed"], stop_on=2)
             if self.m.card_at_sensor():
                 break
-            self.say(f"No card reached the sensor (try {attempt + 1}).")
         else:
             return False
         self.m.move("feed", f["max_card_mm"], f["speed"], stop_on=-2)
@@ -120,18 +127,31 @@ class Sorter:
     # ---------------------------------------------------------------- stations
     def scan(self, card: Card) -> None:
         cam = self.cfg["camera"]
-        self.m.lights(cam["lights_pwm"])
-        self.sleep(cam["settle_ms"] / 1000)
-        jpeg = self.camera.jpeg()
-        try:
-            r = self.pc.identify(jpeg)
-        except Exception as e:                       # PC unreachable: keep sorting, send it to the catch-all bin
-            r = {"ok": False, "error": f"PC not reachable: {e}"}
+        while True:
+            self.m.lights(cam["lights_pwm"])
+            self.sleep(cam["settle_ms"] / 1000)
+            jpeg = self.camera.jpeg()
+            try:
+                r = self.pc.identify(jpeg)
+            except Exception as e:                       # PC unreachable: keep sorting, send it to the end bin
+                r = {"ok": False, "error": f"PC not reachable: {e}"}
+            if r.get("paused") and not r.get("stop"):
+                self.wait_while_paused()                 # then take the photo again
+                continue
+            break
+        if r.get("stop"):
+            self.stopping = True
+            r.setdefault("error", "session stopped before this card was read")
         card.result = r
-        card.bin, card.rule = pick_bin(self.cfg["rules"], r)
+        b = int(r.get("bin") or 0)
+        if b < 1 or b > self.end_bin:
+            card.why = r.get("error") or (f"PC chose bin {b}, machine has {self.in_use}" if b else "no bin from the PC")
+            b = self.end_bin
+        else:
+            card.why = r.get("binReason") or ""
+        card.bin = b
         what = r.get("name") or r.get("error") or "?"
-        flag = "" if r.get("pinned") else " (check)"
-        self.say(f"Card {card.n}: {what}{flag} -> bin {card.bin} ({card.rule})")
+        self.say(f"Card {card.n}: {what} -> bin {b} ({r.get('binLabel') or card.why})")
 
     def drop(self, card: Card, bin_no: int) -> None:
         d = self.cfg["doors"]
@@ -155,17 +175,22 @@ class Sorter:
     def record(self, card: Card, bin_no: int) -> None:
         r = card.result or {}
         self.bin_counts[bin_no] = self.bin_counts.get(bin_no, 0) + 1
-        self._log.writerow([card.n, bin_no, card.rule, r.get("scan"), r.get("name"), r.get("setCode"), r.get("number"),
-                            r.get("pinned"), r.get("finishUnsure"), r.get("price"), r.get("error")])
+        self._log.writerow([card.n, bin_no, r.get("binLabel"), r.get("binWanted"), card.why, r.get("scan"), r.get("name"),
+                            r.get("setCode"), r.get("number"), r.get("pinned"), r.get("finishUnsure"), r.get("price"),
+                            r.get("error")])
+        self._logf.flush()
 
     def check_levels(self) -> None:
         full = self.cfg["levels"]["full_mm"]
+        said = None
         while True:
             dist = self.levels.distances()
             fulls = [i + 1 for i, v in enumerate(dist) if 0 < v < full]
             if not fulls:
                 return
-            self.say(f"Bin {', '.join(map(str, fulls))} full ({dist} mm). Empty it; sorting carries on by itself.")
+            if fulls != said:
+                self.say(f"Bin {', '.join(map(str, fulls))} full ({dist} mm). Empty it; sorting carries on by itself.")
+                said = fulls
             self.sleep(3)
 
     def index(self) -> None:
@@ -173,14 +198,30 @@ class Sorter:
         self.m.move("track", t["pitch_mm"], t["index_speed"])
         last = self.slots[-1]
         if last is not None:                          # off the end, onto the ramp
-            self.record(last, 3)
+            self.record(last, self.end_bin)
         self.slots = [None] + self.slots[:-1]
+
+    def wait_for_cards(self) -> None:
+        """Track is empty and so is the hopper: wait for more cards (or for Stop on the PC)."""
+        self.m.lights(0)
+        self.say("Waiting for cards (load the hopper; Stop on the PC ends the session).")
+        while True:
+            st = self.pc.status()
+            if st.get("stop") or not st.get("active"):
+                raise SessionOver()
+            self.sleep(self.cfg["feed"]["empty_poll_s"])
+            if self.feed():
+                self.count += 1
+                self.slots[0] = Card(self.count)
+                self.say("Cards again: carrying on.")
+                return
 
     # ---------------------------------------------------------------- main loop
     def run(self, limit: int | None = None) -> None:
         self.m.enable(True)
         self.home()
-        door_station = {2: 1, 3: 2}
+        self.join_session()
+        door_station = {b + 1: b for b in range(1, self.in_use)}      # station -> bin, doors for bins 1..in_use-1
         try:
             while True:
                 card = self.slots[1]
@@ -194,20 +235,24 @@ class Sorter:
                         self.slots[st] = None
                 if self.count and self.count % self.cfg["levels"]["check_every"] == 0:
                     self.check_levels()
-                if not self.hopper_empty and (limit is None or self.count < limit):
+                fed = False
+                if not self.stopping and (limit is None or self.count < limit):
                     if self.feed():
                         self.count += 1
                         self.slots[0] = Card(self.count)
-                    else:
-                        self.hopper_empty = True
-                        self.say("Hopper empty: finishing the cards on the track.")
-                if all(s is None for s in self.slots):
-                    break
+                        fed = True
+                if not fed and all(s is None for s in self.slots):
+                    if self.stopping or (limit is not None and self.count >= limit):
+                        break
+                    self.wait_for_cards()                 # returns with a card on the landing, or ends the session
                 self.index()
+        except SessionOver:
+            self.say("Session stopped on the PC.")
         finally:
             self.m.lights(0)
-            self.say(f"Done: {sum(self.bin_counts.values())} cards. Bin 1: {self.bin_counts[1]}, bin 2: {self.bin_counts[2]}, "
-                     f"bin 3: {self.bin_counts[3]}. Log: {self.log_path}")
+            counts = ", ".join(f"bin {b}: {n}" for b, n in self.bin_counts.items())
+            self.say(f"Done: {sum(self.bin_counts.values())} cards ({counts}). Log: {self.log_path}")
+            self._logf.close()
 
 
 def main(argv=None) -> int:

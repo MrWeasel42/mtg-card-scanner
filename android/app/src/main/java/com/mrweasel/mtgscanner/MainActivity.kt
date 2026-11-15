@@ -72,6 +72,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var resultDetail: TextView
     private lateinit var history: TextView
     private lateinit var btnStart: MaterialButton
+    private lateinit var binRow: LinearLayout
+    private lateinit var binBig: TextView
+    private lateinit var binLabel: TextView
+    private lateinit var binWhy: TextView
+    private var sessionName = ""
+    private var sessionMode = ""
 
     private val prefs by lazy { getSharedPreferences("scanner", Context.MODE_PRIVATE) }
     private val link by lazy { PcLink(this) }
@@ -112,6 +118,10 @@ class MainActivity : AppCompatActivity() {
         resultDetail = findViewById(R.id.resultDetail)
         history = findViewById(R.id.history)
         btnStart = findViewById(R.id.btnStart)
+        binRow = findViewById(R.id.binRow)
+        binBig = findViewById(R.id.binBig)
+        binLabel = findViewById(R.id.binLabel)
+        binWhy = findViewById(R.id.binWhy)
         cacheDir.listFiles()?.filter { it.name.startsWith("scan_") }?.forEach { it.delete() }   // nothing carries over
         File(filesDir, "pending").deleteRecursively()                                            // old builds' backlog
 
@@ -170,14 +180,15 @@ class MainActivity : AppCompatActivity() {
         val target = pc ?: run { toast("Not connected to the PC yet"); return }
         if (overlay.editing) { overlay.editing = false; saveBox(overlay.box); watcher.box = RectF(overlay.box) }
         lifecycleScope.launch {
-            val ok = withContext(Dispatchers.IO) {
+            val st = withContext(Dispatchers.IO) {
                 try {
-                    val st = link.status(target)
-                    if (session && st.active && !st.stop) link.resumeSession(target) else link.startSession(target)
-                    true
-                } catch (_: Exception) { false }
+                    val cur = link.status(target)
+                    if (session && cur.active && !cur.stop) link.resumeSession(target) else link.startSession(target)
+                } catch (_: Exception) { null }
             }
-            if (!ok) { toast("The PC didn't answer"); return@launch }
+            if (st == null) { toast("The PC didn't answer"); return@launch }
+            sessionName = st.session
+            sessionMode = st.mode
             if (!session) { sent = 0; lastScan = null; history.text = "" }
             session = true
             watcher.start()
@@ -207,6 +218,8 @@ class MainActivity : AppCompatActivity() {
         resultDetail.text = if (sent > 0) "$sent card${if (sent == 1) "" else "s"} sent this session. Press Start for a new one." else "Press Start to scan."
         history.text = ""
         lastScan = null
+        binRow.visibility = android.view.View.GONE
+        sessionName = ""
         updateButtons()
         showConnected()
     }
@@ -393,8 +406,14 @@ class MainActivity : AppCompatActivity() {
         while (lifecycleScope.isActive) {
             delay(2000)
             val target = pc ?: continue
-            if (!session) continue
             val st = withContext(Dispatchers.IO) { try { link.status(target) } catch (_: Exception) { null } } ?: continue
+            if (!session) {
+                // a session started on the PC: say so, the phone joins it on Start
+                val open = if (st.active && !st.stop) st.session else ""
+                if (open != sessionName) { sessionName = open; sessionMode = st.mode; showConnected() }
+                continue
+            }
+            if (st.session.isNotEmpty()) { sessionName = st.session; sessionMode = st.mode }
             if (st.stop || !st.active) stopSession(tellPc = false, why = "Stopped on the PC.")
             else if (st.paused && watcher.enabled) pauseWatching("Paused on the PC · press Resume to carry on")
         }
@@ -402,7 +421,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun showConnected() {
         val p = pc ?: return
-        status.text = "✅ ${p.name} (${p.host})" + (if (session) " · $sent sent" else " · press Start") +
+        val name = if (sessionName.isNotEmpty()) " · ${sessionName}${if (sessionMode.isNotEmpty()) " ($sessionMode)" else ""}" else ""
+        status.text = "✅ ${p.name}$name" +
+            (if (session) " · $sent sent" else if (sessionName.isNotEmpty()) " · press Start to join" else " · press Start") +
             (if (waiting > 0) " · $waiting waiting" else "")
     }
 
@@ -434,11 +455,13 @@ class MainActivity : AppCompatActivity() {
             r.stop -> { stopSession(tellPc = false, why = "Stopped on the PC."); return }
             r.paused -> { pauseWatching("Paused on the PC · press Resume to carry on"); return }
             r.noCard -> {
+                binRow.visibility = android.view.View.GONE
                 resultName.text = "No card in that photo"
                 resultDetail.text = "Skipped: nothing was added on the PC."
                 return
             }
             !r.ok || r.name == null -> {
+                binRow.visibility = android.view.View.GONE
                 resultName.text = "⚠ ${r.error ?: "Couldn't read that one"}"
                 resultDetail.text = "Check it on the PC."
                 if (beep) beeper.startTone(ToneGenerator.TONE_SUP_ERROR, 300)
@@ -447,6 +470,8 @@ class MainActivity : AppCompatActivity() {
         }
         sent = if (r.count > 0) r.count else sent + 1
         lastScan = r.scan
+        r.session?.takeIf { it.isNotEmpty() }?.let { sessionName = it }
+        showBin(r)
         val check = !r.pinned || r.finishUnsure
         val setLine = listOfNotNull(r.setCode, r.number?.let { "#$it" }).joinToString(" ")
         val price = r.price?.let { String.format(Locale.US, " · $%.2f", it) } ?: ""
@@ -468,9 +493,23 @@ class MainActivity : AppCompatActivity() {
         if (beep) {
             if (check || r.sameAsLast) beeper.startTone(ToneGenerator.TONE_PROP_NACK, 250) else beeper.startTone(ToneGenerator.TONE_PROP_ACK, 150)
         }
-        val lines = (listOf((if (check) "⚠ " else "✓ ") + "${r.name}  $setLine" + if (r.sameAsLast) "  (same as last)" else "") +
+        val binTag = if (r.bin > 0) "[${r.bin}] " else ""
+        val lines = (listOf(binTag + (if (check) "⚠ " else "✓ ") + "${r.name}  $setLine" + if (r.sameAsLast) "  (same as last)" else "") +
             history.text.lines()).filter { it.isNotBlank() }.take(40)
         history.text = lines.joinToString("\n")
+    }
+
+    /** The machine-camera stand-in: the bin this card would drop into, big enough to read from across the desk. */
+    private fun showBin(r: PcLink.ScanReply) {
+        if (r.bin <= 0) { binRow.visibility = android.view.View.GONE; return }
+        binRow.visibility = android.view.View.VISIBLE
+        binBig.text = r.bin.toString()
+        binBig.setBackgroundColor(if (r.flagged) 0xFFB45309.toInt() else 0xFF0F766E.toInt())
+        binLabel.text = if (r.flagged) "Flagged" else r.binLabel ?: ""
+        binWhy.text = listOfNotNull(
+            "Bin ${r.bin}",
+            r.binReason?.takeIf { it.isNotBlank() },
+        ).joinToString(" · ")
     }
 
     // ---------------------------------------------------------------- settings
