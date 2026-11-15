@@ -24,6 +24,7 @@ public sealed class SessionRecord
     public Dictionary<int, int> BinCounts { get; set; } = [];
     public string? ManaBoxCsv { get; set; }
     public string? MoxfieldCsv { get; set; }
+    public List<string> Exports { get; set; } = [];
 }
 
 /// <summary>One bin's tile in the session panel.</summary>
@@ -261,56 +262,67 @@ public partial class IdentifyViewModel
     }
 
     /// <summary>Outside a session: every identified card on the list, to Documents\MTG Card Scanner.</summary>
+
+    /// <summary>Writes the chosen export formats (see <see cref="CsvExport"/>). Cards marked "not listed" or "only the
+    /// name is right" are left out; flagged cards nobody reviewed go in with their best guess.</summary>
+    private void WriteExports(List<ResultItemViewModel> items, string dir, SessionRecord? s, IEnumerable<string>? formats = null)
+    {
+        var chosen = (formats ?? _settings.ExportFormats).ToList();
+        if (chosen.Count == 0) chosen = ["ManaBox"];
+        string baseName = s is null ? "cards" : string.Concat(s.Name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '-' : c));
+        try
+        {
+            var (files, cards, unreviewed) = CsvExport.Write(items, dir, baseName, chosen);
+            if (files.Count == 0) { ExportText = "Nothing to export yet."; return; }
+            if (s is not null)
+            {
+                s.Exports = files;
+                s.ManaBoxCsv = files.FirstOrDefault(f => f.EndsWith("ManaBox.csv"));
+                s.MoxfieldCsv = files.FirstOrDefault(f => f.EndsWith("Moxfield.csv"));
+            }
+            var names = CsvExport.Formats.Where(f => chosen.Contains(f.Key)).Select(f => f.Title);
+            ExportText = $"Saved {cards} cards ({string.Join(", ", names)}) to {dir}" +
+                         (unreviewed > 0 ? $" · {unreviewed} unreviewed flagged card{(unreviewed == 1 ? "" : "s")} included as best guesses" : "");
+        }
+        catch (Exception ex) { Log.Error("Write export", ex); ExportText = $"Couldn't save the files: {ex.Message}"; }
+    }
+
+    // ---- Export window ----
+    public partial class ExportChoice(CsvExport.Format format, bool on) : ObservableObject
+    {
+        public CsvExport.Format Format { get; } = format;
+        [ObservableProperty] private bool _isOn = on;
+    }
+    public ObservableCollection<ExportChoice> ExportChoices { get; } = [];
+    [ObservableProperty] private bool _exportOpen;
+    [ObservableProperty] private string _exportScopeText = "";
+
+    private List<ResultItemViewModel> ExportItems() => SessionActive ? [.. _sessionItems] : [.. Results];
+
     [RelayCommand]
     private void ExportCsv()
     {
-        var dir = Path.Combine(ExportRoot, $"{DateTime.Now:yyyy-MM-dd HHmm} export");
-        WriteExports(Results.ToList(), dir, null);
-        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{dir}\"") { UseShellExecute = true }); }
-        catch (Exception ex) { Log.Error("Open export folder", ex); }
+        ExportChoices.Clear();
+        foreach (var f in CsvExport.Formats) ExportChoices.Add(new ExportChoice(f, _settings.ExportFormats.Contains(f.Key)));
+        int n = ExportItems().Count(r => r.HasResult);
+        ExportScopeText = SessionActive ? $"The {n} cards in this session ({SessionTitle})." : $"The {n} identified cards on the list.";
+        ExportOpen = true;
     }
 
-    /// <summary>ManaBox CSV (exact printing by Scryfall ID) and a Moxfield copy. Cards marked "not listed" or
-    /// "only the name is right" are left out; flagged cards nobody reviewed go in with their best guess and are
-    /// tagged "needs-check" in the Moxfield file.</summary>
-    private void WriteExports(List<ResultItemViewModel> items, string dir, SessionRecord? s)
+    [RelayCommand] private void CancelExport() => ExportOpen = false;
+
+    [RelayCommand]
+    private void DoExport()
     {
-        var rows = items.Where(r => r.HasResult && r.ShownCard is not null && r.Verdict is not (Verdict.NotListed or Verdict.NameOnly))
-            .GroupBy(r => (r.ShownCard!.Id, Finish: r.SelectedFinish?.Key ?? "nonfoil", r.Condition, r.Altered, r.Misprint,
-                           Unchecked: r.Verdict == Verdict.None && r.Bin?.WantedBin == 0))
-            .Select(g => (Card: g.First().ShownCard!, g.Key.Finish, g.Key.Condition, g.Key.Altered, g.Key.Misprint, g.Key.Unchecked, Qty: g.Count()))
-            .OrderBy(r => r.Card.Name).ToList();
-        if (rows.Count == 0) { ExportText = "Nothing to export yet."; return; }
-        try { Directory.CreateDirectory(dir); } catch { }
-        static string Q(string? v) => "\"" + (v ?? "").Replace("\"", "\"\"") + "\"";
-        static string ManaCond(string c) => c switch
-        {
-            "Lightly Played" => "lightly_played", "Moderately Played" => "moderately_played",
-            "Heavily Played" => "heavily_played", "Damaged" => "damaged", _ => "near_mint",
-        };
-        // ManaBox: its own export's columns; language as a Scryfall code ("en", "ja", "ph"...). The Scryfall ID pins
-        // the exact printing either way. Moxfield: its collection import (Deckbox-style), language by name.
-        var mb = new StringBuilder("Name,Set code,Set name,Collector number,Foil,Rarity,Quantity,Scryfall ID,Misprint,Altered,Condition,Language\n");
-        var mx = new StringBuilder("\"Count\",\"Name\",\"Edition\",\"Condition\",\"Language\",\"Foil\",\"Collector Number\",\"Alter\",\"Tags\"\n");
-        foreach (var (card, fin, cond, altered, misprint, unchecked_, qty) in rows)
-        {
-            mb.Append($"{Q(card.Name)},{card.SetCode.ToUpperInvariant()},{Q(card.SetName)},{Q(card.CollectorNumber)},{(fin == "nonfoil" ? "normal" : fin)},{card.Rarity},{qty},{card.Id},{(misprint ? "true" : "false")},{(altered ? "true" : "false")},{ManaCond(cond)},{card.Lang}\n");
-            string mxFoil = fin switch { "foil" => "foil", "etched" => "etched", _ => "" };
-            mx.Append($"\"{qty}\",{Q(card.Name)},\"{card.SetCode.ToLowerInvariant()}\",{Q(string.IsNullOrEmpty(cond) ? "Near Mint" : cond)},\"{card.LanguageName}\",\"{mxFoil}\",{Q(card.CollectorNumber)},\"{(altered ? "True" : "False")}\",\"{(unchecked_ ? "needs-check" : "")}\"\n");
-        }
-        string baseName = s is null ? "cards" : string.Concat(s.Name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '-' : c));
-        var pMb = Path.Combine(dir, $"{baseName} - ManaBox.csv");
-        var pMx = Path.Combine(dir, $"{baseName} - Moxfield.csv");
-        try
-        {
-            File.WriteAllText(pMb, mb.ToString(), new UTF8Encoding(false));
-            File.WriteAllText(pMx, mx.ToString(), new UTF8Encoding(false));
-            if (s is not null) { s.ManaBoxCsv = pMb; s.MoxfieldCsv = pMx; }
-            int unchecked2 = rows.Where(r => r.Unchecked).Sum(r => r.Qty);
-            ExportText = $"Saved {rows.Sum(r => r.Qty)} cards (ManaBox + Moxfield) to {dir}" +
-                         (unchecked2 > 0 ? $" · {unchecked2} unreviewed flagged card{(unchecked2 == 1 ? "" : "s")} included as best guesses" : "");
-        }
-        catch (Exception ex) { Log.Error("Write export", ex); ExportText = $"Couldn't save the CSVs: {ex.Message}"; }
+        var chosen = ExportChoices.Where(c => c.IsOn).Select(c => c.Format.Key).ToList();
+        if (chosen.Count == 0) { ExportScopeText = "Pick at least one format."; return; }
+        _settings.ExportFormats = chosen;
+        _settings.Save();
+        ExportOpen = false;
+        var dir = SessionActive && _sessionDir.Length > 0 ? _sessionDir : Path.Combine(ExportRoot, $"{DateTime.Now:yyyy-MM-dd HHmm} export");
+        WriteExports(ExportItems(), dir, SessionActive ? _session : null, chosen);
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{dir}\"") { UseShellExecute = true }); }
+        catch (Exception ex) { Log.Error("Open export folder", ex); }
     }
 
     // ---- phone link / machine ----

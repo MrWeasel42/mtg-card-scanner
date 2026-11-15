@@ -24,6 +24,9 @@ public sealed class UiSettings
     public CardScanner.Core.Sorting.BinSetup Bins { get; set; } = new();
     public bool CatalogMode { get; set; } = true;
 
+    /// <summary>Export formats ticked last time (Finish writes these too).</summary>
+    public List<string> ExportFormats { get; set; } = ["ManaBox", "Moxfield"];
+
     /// <summary>"Dark", "Light" or "System".</summary>
     public string Theme { get; set; } = "Dark";
 

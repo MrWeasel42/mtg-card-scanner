@@ -115,7 +115,7 @@
                 ToolTip.Tip="Name the session, pick Catalog or Sort and the bin rules. The phone app and the machine join it." />
         <Button Name="AddButton" Content="＋ Add photos" />
         <Button Content="Clear" Command="{Binding ClearCommand}" />
-        <Button Content="⇩ Export CSV" Command="{Binding ExportCsvCommand}" ToolTip.Tip="ManaBox and Moxfield CSVs of every identified card on the list. Saved in Documents\MTG Card Scanner." />
+        <Button Content="⇩ Export CSV" Command="{Binding ExportCsvCommand}" ToolTip.Tip="Pick the formats: ManaBox, Moxfield, Deckbox, TCGplayer list, General. Saved in Documents\MTG Card Scanner." />
         <Button Content="📁 Sessions" Command="{Binding OpenSessionsFolderCommand}" ToolTip.Tip="Past sessions: each has its CSVs and a summary (Documents\MTG Card Scanner)" />
         <Button Content="📄 Results log" Command="{Binding OpenLogFolderCommand}" />
         <Button Content="⚙ Settings" Command="{Binding OpenSettingsCommand}" ToolTip.Tip="All settings: theme, compare view, finish, phone link, default bins" />
@@ -566,6 +566,31 @@
           </StackPanel>
         </StackPanel>
       </ScrollViewer>
+    </Border>
+  </Border>
+  <!-- Export window -->
+  <Border IsVisible="{Binding ExportOpen}" Background="#B0000000">
+    <Border Classes="card" Width="620" Padding="22" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <StackPanel Spacing="12">
+        <TextBlock Classes="h1" Text="Export CSV" />
+        <TextBlock Classes="muted" Text="{Binding ExportScopeText}" TextWrapping="Wrap" />
+        <ItemsControl ItemsSource="{Binding ExportChoices}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Margin="0,0,0,10" Spacing="2">
+                <CheckBox IsChecked="{Binding IsOn}" Content="{Binding Format.Title}" FontWeight="SemiBold" />
+                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="28,0,0,0" Text="{Binding Format.Description}" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                   Text="Your picks are remembered, and Finish on a session writes the same ones." />
+        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+          <Button Content="Cancel" Command="{Binding CancelExportCommand}" />
+          <Button Classes="accent" Content="⇩ Export" Command="{Binding DoExportCommand}" />
+        </StackPanel>
+      </StackPanel>
     </Border>
   </Border>
   </Panel>
