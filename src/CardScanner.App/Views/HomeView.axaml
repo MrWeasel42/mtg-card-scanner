@@ -83,7 +83,7 @@
                       </TextBlock>
                     </StackPanel>
                     <Button Grid.Column="1" Content="📁 Open" FontSize="12" VerticalAlignment="Center"
-                            Command="{Binding $parent[ItemsControl].((vm:HomeViewModel)DataContext).OpenRecentCommand}"
+                            Command="{Binding $parent[ItemsControl].DataContext.OpenRecentCommand}"
                             CommandParameter="{Binding}" />
                   </Grid>
                 </DataTemplate>
