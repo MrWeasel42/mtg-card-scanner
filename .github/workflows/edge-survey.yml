@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install requests numpy opencv-python-headless
+      - run: pip install requests numpy opencv-python-headless tqdm ijson
       - name: Survey
         working-directory: tools/edge_survey
         run: python survey.py ${{ inputs.limit }} | tee edge_survey.log

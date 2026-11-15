@@ -7,12 +7,17 @@ colours by how many edge pixels are close to them in CIELAB (dE < 25: hard to te
 import concurrent.futures as cf, io, json, sys, time, collections
 import numpy as np, requests, cv2
 
-UA = {"User-Agent": "MTGCardScanner-edge-survey/1.0", "Accept": "application/json"}
+import os, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "catalog-builder"))
+from builder import scryfall   # same downloader as the catalog build (handles Scryfall's bulk-list quirks)
+
+UA = {"User-Agent": "MTGCardScanner-edge-survey/1.0", "Accept": "*/*"}
 s = requests.Session(); s.headers.update(UA)
-bulk = next(b for b in s.get("https://api.scryfall.com/bulk-data", timeout=60).json()["data"] if b["type"] == "default_cards")
-cards = s.get(bulk["download_uri"], timeout=600).json()
+bulk_path, _ = scryfall.download_bulk("MTGCardScanner-edge-survey/1.0", "default_cards", pathlib.Path("bulk.json"))
 items = []
-for c in cards:
+for c in scryfall.iter_raw_cards(bulk_path):
+    if c.get("lang") not in ("en", None):
+        continue
     if c.get("digital") or "paper" not in (c.get("games") or []) or c.get("layout") in ("art_series", "token", "double_faced_token", "emblem"):
         continue
     iu = c.get("image_uris") or ((c.get("card_faces") or [{}])[0].get("image_uris") or {})
