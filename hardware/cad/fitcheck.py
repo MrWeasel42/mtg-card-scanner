@@ -115,8 +115,8 @@ checks.append(dict(label="Fin finger below the card floor (no card can get under
 checks.append(dict(label="Fin lands behind the exit-roller nip", overlap=0, gap=round(EXIT_X - FIN_START_X, 2), need=4.0,
                    ok=EXIT_X - FIN_START_X >= 4.0, note="the card's tail leaves the nip at X 136; fins touch down at X 131"))
 loop = 2 * (END_SHAFT_X - FIN_START_X) + 2 * math.pi * PUL_R
-checks.append(dict(label="Belt loop = whole number of 105 mm fin pitches", overlap=0, gap=round(loop, 2), need=FIN_PITCHES * 105,
-                   ok=abs(loop - FIN_PITCHES * 105) < 0.01, note=f"{loop:.1f} mm = {FIN_PITCHES} x 105; +6 bins adds 12 pitches"))
+checks.append(dict(label="Belt loop = factory 1220 mm closed loop = whole number of fin pitches", overlap=0, gap=round(loop, 2), need=1220,
+                   ok=abs(loop - 1220) < 0.01 and abs(loop - FIN_PITCHES * PITCH) < 0.01, note=f"{loop:.1f} mm = {FIN_PITCHES} x {PITCH:.0f} (61 teeth per fin)"))
 # --- feed-to-exit roller loop (122 mm) on the front, inside the base
 feed_pulley = cyl_y(FEED_X, FEED_Z, 8, -55, -39); exit_pulley = cyl_y(EXIT_X, EXIT_Z, 8, -55, -39)
 check("Feed-shaft pulley (122 mm loop) vs base", feed_pulley, base, 0.3, "pulley set 1 mm off the wall")

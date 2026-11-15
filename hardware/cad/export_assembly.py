@@ -21,7 +21,7 @@ put("motor_track", box(END_SHAFT_X - 21, END_SHAFT_X + 21, WALL_OUT + 30, WALL_O
 put("standoff_feed", motor_standoff().translate((FEED_X, 60, FEED_Z)), "petg")
 put("standoff_track", motor_standoff().translate((END_SHAFT_X, WALL_OUT, PUL_Z)), "petg")
 put("track_shaft", cyl_y(END_SHAFT_X, PUL_Z, 2.5, -WALL_OUT, WALL_OUT + 30), "alu")
-# 10 mm belts above the floor: bottom run pushes cards, top run returns; fins every 105 mm on the belt back
+# 10 mm belts above the floor: bottom run pushes cards, top run returns; fins every 122 mm on the belt back
 yc = (BELT_Y0 + BELT_Y1) / 2
 for s in (-1, 1):
     y0, y1 = sorted((s * BELT_Y0, s * BELT_Y1))

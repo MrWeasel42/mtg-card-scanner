@@ -14,7 +14,7 @@ import cadquery as cq
 PATH = 205.0          # track floor height above the desk (top of the 2020 rails is Z=20)
 RAIL_Z = 20.0         # 2020 extrusion lying on the desk
 RAIL_Y = 62.0         # extrusion centre lines at Y = +-62
-PITCH = 105.0         # one bin / one belt-fin step
+PITCH = 122.0         # one bin / one belt-fin step: 61 belt teeth (factory 1220 mm closed loop / 10 fins)
 CH = 70.0             # channel width between the side strips (Y -35..35)
 STRIP_IN, STRIP_OUT = 35.0, 47.0   # side strip (floor edge + belt guide) Y range
 WALL_IN, WALL_OUT = 47.0, 55.0     # side wall Y range
@@ -31,14 +31,14 @@ GROOVE_Y0, GROOVE_D = 26.5, 1.2    # fin lanes: groove from |Y| 26.5 out to the 
 RAIL_IN, RAIL_W, RAIL_H = 33.75, 2.0, 2.5   # side guides: 67.5 mm apart (sleeved card 66 + 0.75 a side), 2.5 tall
 TAPER_X0, TAPER_X1, TAPER_IN0 = 136.0, 230.0, 36.5   # lead-in: 73 mm wide at the exit-roller nip, 67.5 mm by X 230 (1.7 deg a side)
 TOWER_LEAN_X = 3.0                 # the L-shaped hopper also leans 3 degrees toward the exit wall
-FIN_PITCHES = 10                   # 3-bin build: belt loop = 10 x 105 = 1050 mm, one fin every 105 mm
+FIN_PITCHES = 10                   # 3-bin build: factory closed loop 1220 mm = 10 x 122 mm, one fin every 122 mm
 CARD_L, CARD_W = 88.0, 63.0
-SCAN_X = 277.0        # card centre when photographed
-BIN_X = [382.0, 487.0, 592.0]     # bin centres: bin 1, bin 2, end-of-line bin
+SCAN_X = 128.0 + PITCH + CARD_L / 2   # card centre when photographed (294): fin face lands at 128, one pitch on
+BIN_X = [SCAN_X + PITCH * (k + 1) for k in range(3)]   # bin centres (416, 538, 660): bin 1, bin 2, end-of-line bin
 M5 = 5.4; M3 = 3.3; M3_INSERT = 4.0   # clearance / heat-set insert holes
 M2 = 2.2
 FIN_START_X = 131.0   # start idlers (stub shafts in the posts on the feeder base); fins land here, 5 mm behind the exit nip
-END_SHAFT_X = FIN_START_X + (FIN_PITCHES * 105.0 - 2 * math.pi * PUL_R) / 2   # drive shaft in the end module (626)
+END_SHAFT_X = FIN_START_X + (FIN_PITCHES * PITCH - 2 * math.pi * PUL_R) / 2   # drive shaft in the end module (711)
 NEMA = 42.3; NEMA_HOLES = 31.0; NEMA_BOSS = 22.5
 
 # tower (raw cards)
@@ -57,7 +57,7 @@ BIN_Y = -37.0                     # bins sit forward: inner back wall at Y -1, r
 BAY_TOP = 140.0                   # front wall is open below this between 2.5 mm posts so the bins slide out the front
 POST_T = 2.5
 RAIL2_Y = 24.0                    # second back rail (under the doors) replaces the front rail under the bin modules
-TOF_X = 33.0                      # bin-level ToF sensor (Pololu VL53L1X carrier, 13 x 18 mm) position in each module
+TOF_X = PITCH / 2 - 19.5           # bin-level ToF sensor (Pololu VL53L1X carrier, 13 x 18 mm) position in each module
 
 FEED_X, FEED_Z, FEED_R = 95.0, PATH - 11.0, 12.0     # feed roller: same O-rings, size and height as the exit roller,
                                                       # so both move the card at the same speed (same 20T pulleys)
@@ -310,14 +310,14 @@ def fin():
 
 def belt_drill_jig():
     """Clamps on a straight run of the 10 mm belt, teeth down on printed GT2 ridges, so every fin hole is drilled
-    on the belt's centre line at a tooth. Two 2.1 mm guide holes 52 and 53 teeth from the index ridge set the
-    alternating 104 / 106 mm fin spacing (105 mm average). Same jig for the 4 splice holes."""
+    on the belt's centre line at a tooth. Guide holes 61 teeth (122 mm) apart: drill one, slide the jig on until
+    its first hole sits over the last hole drilled, drill the next. 10 fins on each factory 1220 mm loop."""
     L = 130.0
     j = box(0, L, -9, 9, 0, 6)
     j = j.cut(box(-1, L + 1, -5.1, 5.1, 3, 7))               # belt channel (10.2 wide)
     for k in range(int(L / 2)):
         j = j.union(box(2 * k + 0.6, 2 * k + 1.4, -5.1, 5.1, 3, 3.75))   # tooth ridges at 2 mm pitch
-    for x in (2.0 + 1.0, 2.0 + 1.0 + 104.0, 2.0 + 1.0 + 106.0):
+    for x in (2.0 + 1.0, 2.0 + 1.0 + PITCH):
         j = j.cut(cyl_z(x, 0, 1.05, -1, 8))
     j = j.union(box(0, L, -9, -5.1, 6, 9)).union(box(0, L, 5.1, 9, 6, 9))  # lips; a strip of tape holds the belt
     return j
@@ -429,8 +429,8 @@ def fit_coupon():
     return c
 
 # ============================================================================ SCANNER
-SCAN_X0, SCAN_X1 = 150.0, 330.0  # scan module footprint along X (under the hood)
-HOOD_X0, HOOD_X1 = 200.0, 355.0
+SCAN_X0, SCAN_X1 = 150.0, BIN_X[0] - PITCH / 2  # scan module footprint along X (150..355, under the hood)
+HOOD_X0, HOOD_X1 = SCAN_X - 77.0, SCAN_X + 78.0
 CAM_RIB_X0 = 34.6    # camera hanger ribs at |X - SCAN_X| 34.6..38.6
 CAM_HOLE_DZ = 5.0    # tab insert centre, above the camera PCB's underside
 CAM_D_MIN, CAM_D_MAX = 158.0, 205.0
@@ -592,10 +592,10 @@ def polarizer_cap():
 
 # ============================================================================ BIN MODULES
 def door():
-    """Trapdoor leaf: 101 x 69.6 x 2.4 mm. Hinged at the back edge (Y = +35) on a 2 mm pin; the lever
+    """Trapdoor leaf: (PITCH - 11) x 69.6 x 2.4 mm (111 long). Hinged at the back edge (Y = +35) on a 2 mm pin; the lever
     under the back strip is pushed by the servo link. Smooth top (print top face up on the textured sheet? no:
     print top face DOWN on the smooth side of the plate for the slickest surface)."""
-    L, W, T = 94.0, 69.6, 2.4               # 94 long: leaves 5.5 mm each end for the tie-bar floor bridges
+    L, W, T = PITCH - 11.0, 69.6, 2.4       # leaves 5.5 mm each end of the module for the tie-bar floor bridges
     d = box(0, L, -W / 2, W / 2, -T, 0)
     d = d.cut(fin_groove(-1, L + 1, W / 2 + 1).translate((0, 0, -PATH)))   # fin lanes along both long edges
     for xk in (1, L / 2 - 8, L - 16):       # hinge knuckles (between the frame knuckles)
@@ -614,7 +614,7 @@ def servo_link():
     return l
 
 def bin_module_side(side):
-    """Side frame for one 105 mm bin module. Back side (+1) carries the hinge, servo and LED emitter;
+    """Side frame for one 122 mm bin module. Back side (+1) carries the hinge, servo and LED emitter;
     front side (-1) carries the door rest ledge and the receiver."""
     x0, x1 = 0.0, PITCH
     f = side_frame(x0, x1, side, bay=True)
@@ -667,17 +667,19 @@ def bin_box(height=135.0, depth=76.0):
             b = b.cut(box(-W / 2 + 3, -W / 2 + 10, -D / 2 - 0.1, -D / 2 + 0.6, z - 0.6, z + 0.6))
     return b
 
+END_L = END_SHAFT_X - (BIN_X[1] + PITCH / 2) + 18.5   # end module length (130.5): shaft 18.5 from its end
+
 def end_side(side):
-    """End module side: one full pitch (105 mm) so the end-of-line bin sits fully under it; carries the end
-    idler pulley stub shaft. There's no floor here: cards are pushed off the end of the last door."""
-    x0, x1 = 0.0, PITCH
+    """End module side: END_L long so the end-of-line bin sits fully under it and the drive shaft has room;
+    carries the track drive shaft and motor. There's no floor here: cards are pushed off the end of the last door."""
+    x0, x1 = 0.0, END_L
     f = side_frame(x0, x1, side, bin_opening=False, rails=False, bay=(side < 0))
     s = side
-    xs = END_SHAFT_X - (BIN_X[1] + PITCH / 2)            # drive shaft position in this module (86.5)
+    xs = END_SHAFT_X - (BIN_X[1] + PITCH / 2)            # drive shaft position in this module (112)
     f = f.cut(cyl_y(xs, PUL_Z, 2.75, -WALL_OUT - 1, WALL_OUT + 1))
     yb0, yb1 = sorted((s * (WALL_OUT - 5.2), s * (WALL_OUT + 0.1)))
     f = f.cut(cyl_y(xs, PUL_Z, 8.05, yb0, yb1))           # 625 bearing seat (outer face)
-    f = f.cut(box(xs - 20, PITCH + 1, *sorted((s * 35.0, s * WALL_IN_UP)), PATH, WALL_TOP + 1))  # room for pulley + fins
+    f = f.cut(box(xs - 20, END_L + 1, *sorted((s * 35.0, s * WALL_IN_UP)), PATH, WALL_TOP + 1))  # room for pulley + fins
     if s > 0:   # ramp flange screws into the underside of the back strip
         for xh in (6.5 + 15, PITCH - 5.0 - 15):
             f = f.cut(cyl_z(xh, 41.0, M3_INSERT / 2, PATH - 12.5, PATH - 5))
@@ -781,7 +783,7 @@ def inlet_plate():
     return p
 
 def channel_cover():
-    """Snap-on cover for the wire channel on the side walls (one per module side, 105 mm)."""
+    """Snap-on cover for the wire channel on the side walls (one per module side, one pitch long)."""
     h = CHAN_Z1 - CHAN_Z0
     c = box(0, 104, 0, 1.6, 0, h)
     c = c.union(box(0, 104, 0, 4, 0, 1.6)).union(box(0, 104, 0, 4, h - 1.6, h))
@@ -965,13 +967,13 @@ def placed():
     xe = BIN_X[1] + PITCH / 2
     P["end_side_front"] = end_side(-1).translate((xe, 0, 0))
     P["end_side_back"] = end_side(1).translate((xe, 0, 0))
-    P["end_cap"] = end_cap().translate((xe + PITCH, 0, 0))
+    P["end_cap"] = end_cap().translate((xe + END_L, 0, 0))
     P["end_ramp"] = end_ramp().translate((xe, 0, 0))
     for k, xj in enumerate((BIN_X[0] - PITCH / 2, BIN_X[1] - PITCH / 2, BIN_X[1] + PITCH / 2)):
         P[f"tie_bar_{k}"] = tie_bar().translate((xj, 0, 0))
     return P
 
-LENGTH = BIN_X[1] + PITCH / 2 + PITCH + 4.0
+LENGTH = BIN_X[1] + PITCH / 2 + END_L + 4.0
 
 if __name__ == "__main__":
     here = os.path.dirname(os.path.abspath(__file__))

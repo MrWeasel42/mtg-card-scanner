@@ -152,7 +152,7 @@ class SimMachine:
     def __init__(self, cards: int = 12, seed: int = 1, jam_at: int | None = None):
         self.hopper = cards
         self.rng = random.Random(seed)
-        self.track_pos = self.rng.uniform(0, 1050)   # where the belt happens to be at power-up
+        self.track_pos = self.rng.uniform(0, 1220)   # where the belt happens to be at power-up
         self.card_on_sensor = False
         self.jam_at = jam_at
         self.fed = 0
@@ -163,7 +163,7 @@ class SimMachine:
 
     # Klipper-like
     def card_at_sensor(self) -> bool: return self.card_on_sensor
-    def fin_at_home(self) -> bool: return (self.track_pos % 105.0) < 4.0
+    def fin_at_home(self) -> bool: return (self.track_pos % 122.0) < 4.0
     def enable(self, on: bool) -> None: pass
     def lights(self, v: float) -> None: self.light = v
 
@@ -172,10 +172,10 @@ class SimMachine:
         if stepper == "track":
             if stop_on == 2:
                 # run until a fin reaches the home sensor
-                d = (105.0 - (self.track_pos % 105.0)) % 105.0
-                d = d if d > 0 else 105.0
+                d = (122.0 - (self.track_pos % 122.0)) % 122.0
+                d = d if d > 0 else 122.0
                 self._moved = min(d, mm)
-            self.track_pos = (self.track_pos + self._moved) % 1050.0
+            self.track_pos = (self.track_pos + self._moved) % 1220.0
         else:
             if stop_on == 2:          # until the card reaches the sensor
                 if self.hopper == 0:
