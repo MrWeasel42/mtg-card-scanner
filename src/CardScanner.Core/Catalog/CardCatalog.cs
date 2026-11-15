@@ -18,7 +18,9 @@ public sealed record CardInfo(
     decimal? PriceUsdFoil,
     decimal? PriceUsdEtched,
     string ImageUrl,
-    string Rarity = "")
+    string Rarity = "",
+    string Colors = "",
+    string TypeLine = "")
 {
     /// <summary>Rarity of this exact printing: common, uncommon, rare, mythic, special or bonus.</summary>
     public string RarityLabel => Rarity is { Length: > 0 } r ? char.ToUpperInvariant(r[0]) + r[1..] : "";
@@ -33,7 +35,7 @@ public sealed class CardCatalog : IDisposable
     private readonly SqliteConnection _con;
     private const string Columns =
         "id, name, set_code, set_name, collector_number, released_at, frame, finishes, promo_types, " +
-        "special_foil, price_usd, price_usd_foil, price_usd_etched, image_url, rarity";
+        "special_foil, price_usd, price_usd_foil, price_usd_etched, image_url, rarity, colors, type_line";
 
     public CardCatalog(string dbPath)
     {
@@ -81,7 +83,7 @@ public sealed class CardCatalog : IDisposable
     private static CardInfo Read(SqliteDataReader r) => new(
         r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4),
         Str(r, 5), Str(r, 6), Str(r, 7), Str(r, 8), Str(r, 9),
-        Dec(r, 10), Dec(r, 11), Dec(r, 12), Str(r, 13), Str(r, 14));
+        Dec(r, 10), Dec(r, 11), Dec(r, 12), Str(r, 13), Str(r, 14), Str(r, 15), Str(r, 16));
 
     private static string Str(SqliteDataReader r, int i) => r.IsDBNull(i) ? "" : r.GetString(i);
     private static decimal? Dec(SqliteDataReader r, int i) => r.IsDBNull(i) ? null : (decimal)r.GetDouble(i);

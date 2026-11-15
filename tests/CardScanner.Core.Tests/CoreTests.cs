@@ -1,6 +1,7 @@
 using CardScanner.Core;
 using CardScanner.Core.Catalog;
 using CardScanner.Core.Recognition;
+using CardScanner.Core.Sorting;
 using CardScanner.Core.Vision;
 using OpenCvSharp;
 using Xunit;
@@ -540,5 +541,69 @@ public class TextReaderTests(Xunit.Abstractions.ITestOutputHelper output)
         var lines = reader.Read(img);
         foreach (var l in lines) output.WriteLine($"'{l.Text}' {l.Confidence:0.000} at ({l.Left:0},{l.Top:0})");
         Assert.Equal(expected, lines.Select(l => l.Text).ToArray());
+    }
+}
+
+
+public class BinSorterTests
+{
+    private static CardFacts Card(string name = "Lightning Bolt", decimal? price = 2.5m, string colors = "R", string type = "Instant",
+                                  string rarity = "common", string set = "lea", bool flagged = false) =>
+        new(name, price, colors, type, rarity, set, "1", flagged, flagged ? "not sure" : null);
+
+    [Fact]
+    public void PriceBrackets_AllNineBins()
+    {
+        var s = new BinSetup { BinsInUse = 9, By = SortBy.Price };
+        Assert.Equal(["Under $1", "$1–5", "$5–10", "$10–25", "$25–50", "$50+"], BinSorter.Categories(s));
+        Assert.Equal(1, BinSorter.Choose(s, Card(price: 0.25m)).Bin);
+        Assert.Equal(2, BinSorter.Choose(s, Card(price: 1m)).Bin);      // edge goes up
+        Assert.Equal(2, BinSorter.Choose(s, Card(price: 4.99m)).Bin);
+        Assert.Equal(6, BinSorter.Choose(s, Card(price: 120m)).Bin);
+        Assert.Equal(9, BinSorter.Choose(s, Card(price: null)).Bin);     // no price: Flagged
+        Assert.Equal(9, BinSorter.Choose(s, Card(flagged: true)).Bin);
+    }
+
+    [Fact]
+    public void ThreeBinsInUse_RestRidesToTheEnd()
+    {
+        var s = new BinSetup { BinsInUse = 3, By = SortBy.Price };
+        Assert.Equal(1, BinSorter.Choose(s, Card(price: 0.5m)).Bin);
+        Assert.Equal(2, BinSorter.Choose(s, Card(price: 2m)).Bin);
+        var big = BinSorter.Choose(s, Card(price: 30m));
+        Assert.Equal(3, big.Bin);
+        Assert.Equal(5, big.WantedBin);
+        Assert.True(big.Rerouted);
+        Assert.Contains("bin 5 is off", big.Reason);
+        Assert.Equal("off", BinSorter.BinLabels(s)[3]);
+        Assert.StartsWith("Flagged", BinSorter.BinLabels(s)[2]);
+    }
+
+    [Fact]
+    public void Colors_Lands_Multicolor()
+    {
+        var s = new BinSetup { BinsInUse = 9, By = SortBy.Color };
+        Assert.Equal(4, BinSorter.Choose(s, Card(colors: "R")).Bin);
+        Assert.Equal(6, BinSorter.Choose(s, Card(colors: "U,R")).Bin);
+        Assert.Equal(7, BinSorter.Choose(s, Card(colors: "", type: "Artifact")).Bin);
+        Assert.Equal(8, BinSorter.Choose(s, Card(colors: "G", type: "Land Creature — Forest Dryad")).Bin);
+        Assert.Equal(8, BinSorter.Choose(s, Card(colors: "", type: "Basic Land — Forest")).Bin);
+    }
+
+    [Fact]
+    public void Alphabet_And_Rarity_And_Set()
+    {
+        var a = new BinSetup { BinsInUse = 9, By = SortBy.Alphabet };
+        Assert.Equal(1, BinSorter.Choose(a, Card(name: "Ancestral Recall")).Bin);
+        Assert.Equal(3, BinSorter.Choose(a, Card(name: "Lightning Bolt")).Bin);
+        Assert.Equal(4, BinSorter.Choose(a, Card(name: "Sol Ring")).Bin);
+        Assert.Equal(1, BinSorter.Choose(a, Card(name: "Æther Vial")).Bin);
+        var r = new BinSetup { BinsInUse = 9, By = SortBy.Rarity };
+        Assert.Equal(4, BinSorter.Choose(r, Card(rarity: "mythic")).Bin);
+        Assert.Equal(5, BinSorter.Choose(r, Card(rarity: "bonus")).Bin);
+        var st = new BinSetup { BinsInUse = 9, By = SortBy.Set, SetGroups = ["MH3, MH2", "trk"] };
+        Assert.Equal(1, BinSorter.Choose(st, Card(set: "mh2")).Bin);
+        Assert.Equal(2, BinSorter.Choose(st, Card(set: "TRK")).Bin);
+        Assert.Equal(3, BinSorter.Choose(st, Card(set: "lea")).Bin);
     }
 }
