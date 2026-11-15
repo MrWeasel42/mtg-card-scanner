@@ -29,15 +29,15 @@ SPEC = {
     "GT2 20T pulley, 5 mm bore, 6 mm belt": ("flange D16, teeth D12.2, 16 long incl. 7 mm hub with 2 M3 set screws", "typical GT2 pulley"),
     "5 x 5 mm flexible coupler": ("D19 x 25", "typical 'D19L25' coupler"),
     "GT2 belt 6 mm": ("6 wide x 1.38 thick, 2 mm pitch", "Gates 2GT"),
-    "Nitrile O-rings": ("feed: 24 ID x 3.5 CS; exit: 16 ID x 3.5 CS", "metric O-ring sizes"),
+    "Nitrile O-rings": ("feed and exit rollers: 16 ID x 3.5 CS (23 OD)", "metric O-ring sizes"),
     "M3 heat-set insert (Ruthex M3x5.7)": ("4.6 OD, 5.7 long; hole 4.0 mm, at least 6 deep; 1.6 mm wall around it", "Ruthex"),
     "M3 socket cap screw": ("head D5.5 x 3", "ISO 4762"),
     "M5 socket cap screw / 2020 T-nut": ("head D8.5 x 5; 6 mm slot", "ISO 4762 / 2020 profile"),
-    "M8 washer (stack weight)": ("8.4 ID x 16 OD x 1.6", "ISO 7089"),
     "Hookup wire (silicone)": ("22 AWG: 1.6 mm OD; 18 AWG: 2.3 mm OD", "typical silicone wire"),
     "Servo / sensor leads": ("26 AWG conductors ~1.1 mm OD each; Dupont 1x3 plug 7.6 x 2.6 x 14", "typical"),
-    "IEC C14 inlet, fuse + switch": ("panel cutout 47.5 x 27.5; 35 mm deep behind the panel", "typical snap-in module"),
-    "30 mm fan": ("30 x 30 x 10; screw holes 24 mm apart", "typical 3010 fan"),
+    "IEC C14 inlet, fuse + switch (3Dman B07RQV2NPN)": ("panel cutout 47.5 x 27.5; 35 mm deep behind the panel; 10 A fuse; comes pre-wired with 18 AWG leads", "typical snap-in module / listing"),
+    "24 -> 6 V step-down (B0CSPKLF98)": ("fixed 6 V out, 12-32 V in, 5 A; potted module with leads", "listing"),
+    "BTF FCOB strip, 24 V, 480 LED/m": ("8 wide; about 10-12 W per metre (the hood uses ~0.3 m)", "listing"),
 }
 
 # ---------------------------------------------------------------------------------------------- envelopes
