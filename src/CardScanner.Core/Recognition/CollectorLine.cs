@@ -120,7 +120,7 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
         // Language: the first code after a set code. Anything but EN means a foreign printing.
         string? lang = null;
         foreach (Match m in SetAndLanguage().Matches(up)) { lang ??= m.Groups[3].Value; }
-        foreach (Match m in ForeignLanguage().Matches(up))
+        foreach (Match m in ForeignSetAndLanguage().Matches(up))
         {
             lang ??= m.Groups[3].Value;
             var s = m.Groups[1].Value;
@@ -172,7 +172,7 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
     // Other languages, only when the dot / star is there ("TRK★KL", "ONE•PH", "WOE·DE"): two capital letters
     // on their own are too easy to find in an artist's name.
     [GeneratedRegex(@"(?<![A-Z0-9])([A-Z0-9]{3,5})\s*([·•★*])\s*(KL|PH|DE|FR|IT|ES|SP|PT|RU|KO|CS|CT|JA|LA|QY)(?![A-Z])")]
-    private static partial Regex ForeignLanguage();
+    private static partial Regex ForeignSetAndLanguage();
 
     // "124/280", "066/249C": the number after the slash is the set's size.
     [GeneratedRegex(@"(?<![0-9])[0-9O]{1,4}\s*/\s*([0-9O]{2,4})(?![0-9])")]
