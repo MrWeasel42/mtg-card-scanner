@@ -53,6 +53,9 @@ jobs:
       - name: Test
         run: dotnet test tests/CardScanner.Core.Tests -c Release --logger "console;verbosity=normal"
 
+      - name: Pages open (headless UI)
+        run: dotnet test tests/CardScanner.App.Tests -c Release --logger "console;verbosity=normal"
+
       - name: End-to-end check (real catalog, real model, real card images)
         run: dotnet run --project tools/CardScanner.Smoke -c Release -- 40
 

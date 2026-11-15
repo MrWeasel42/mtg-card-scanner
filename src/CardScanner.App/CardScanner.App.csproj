@@ -21,6 +21,9 @@
     <AvaloniaResource Include="Assets\**\*.png;Assets\**\*.ico" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="CardScanner.App.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\CardScanner.Core\CardScanner.Core.csproj" />
   </ItemGroup>
 </Project>
