@@ -37,7 +37,7 @@ public partial class IdentifyViewModel : ObservableObject
         _recognizer = recognizer;
         _paths = paths;
         _thumbs = new ThumbnailCache(paths);
-        _logPath = Path.Combine(paths.LogsDir, "identify_results_v6.csv");
+        _logPath = Path.Combine(paths.LogsDir, "identify_results_v7.csv");
         _settings = UiSettings.Load(paths);
         PhoneLink.Instance.StatusChanged += t => Avalonia.Threading.Dispatcher.UIThread.Post(() => PhoneLinkStatus = t);
         PhoneLinkStatus = PhoneLink.Instance.Status;
@@ -164,6 +164,7 @@ public partial class IdentifyViewModel : ObservableObject
     internal void ApplyFilter()
     {
         if (_bulk) return;
+        if (SessionActive) UpdateSessionText();
         foreach (var r in Results) r.IsShown = Matches(r, Filter) && r.MatchesSearch(SearchText) && MatchesRarity(r) && MatchesPrice(r);
         var list = Sorted(Results.Where(r => r.IsShown)).ToList();
         SyncShown(list);
@@ -252,6 +253,7 @@ public partial class IdentifyViewModel : ObservableObject
     private void Insert(ResultItemViewModel item)
     {
         item.ScanNumber = ++_scanCount;
+        if (SessionActive && !SessionReviewing) AddToSession(item);
         Results.Insert(0, item);
         _ = item.LoadThumbnailsAsync(_thumbs);
     }
@@ -314,163 +316,6 @@ public partial class IdentifyViewModel : ObservableObject
         bool ok = await PhoneLink.AllowThroughFirewallAsync();
         FirewallText = ok ? "✓ Allowed on this network. Try the phone again." : "Not changed (the Windows prompt was declined or failed).";
         if (ok && PhoneLinkOn) { PhoneLink.Instance.Stop(); PhoneLink.Instance.Start(); }
-    }
-
-    // ---- Phone session: the phone (or the machine's Pi) sends photos; Pause / Stop here reach it on its next request ----
-
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(PhonePauseLabel))] private bool _phoneSessionActive;
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(PhonePauseLabel))] private bool _phonePaused;
-    [ObservableProperty] private string _phoneSessionText = "";
-    public string PhonePauseLabel => PhonePaused ? "▶ Resume phone" : "⏸ Pause phone";
-    private bool _phoneStopRequested;
-    private string _phoneSession = "";
-    private int _phoneCount, _phoneDropped;
-    private string? _lastPhoneCardId;
-    private readonly Dictionary<string, (ResultItemViewModel Item, string File)> _phoneItems = [];
-
-    private void UpdatePhoneText() =>
-        PhoneSessionText = $"📱 {_phoneSession}: {_phoneCount} card{(_phoneCount == 1 ? "" : "s")}" +
-                           (_phoneDropped > 0 ? $" · {_phoneDropped} photo{(_phoneDropped == 1 ? "" : "s")} without a card skipped" : "") +
-                           (PhonePaused ? " · paused" : "");
-
-    private void BeginPhoneSession()
-    {
-        _phoneSession = $"Phone scan {DateTime.Now:HH:mm}";
-        _phoneCount = 0; _phoneDropped = 0; _lastPhoneCardId = null; _phoneStopRequested = false;
-        PhonePaused = false; PhoneSessionActive = true;
-        _phoneItems.Clear();
-        UpdatePhoneText();
-    }
-
-    [RelayCommand]
-    private void TogglePhonePause() { PhonePaused = !PhonePaused; UpdatePhoneText(); }
-
-    [RelayCommand]
-    private void StopPhone() { _phoneStopRequested = true; PhoneSessionActive = false; }
-
-    private object Status() => new { ok = true, active = PhoneSessionActive, paused = PhonePaused, stop = _phoneStopRequested, session = _phoneSession, count = _phoneCount };
-
-    /// <summary>Requests from the phone. Runs off the UI thread; anything touching the page runs on it.</summary>
-    private async Task<(int, object)> HandlePhoneRequestAsync(PhoneLink.Request req)
-    {
-        var ui = Avalonia.Threading.Dispatcher.UIThread;
-        switch (req.Path)
-        {
-            case "/api/session/start":
-                await ui.InvokeAsync(BeginPhoneSession);
-                return (200, await ui.InvokeAsync(Status));
-            case "/api/session/resume":
-                await ui.InvokeAsync(() => { if (!PhoneSessionActive) BeginPhoneSession(); PhonePaused = false; UpdatePhoneText(); });
-                return (200, await ui.InvokeAsync(Status));
-            case "/api/session/stop":
-                await ui.InvokeAsync(() => { PhoneSessionActive = false; });
-                return (200, new { ok = true });
-            case "/api/status":
-                return (200, await ui.InvokeAsync(Status));
-            case "/api/undo":
-                return await ui.InvokeAsync(() => UndoPhoneScan(System.Text.Encoding.UTF8.GetString(req.Body).Trim()));
-            case "/api/scan":
-                break;
-            default:
-                return (404, new { ok = false, error = "Unknown request." });
-        }
-
-        // A scan. Stopped or paused on the PC: tell the phone, keep nothing.
-        var (stop, paused, active) = await ui.InvokeAsync(() => (_phoneStopRequested, PhonePaused, PhoneSessionActive));
-        if (stop) return (409, new { ok = false, stop = true, error = "Scanning was stopped on the PC." });
-        if (paused) return (409, new { ok = false, paused = true, error = "Paused on the PC." });
-        if (!active) await ui.InvokeAsync(BeginPhoneSession);
-
-        var dir = Path.Combine(_paths.Root, "phone_scans", DateTime.Now.ToString("yyyy-MM-dd"));
-        Directory.CreateDirectory(dir);
-        var file = Path.Combine(dir, $"phone_{DateTime.Now:HHmmss_fff}.jpg");
-        await File.WriteAllBytesAsync(file, req.Body);
-
-        return await ui.InvokeAsync(async () =>
-        {
-            var item = await IdentifyPhonePhotoAsync(file);
-            var card = item.ShownCard;
-            var r = item.Result;
-            // No card: nothing read at all and nothing pinned. Don't fill the review list with photos of the desk.
-            bool noCard = card is null || r is null ||
-                          (!item.IsPinned && string.IsNullOrWhiteSpace(r.NameRead) && string.IsNullOrWhiteSpace(r.Collector.Raw));
-            if (noCard)
-            {
-                _phoneDropped++;
-                UpdatePhoneText();
-                try { File.Delete(file); } catch { }
-                return (200, (object)new { ok = false, noCard = true, error = "No card found in the photo.", paused = PhonePaused, stop = _phoneStopRequested });
-            }
-            if (r is not null) r.Folder = _phoneSession;
-            Insert(item);
-            _phoneCount++;
-            bool repeat = card!.Id == _lastPhoneCardId;
-            _lastPhoneCardId = card.Id;
-            _phoneItems[item.ScanLabel] = (item, file);
-            UpdatePhoneText();
-            return (200, (object)new
-            {
-                ok = true,
-                scan = item.ScanLabel,
-                name = card.Name,
-                set = card.SetName,
-                setCode = card.SetCode.ToUpperInvariant(),
-                number = card.CollectorNumber,
-                finish = item.SelectedFinish?.Label,
-                finishUnsure = item.FinishUnsure,
-                pinned = item.IsPinned,
-                pinReason = item.PinReason,
-                price = item.Price,
-                sameAsLast = repeat,
-                count = _phoneCount,
-                paused = PhonePaused,
-                stop = _phoneStopRequested,
-            });
-        });
-    }
-
-    /// <summary>The phone's Undo: take its last scan back off the list (only if you haven't reviewed it yet).</summary>
-    private (int, object) UndoPhoneScan(string scan)
-    {
-        if (!_phoneItems.TryGetValue(scan, out var e)) return (404, new { ok = false, error = "That scan isn't on the PC list." });
-        if (e.Item.Verdict != Verdict.None) return (409, new { ok = false, error = "Already reviewed on the PC; change it there." });
-        Results.Remove(e.Item);
-        _phoneItems.Remove(scan);
-        _phoneCount = Math.Max(0, _phoneCount - 1);
-        _lastPhoneCardId = null;
-        try { File.Delete(e.File); } catch { }
-        UpdatePhoneText();
-        return (200, new { ok = true, scan });
-    }
-
-    // ---- Export: ManaBox CSV (also imports into Moxfield, Archidekt and Deckbox as a ManaBox file) ----
-
-    [ObservableProperty] private string _exportText = "";
-
-    [RelayCommand]
-    private void ExportCsv()
-    {
-        var rows = Results.Where(r => r.HasResult && r.ShownCard is not null && r.Verdict is not (Verdict.NotListed or Verdict.NameOnly))
-            .GroupBy(r => (r.ShownCard!.Id, Finish: r.SelectedFinish?.Key ?? "nonfoil", r.Condition))
-            .Select(g => (Card: g.First().ShownCard!, g.Key.Finish, g.Key.Condition, Qty: g.Count()))
-            .ToList();
-        if (rows.Count == 0) { ExportText = "Nothing to export yet."; return; }
-        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MTG Card Scanner");
-        Directory.CreateDirectory(dir);
-        var path = Path.Combine(dir, $"scan_{DateTime.Now:yyyy-MM-dd_HHmm}_manabox.csv");
-        static string Q(string? s) => "\"" + (s ?? "").Replace("\"", "\"\"") + "\"";
-        static string Cond(string c) => c switch
-        {
-            "Lightly Played" => "lightly_played", "Moderately Played" => "moderately_played",
-            "Heavily Played" => "heavily_played", "Damaged" => "damaged", _ => "near_mint",
-        };
-        var sb = new System.Text.StringBuilder("Name,Set code,Collector number,Foil,Quantity,Condition,Language,Scryfall ID\n");
-        foreach (var (card, fin, cond, qty) in rows)
-            sb.Append($"{Q(card.Name)},{card.SetCode.ToUpperInvariant()},{Q(card.CollectorNumber)},{(fin == "nonfoil" ? "normal" : fin)},{qty},{Cond(cond)},English,{card.Id}\n");
-        File.WriteAllText(path, sb.ToString());
-        ExportText = $"Saved {rows.Sum(r => r.Qty)} cards to {path}";
-        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true }); }
-        catch (Exception ex) { Log.Error("Open export folder", ex); }
     }
 
     private static IEnumerable<string> Expand(IEnumerable<string> paths)
@@ -632,7 +477,7 @@ public partial class IdentifyViewModel : ObservableObject
             bool newFile = !File.Exists(_logPath);
             using var w = new StreamWriter(_logPath, append: true);
             if (newFile)
-                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason,list_symbol_score,shooting_star_score,outline_method,detail_pick,detail_margin,straightened,rarity,condition,altered,misprint,image_sim");
+                w.WriteLine("time,folder,photo,rank_of_correct,correct_id,correct_name,correct_set,correct_number,top_id,top_name,top_set,top_number,top_score,name_margin,outline_found,upside_down,flipped_by_user,pinned,flag,name_read,collector_read,foil_read,ms,pin_reason,border,runner_up_set,runner_up_number,runner_up_score,app_version,finish,finish_detected,finish_reason,list_symbol_score,shooting_star_score,outline_method,detail_pick,detail_margin,straightened,rarity,condition,altered,misprint,image_sim,session,bin,bin_wanted,bin_label,bin_reason");
             // What you saw: the current top (after any detail-check reordering), not the first guess.
             var top = item.Top?.Source;
             var second = item.Candidates.Skip(1).FirstOrDefault()?.Source;
@@ -663,6 +508,8 @@ public partial class IdentifyViewModel : ObservableObject
                 (right?.Card ?? top?.Card)?.Rarity ?? "", ResultItemViewModel.ConditionCode(item.Condition),
                 item.Altered.ToString(), item.Misprint.ToString(),
                 (top?.ImageSimilarity ?? 0).ToString("0.000", CultureInfo.InvariantCulture),
+                item.SessionId ?? "", item.Bin?.Bin.ToString() ?? "", item.Bin is { } bw ? (bw.WantedBin == 0 ? "flagged" : bw.WantedBin.ToString()) : "",
+                item.Bin?.Label ?? "", item.Bin?.Reason ?? "",
             ];
             w.WriteLine(string.Join(",", cols.Select(Csv)));
         }

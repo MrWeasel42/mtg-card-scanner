@@ -96,6 +96,11 @@ public partial class ResultItemViewModel : ObservableObject
     public string PinText => IsSoftPin ? $"📌 Pinned by {PinReason}" : "📌 Pinned: name + set + number agree";
     public string? FlagReason => _detailPinned ? null : Result?.FlagReason;
     public bool IsFlagged => FlagReason is not null;
+
+    // ---- Scan session: where the machine sends this card (decided when it was scanned) ----
+    public CardScanner.Core.Sorting.BinChoice? Bin { get; set; }
+    public string? SessionId { get; set; }
+    [ObservableProperty] private string _binText = "";
     public string? DetailNote => _detailNote;
 
     /// <summary>

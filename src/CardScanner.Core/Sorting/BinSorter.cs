@@ -143,10 +143,11 @@ public static class BinSorter
     public static List<string> PriceCategories(IEnumerable<decimal> breaksIn)
     {
         var b = breaksIn.Where(x => x > 0).Distinct().OrderBy(x => x).ToList();
-        static string M(decimal d) => d == Math.Floor(d) ? $"${d:0}" : $"${d.ToString("0.##", CultureInfo.InvariantCulture)}";
+        static string N(decimal d) => d == Math.Floor(d) ? d.ToString("0", CultureInfo.InvariantCulture) : d.ToString("0.##", CultureInfo.InvariantCulture);
+        static string M(decimal d) => "$" + N(d);
         if (b.Count == 0) return ["Any price"];
         var list = new List<string> { $"Under {M(b[0])}" };
-        for (int i = 1; i < b.Count; i++) list.Add($"{M(b[i - 1])}–{M(b[i])}");
+        for (int i = 1; i < b.Count; i++) list.Add($"{M(b[i - 1])}–{N(b[i])}");
         list.Add($"{M(b[^1])}+");
         return list;
     }
@@ -161,6 +162,7 @@ public static class BinSorter
 
     private static char FirstLetter(string name)
     {
+        name = name.Replace("Æ", "AE").Replace("æ", "ae").Replace("Œ", "OE").Replace("œ", "oe");
         foreach (var ch in name.Normalize(System.Text.NormalizationForm.FormD))
             if (char.IsLetter(ch)) return char.ToUpperInvariant(ch);
             else if (char.IsDigit(ch)) return '\0';

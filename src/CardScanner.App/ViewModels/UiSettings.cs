@@ -20,6 +20,10 @@ public sealed class UiSettings
     /// <summary>Listen for the Android scanner app on the local network.</summary>
     public bool PhoneLink { get; set; }
 
+    /// <summary>The bin rules and mode used for the last scan session (the start panel opens with them).</summary>
+    public CardScanner.Core.Sorting.BinSetup Bins { get; set; } = new();
+    public bool CatalogMode { get; set; } = true;
+
     [JsonIgnore] private string _path = "";
 
     public static UiSettings Load(AppPaths paths)
