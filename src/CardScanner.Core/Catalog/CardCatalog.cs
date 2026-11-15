@@ -20,8 +20,18 @@ public sealed record CardInfo(
     string ImageUrl,
     string Rarity = "",
     string Colors = "",
-    string TypeLine = "")
+    string TypeLine = "",
+    string Lang = "en")
 {
+    /// <summary>The language printed on the card, as CSV exports name it ("English", "Japanese", "Klingon"...).</summary>
+    public string LanguageName => LanguageNames.TryGetValue(Lang, out var n) ? n : Lang;
+    private static readonly Dictionary<string, string> LanguageNames = new()
+    {
+        ["en"] = "English", ["ja"] = "Japanese", ["de"] = "German", ["fr"] = "French", ["it"] = "Italian", ["es"] = "Spanish",
+        ["pt"] = "Portuguese", ["ru"] = "Russian", ["ko"] = "Korean", ["zhs"] = "Chinese Simplified", ["zht"] = "Chinese Traditional",
+        ["ph"] = "Phyrexian", ["kl"] = "Klingon", ["qkl"] = "Klingon", ["tlh"] = "Klingon", ["qya"] = "Quenya", ["la"] = "Latin",
+    };
+
     /// <summary>Rarity of this exact printing: common, uncommon, rare, mythic, special or bonus.</summary>
     public string RarityLabel => Rarity is { Length: > 0 } r ? char.ToUpperInvariant(r[0]) + r[1..] : "";
     public string SetLabel => $"{SetName} ({SetCode.ToUpperInvariant()}) #{CollectorNumber}";
@@ -33,9 +43,13 @@ public sealed record CardInfo(
 public sealed class CardCatalog : IDisposable
 {
     private readonly SqliteConnection _con;
-    private const string Columns =
+    private const string BaseColumns =
         "id, name, set_code, set_name, collector_number, released_at, frame, finishes, promo_types, " +
         "special_foil, price_usd, price_usd_foil, price_usd_etched, image_url, rarity, colors, type_line";
+    private readonly string Columns;
+
+    /// <summary>Printed set size ("/280") per set code, from the catalog's set_info table (empty on older catalogs).</summary>
+    public IReadOnlyDictionary<string, int> SetSizes { get; }
 
     public CardCatalog(string dbPath)
     {
@@ -46,6 +60,17 @@ public sealed class CardCatalog : IDisposable
             Pooling = false,
         }.ToString());
         _con.Open();
+        bool Has(string sql) { using var c = _con.CreateCommand(); c.CommandText = sql; return c.ExecuteScalar() is not null; }
+        Columns = BaseColumns + (Has("SELECT 1 FROM pragma_table_info('cards') WHERE name = 'lang'") ? ", lang" : ", 'en'");
+        var sizes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        if (Has("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'set_info'"))
+        {
+            using var c = _con.CreateCommand();
+            c.CommandText = "SELECT set_code, printed_size FROM set_info WHERE printed_size > 0";
+            using var r = c.ExecuteReader();
+            while (r.Read()) sizes[r.GetString(0)] = r.GetInt32(1);
+        }
+        SetSizes = sizes;
     }
 
     public CardInfo? Get(string id) => GetMany([id]).GetValueOrDefault(id);
@@ -83,7 +108,8 @@ public sealed class CardCatalog : IDisposable
     private static CardInfo Read(SqliteDataReader r) => new(
         r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4),
         Str(r, 5), Str(r, 6), Str(r, 7), Str(r, 8), Str(r, 9),
-        Dec(r, 10), Dec(r, 11), Dec(r, 12), Str(r, 13), Str(r, 14), Str(r, 15), Str(r, 16));
+        Dec(r, 10), Dec(r, 11), Dec(r, 12), Str(r, 13), Str(r, 14), Str(r, 15), Str(r, 16),
+        Str(r, 17) is { Length: > 0 } lang ? lang : "en");
 
     private static string Str(SqliteDataReader r, int i) => r.IsDBNull(i) ? "" : r.GetString(i);
     private static decimal? Dec(SqliteDataReader r, int i) => r.IsDBNull(i) ? null : (decimal)r.GetDouble(i);

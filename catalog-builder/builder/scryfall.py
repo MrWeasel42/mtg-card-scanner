@@ -163,9 +163,39 @@ def _price(prices: dict, key: str) -> float | None:
 LANGUAGES = {"en", "ja"}
 
 
-def to_record(card: dict, languages: set[str] = LANGUAGES) -> dict | None:
-    """Convert a raw Scryfall card into the record we store. Returns None to skip it."""
-    if card.get("lang") not in languages:
+SETS_URL = "https://api.scryfall.com/sets"
+
+
+def get_set_sizes(user_agent: str) -> dict[str, int]:
+    """Printed set size per set code (the "280" in "124/280"), falling back to the card count."""
+    s = _session(user_agent)
+    sizes: dict[str, int] = {}
+    url = SETS_URL
+    while url:
+        r = s.get(url, timeout=60)
+        r.raise_for_status()
+        j = r.json()
+        for st in j.get("data", []):
+            n = st.get("printed_size") or st.get("card_count") or 0
+            if n:
+                sizes[st["code"]] = int(n)
+        url = j.get("next_page") if j.get("has_more") else None
+    return sizes
+
+
+def english_set_codes(bulk_path) -> set[str]:
+    """Sets that have English printings (English products)."""
+    return {c.get("set") for c in iter_raw_cards(bulk_path) if c.get("lang") == "en"}
+
+
+def to_record(card: dict, languages: set[str] = LANGUAGES, english_sets: set[str] | None = None) -> dict | None:
+    """Convert a raw Scryfall card into the record we store. Returns None to skip it.
+    Other-language printings are kept when they belong to a set with English printings: default_cards only
+    lists a non-English printing when that set + number was never printed in English, so these are cards
+    found in English boosters (Klingon cards in Star Trek, Phyrexian cards in ONE, ...). Their `name` is the
+    English name; `lang` says what's printed on the card."""
+    lang = card.get("lang")
+    if lang not in languages and not (english_sets is not None and card.get("set") in english_sets):
         return None
     if card.get("digital") or "paper" not in (card.get("games") or []):
         return None

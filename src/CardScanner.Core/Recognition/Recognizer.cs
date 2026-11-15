@@ -85,7 +85,8 @@ public sealed class Recognizer : IDisposable
     private const double ListPenalty = 0.30;        // List symbol clearly absent (or seen, for non-List printings)
     private const float MinPinSimilarity = 0.65f;   // picture match needed to pin without a readable name
     private const double BorderPenalty = 0.40;      // clearly white border vs a black-bordered printing, or vice versa
-    private const double YearBonus = 0.25;          // copyright year printed on the card = the printing's release year
+    private const double YearBonus = 0.25;
+    private const double SizeBonus = 0.25;          // set size printed on the card ("124/280") = this printing's set size          // copyright year printed on the card = the printing's release year
     private const double MinNameScore = 0.85;
     private const double MinFallbackNameScore = 0.90;
     private const float MinImageSimilarity = 0.50f;
@@ -279,7 +280,13 @@ public sealed class Recognizer : IDisposable
             || (collector.SetCodes.Contains("prm") && p.SetType == "promo")
             || (p.SetCode is "plst" or "ulst" && p.Number.Split('-') is [var os, _] && collector.SetCodes.Contains(os.ToLowerInvariant()));
         bool noSetCode = collector.SetCodes.Count == 0 || !pool.Values.Any(SetHit);
-        var scored = new List<(PrintingKey P, double Score, float Sim, bool Name, bool Num, bool Set, bool BorderMismatch, bool Year)>();
+        // "124/280": the set size settles reprints that share a number (Act of Treason M10 #124 vs M20 #124).
+        int? SizeOf(PrintingKey p)
+        {
+            var code = p.SetCode is "plst" or "ulst" && p.Number.Split('-') is [var os, _] ? os : p.SetCode;
+            return _catalog.SetSizes.TryGetValue(code, out var n) ? n : null;
+        }
+        var scored = new List<(PrintingKey P, double Score, float Sim, bool Name, bool Num, bool Set, bool BorderMismatch, bool Year, bool Size)>();
         foreach (var p in pool.Values)
         {
             if (!_index.Contains(p.Id)) continue;
@@ -307,15 +314,17 @@ public sealed class Recognizer : IDisposable
                 _ => false,
             };
             bool yearMatch = collector.CopyrightYear is { } cy && p.ReleaseYear == cy;
+            bool sizeMatch = num && collector.SetTotals.Count > 0 && SizeOf(p) is { } size && collector.SetTotals.Contains(size);
             double score = ImageWeight * sim + ns + (num ? NumberBonus : 0) + (set ? SetBonus : 0) + (pinnedByCollector ? BothBonus : 0)
                 + (yearMatch && !pinnedByCollector ? YearBonus : 0)
+                + (sizeMatch && !pinnedByCollector ? SizeBonus : 0)
                 - (p.IsUnlikely && !pinnedByCollector ? UnlikelyPenalty : 0)
                 - (borderMismatch && !pinnedByCollector ? BorderPenalty : 0)
                 + (isList && listSeen ? ListBonus : 0)
                 - (isList && listAbsent ? ListPenalty : 0)
                 - (isList && !listSeen && !listAbsent ? 0.05 : 0)   // unsure: lean to the far more common original
                 - (!isList && listSeen ? ListPenalty : 0);
-            scored.Add((p, score, sim, ns > 0, num, set, borderMismatch && !pinnedByCollector, yearMatch));
+            scored.Add((p, score, sim, ns > 0, num, set, borderMismatch && !pinnedByCollector, yearMatch, sizeMatch));
         }
 
         string? flag = null;
@@ -323,7 +332,7 @@ public sealed class Recognizer : IDisposable
         {
             // Nothing readable: picture only.
             foreach (var (id, s) in _index.Search(vec, topK))
-                scored.Add((new PrintingKey(id, "", "", "", ""), ImageWeight * s, s, false, false, false, false, false));
+                scored.Add((new PrintingKey(id, "", "", "", ""), ImageWeight * s, s, false, false, false, false, false, false));
             flag = "Couldn't read the card's name or collector number — matched by picture only.";
         }
         scored.Sort((a, b) => b.Score.CompareTo(a.Score));
@@ -379,6 +388,16 @@ public sealed class Recognizer : IDisposable
             else if (same.Count(t => t.Year) == 1 && same.First(t => Group(t.P) == bestGroup).Year)
             { pinned = true; pinReason = "name + number + copyright year"; }
         }
+        // Name + number fit more than one printing, but the set size on the card ("124/280") fits only one.
+        if (!pinned && best is { NameMatched: true, NumberMatched: true } && collector.SetTotals.Count > 0 && (!bestIsList || listSeen))
+        {
+            static string GroupS(PrintingKey p) => p.SetCode + "|" + p.Number.TrimEnd('★');
+            var same = scored.Where(t => t.Name && t.Num && t.P.Name == best.Card.Name && (ListFits(t.P) || t.P.Id == best.Card.Id))
+                .GroupBy(t => GroupS(t.P)).Select(g => g.First()).ToList();
+            var sized = same.Where(t => t.Size).ToList();
+            if (sized.Count == 1 && sized[0].P.Id == best.Card.Id && !listDoubtFor(best.Card.Name))
+            { pinned = true; pinReason = $"name + number + set size (/{SizeOf(sized[0].P)})"; }
+        }
         // 2003-2014 frames print a copyright year and "179/301" but no set code. When the number didn't read,
         // the year alone can still single out one printing (Creeping Renaissance: ISD 2011 vs C18 2018).
         if (!pinned && best is { NameMatched: true } && noSetCode && collector.CopyrightYear is not null
@@ -428,12 +447,14 @@ public sealed class Recognizer : IDisposable
             pinReason = "set + number + picture (name not readable)";
             if (flag?.StartsWith("Couldn't read the card's name") == true) flag = null;
         }
-        // Japanese printings: the name can't be read, but set code + number + the JP marker pin it down.
+        // Foreign-language printings found in English boosters (Japanese showcase, Klingon in Star Trek, Phyrexian
+        // in ONE): the name can't be read, but set code + number + the language code pin it down.
         if (!pinned && best is { NumberMatched: true, SetMatched: true }
-            && scored.FirstOrDefault(t => t.P.Id == best.Card.Id).P?.Lang == "ja")
+            && scored.FirstOrDefault(t => t.P.Id == best.Card.Id).P is { Lang: not "en" } fp
+            && (fp.Lang == "ja" || collector.ForeignLanguage))
         {
             pinned = true;
-            pinReason = "set + number + JP marker (Japanese printing)";
+            pinReason = $"set + number + {(collector.Language ?? fp.Lang.ToUpperInvariant())} marker ({best.Card.LanguageName} printing)";
             if (flag?.StartsWith("Couldn't read the card's name") == true) flag = null;
         }
 

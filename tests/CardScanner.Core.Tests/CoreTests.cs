@@ -249,6 +249,24 @@ public class CollectorLineTests
         Assert.Equal(foil, c.Foil);
     }
 
+    [Fact]
+    public void Reads_foreign_language_and_set_size()
+    {
+        var k = CollectorLine.Parse("U0440 VIKTOR FETSCH TM TRK★KL | U0440 TM&C2026Wizardsof theCoast VIKTORFETSCH TRK★KL");
+        Assert.Contains("440", k.Numbers);
+        Assert.Contains("trk", k.SetCodes);
+        Assert.Equal("KL", k.Language);
+        Assert.True(k.ForeignLanguage);
+        Assert.True(k.Foil);
+        var e = CollectorLine.Parse("R0381 VALERA LUTFULLINA DSK·EN");
+        Assert.Equal("EN", e.Language);
+        Assert.False(e.ForeignLanguage);
+        var t = CollectorLine.Parse("the heart's emotions are tu 124/280C");
+        Assert.Contains(280, t.SetTotals);
+        Assert.Contains("124", t.Numbers);
+        Assert.Null(CollectorLine.Parse("Illus. Kev Walker").Language);
+    }
+
     [Theory]
     [InlineData("Illus. Christopher Rush 1995wizardsofbe Coas", 1995)]
     [InlineData("Dermot Power TM&C1993-2005WizardsoftheCoast,", 2005)]

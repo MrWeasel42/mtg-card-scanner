@@ -88,9 +88,14 @@ def main(argv: list[str] | None = None) -> int:
     db_path = args.out / "catalog.sqlite"
     db_path.unlink(missing_ok=True)
     con = db.connect(db_path)
-    records = (r for r in map(scryfall.to_record, scryfall.iter_raw_cards(bulk)) if r)
+    en_sets = scryfall.english_set_codes(bulk)
+    records = (r for r in (scryfall.to_record(c, english_sets=en_sets) for c in scryfall.iter_raw_cards(bulk)) if r)
     n_cards = db.replace_cards(con, records)
     print(f"{n_cards:,} printings")
+    try:
+        print(f"{db.replace_set_sizes(con, scryfall.get_set_sizes(USER_AGENT)):,} set sizes")
+    except Exception as e:  # the set sizes only help tell reprints apart: never fail the build over them
+        print(f"Set sizes skipped: {e}")
 
     print("== Foil rules ==")
     print(foil_rules.build_rules(con, args.overrides))

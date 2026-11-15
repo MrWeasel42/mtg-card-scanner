@@ -287,7 +287,13 @@ public partial class ResultItemViewModel : ObservableObject
 
     public static ResultItemViewModel Failed(string photo, string error, IdentifyViewModel owner) => new(photo, error, owner);
 
-    public async Task LoadThumbnailsAsync(ThumbnailCache cache)
+    /// <summary>Downloads the candidates' pictures, then straightens the crop and runs the ★/• and card-detail
+    /// checks (they can pin the card or settle its finish). Runs once; calling it again returns the same task, so a
+    /// session scan can wait for it before the card's bin is chosen.</summary>
+    public Task LoadThumbnailsAsync(ThumbnailCache cache) => _loadTask ??= LoadCoreAsync(cache);
+    private Task? _loadTask;
+
+    private async Task LoadCoreAsync(ThumbnailCache cache)
     {
         foreach (var c in Candidates.ToList())
         {

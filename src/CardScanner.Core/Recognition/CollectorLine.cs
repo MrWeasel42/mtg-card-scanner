@@ -8,6 +8,15 @@ namespace CardScanner.Core.Recognition;
 /// </summary>
 public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, HashSet<string> SetCodes, bool? Foil, int? CopyrightYear = null)
 {
+    /// <summary>The language code printed after the set code ("EN", "JP", "KL" Klingon, "PH" Phyrexian...), or null.</summary>
+    public string? Language { get; init; }
+
+    /// <summary>Set sizes read from "124/280" (the number after the slash).</summary>
+    public HashSet<int> SetTotals { get; init; } = [];
+
+    /// <summary>A language other than English was printed on the card.</summary>
+    public bool ForeignLanguage => Language is { } l && l != "EN";
+
     public static readonly CollectorLine Empty = new("", [], [], null);
 
     public bool HasAny => Numbers.Count > 0 || SetCodes.Count > 0;
@@ -108,7 +117,22 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
         foreach (Match m in Year().Matches(up))
             if (int.TryParse(m.Value, out var y) && y is >= 1993 and <= 2030) year = Math.Max(year ?? 0, y);
         year ??= FuzzyYear(up);
-        return new CollectorLine(raw, numbers, sets, foil, year);
+        // Language: the first code after a set code. Anything but EN means a foreign printing.
+        string? lang = null;
+        foreach (Match m in SetAndLanguage().Matches(up)) { lang ??= m.Groups[3].Value; }
+        foreach (Match m in ForeignLanguage().Matches(up))
+        {
+            lang ??= m.Groups[3].Value;
+            var s = m.Groups[1].Value;
+            if (!s.All(char.IsDigit)) sets.Add(s.ToLowerInvariant());
+            if (m.Groups[2].Value is "★" or "*") foil = true;
+            else if (foil is null) foil = false;
+        }
+        if (lang == "JA") lang = "JP";
+        var totals = new HashSet<int>();
+        foreach (Match m in Total().Matches(up))
+            if (int.TryParse(m.Groups[1].Value.Replace('O', '0'), out var t) && t is >= 20 and <= 999) totals.Add(t);
+        return new CollectorLine(raw, numbers, sets, foil, year) { Language = lang, SetTotals = totals };
     }
 
     /// <summary>Adds the number printed after "Wizards of the Coast" on older and retro frames.</summary>
@@ -126,7 +150,10 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
         foreach (Match m in Year().Matches(copyrightLine))
             if (int.TryParse(m.Value, out var y) && y is >= 1993 and <= 2030) year = Math.Max(year ?? 0, y);
         year ??= FuzzyYear(copyrightLine.ToUpperInvariant());
-        return this with { Raw = (Raw + " | " + copyrightLine).Trim(' ', '|'), Numbers = nums, CopyrightYear = year };
+        var totals = new HashSet<int>(SetTotals);
+        foreach (Match m in Total().Matches(copyrightLine.ToUpperInvariant()))
+            if (int.TryParse(m.Groups[1].Value.Replace('O', '0'), out var t) && t is >= 20 and <= 999) totals.Add(t);
+        return this with { Raw = (Raw + " | " + copyrightLine).Trim(' ', '|'), Numbers = nums, CopyrightYear = year, SetTotals = totals };
     }
 
     // "COAST, INC. 128/350", "COAST 14", "C0AST LLC 72/145"
@@ -139,8 +166,17 @@ public sealed partial record CollectorLine(string Raw, HashSet<string> Numbers, 
 
     // "DSK • EN", "ECL★EN", "SLDEN", "LTR·EN", "LTCENCALDER" (artist name glued on), "SOA*JP" (Japanese
     // showcase printings found in English boosters)
-    [GeneratedRegex(@"(?<![A-Z0-9])([A-Z0-9]{3,5}?)\s*[\-–]?\s*([·•★*.|]|[IT1L](?=EN|JP)|)\s*[\-–]?\s*(?:EN|JP)(?![A-Z0-9]*[·•★])")]
+    [GeneratedRegex(@"(?<![A-Z0-9])([A-Z0-9]{3,5}?)\s*[\-–]?\s*([·•★*.|]|[IT1L](?=EN|JP)|)\s*[\-–]?\s*(EN|JP)(?![A-Z0-9]*[·•★])")]
     private static partial Regex SetAndLanguage();
+
+    // Other languages, only when the dot / star is there ("TRK★KL", "ONE•PH", "WOE·DE"): two capital letters
+    // on their own are too easy to find in an artist's name.
+    [GeneratedRegex(@"(?<![A-Z0-9])([A-Z0-9]{3,5})\s*([·•★*])\s*(KL|PH|DE|FR|IT|ES|SP|PT|RU|KO|CS|CT|JA|LA|QY)(?![A-Z])")]
+    private static partial Regex ForeignLanguage();
+
+    // "124/280", "066/249C": the number after the slash is the set's size.
+    [GeneratedRegex(@"(?<![0-9])[0-9O]{1,4}\s*/\s*([0-9O]{2,4})(?![0-9])")]
+    private static partial Regex Total();
 
     [GeneratedRegex(@"(?<![0-9])(19|20)[0-9]{2}(?![0-9])")]
     private static partial Regex Year();

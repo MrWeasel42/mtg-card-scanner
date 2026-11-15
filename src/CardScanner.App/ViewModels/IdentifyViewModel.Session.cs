@@ -338,9 +338,9 @@ public partial class IdentifyViewModel
         var mx = new StringBuilder("\"Count\",\"Name\",\"Edition\",\"Condition\",\"Language\",\"Foil\",\"Collector Number\",\"Tags\"\n");
         foreach (var (card, fin, cond, unchecked_, qty) in rows)
         {
-            mb.Append($"{Q(card.Name)},{card.SetCode.ToUpperInvariant()},{Q(card.CollectorNumber)},{(fin == "nonfoil" ? "normal" : fin)},{card.Rarity},{qty},{ManaCond(cond)},English,{card.Id}\n");
+            mb.Append($"{Q(card.Name)},{card.SetCode.ToUpperInvariant()},{Q(card.CollectorNumber)},{(fin == "nonfoil" ? "normal" : fin)},{card.Rarity},{qty},{ManaCond(cond)},{card.LanguageName},{card.Id}\n");
             string mxFoil = fin switch { "foil" => "foil", "etched" => "etched", _ => "" };
-            mx.Append($"\"{qty}\",{Q(card.Name)},\"{card.SetCode.ToLowerInvariant()}\",{Q(string.IsNullOrEmpty(cond) ? "Near Mint" : cond)},\"English\",\"{mxFoil}\",{Q(card.CollectorNumber)},\"{(unchecked_ ? "needs-check" : "")}\"\n");
+            mx.Append($"\"{qty}\",{Q(card.Name)},\"{card.SetCode.ToLowerInvariant()}\",{Q(string.IsNullOrEmpty(cond) ? "Near Mint" : cond)},\"{card.LanguageName}\",\"{mxFoil}\",{Q(card.CollectorNumber)},\"{(unchecked_ ? "needs-check" : "")}\"\n");
         }
         string baseName = s is null ? "cards" : string.Concat(s.Name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '-' : c));
         var pMb = Path.Combine(dir, $"{baseName} - ManaBox.csv");
@@ -438,6 +438,11 @@ public partial class IdentifyViewModel
                 var fb = _session?.Bins.FlaggedBin ?? 0;
                 return (200, (object)new { ok = false, noCard = true, error = "No card found in the photo.", bin = fb, binLabel = "No card", paused = SessionPaused, stop = _stopRequested });
             }
+            // Let the straighten, ★/• and card-detail checks finish first: they can pin the card or settle its
+            // finish, which changes its bin (they took ~1 s and used to land after the bin was already chosen).
+            try { await Task.WhenAny(item.LoadThumbnailsAsync(_thumbs), Task.Delay(TimeSpan.FromSeconds(12))); }
+            catch (Exception ex) { Log.Error("Checks before bin", ex); }
+            card = item.ShownCard ?? card;
             Insert(item);
             bool repeat = card!.Id == _lastCardId;
             _lastCardId = card.Id;

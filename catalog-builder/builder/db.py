@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS set_foil_rules (
 );
 
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
+
+CREATE TABLE IF NOT EXISTS set_info (set_code TEXT PRIMARY KEY, printed_size INTEGER);
 """
 
 
@@ -72,3 +74,10 @@ def get_meta(con: sqlite3.Connection, key: str) -> str | None:
 
 def all_card_ids(con: sqlite3.Connection) -> list[str]:
     return [r["id"] for r in con.execute("SELECT id FROM cards ORDER BY id")]
+
+
+def replace_set_sizes(con: sqlite3.Connection, sizes: dict[str, int]) -> int:
+    con.execute("DELETE FROM set_info")
+    con.executemany("INSERT INTO set_info (set_code, printed_size) VALUES (?, ?)", sorted(sizes.items()))
+    con.commit()
+    return len(sizes)

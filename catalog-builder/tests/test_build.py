@@ -135,3 +135,13 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+def test_other_language_kept_only_in_english_sets():
+    from builder import scryfall
+    base = {"id": "x", "name": "Kahless", "set": "trk", "collector_number": "440", "games": ["paper"],
+            "image_uris": {"normal": "u"}, "lang": "kl"}
+    assert scryfall.to_record(base) is None
+    r = scryfall.to_record(base, english_sets={"trk"})
+    assert r is not None and r["lang"] == "kl" and r["name"] == "Kahless"
+    assert scryfall.to_record(dict(base, set="xyz"), english_sets={"trk"}) is None

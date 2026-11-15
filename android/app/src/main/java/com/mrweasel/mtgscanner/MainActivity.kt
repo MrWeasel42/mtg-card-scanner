@@ -483,7 +483,6 @@ class MainActivity : AppCompatActivity() {
             append("\n")
             append(
                 when {
-                    r.sameAsLast -> "Same printing as the last card. Tap Undo if it was taken twice."
                     !r.pinned -> "Not sure: verify it on the PC"
                     r.finishUnsure -> "Check the finish on the PC (foil?)"
                     else -> "📌 ${r.pinReason ?: "pinned"}"
@@ -491,10 +490,10 @@ class MainActivity : AppCompatActivity() {
             )
         }
         if (beep) {
-            if (check || r.sameAsLast) beeper.startTone(ToneGenerator.TONE_PROP_NACK, 250) else beeper.startTone(ToneGenerator.TONE_PROP_ACK, 150)
+            if (check) beeper.startTone(ToneGenerator.TONE_PROP_NACK, 250) else beeper.startTone(ToneGenerator.TONE_PROP_ACK, 150)
         }
         val binTag = if (r.bin > 0) "[${r.bin}] " else ""
-        val lines = (listOf(binTag + (if (check) "⚠ " else "✓ ") + "${r.name}  $setLine" + if (r.sameAsLast) "  (same as last)" else "") +
+        val lines = (listOf(binTag + (if (check) "⚠ " else "✓ ") + "${r.name}  $setLine") +
             history.text.lines()).filter { it.isNotBlank() }.take(40)
         history.text = lines.joinToString("\n")
     }
