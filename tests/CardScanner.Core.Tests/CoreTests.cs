@@ -611,6 +611,46 @@ public class BinSorterTests
     }
 
     [Fact]
+    public void Custom_rules_per_bin()
+    {
+        var s = new BinSetup
+        {
+            BinsInUse = 4,
+            Rules =
+            [
+                new BinRule { Kind = RuleKind.Type, Types = ["Creature"] },
+                new BinRule { Kind = RuleKind.Color, Colors = ["U", "B"] },
+                new BinRule { Kind = RuleKind.Price, Min = 5m, Name = "Bulk rares+" },
+                new BinRule { Kind = RuleKind.Rarity, Rarities = ["mythic"] },
+            ],
+        };
+        Assert.Equal(1, BinSorter.Choose(s, Card(type: "Creature — Goblin", colors: "U")).Bin);      // first bin that fits wins
+        Assert.Equal(2, BinSorter.Choose(s, Card(colors: "B")).Bin);
+        Assert.Equal(3, BinSorter.Choose(s, Card(price: 7m)).Bin);
+        Assert.Equal("Bulk rares+", BinSorter.Choose(s, Card(price: 7m)).Label);
+        var m = BinSorter.Choose(s, Card(rarity: "mythic", price: 1m));
+        Assert.Equal(4, m.Bin);                          // bin 4 is the end bin: shares it with Flagged
+        Assert.Equal(4, m.WantedBin);
+        var none = BinSorter.Choose(s, Card(price: 1m));  // red common instant: no bin takes it
+        Assert.Equal(4, none.Bin);
+        Assert.Equal("Everything else", none.Label);
+        Assert.Equal(["Creature", "Blue + Black", "Bulk rares+", "Flagged + everything else", "off"], BinSorter.BinLabels(s).Take(5));
+    }
+
+    [Fact]
+    public void Old_settings_without_rules_still_sort()
+    {
+        var json = """{"BinsInUse":3,"By":"Price","PriceBreaks":[2,10]}""";
+        var s = System.Text.Json.JsonSerializer.Deserialize<BinSetup>(json)!;
+        Assert.Equal(["Under $2", "$2–10", "Flagged + everything else"], BinSorter.BinLabels(s).Take(3));
+        Assert.Equal(2, BinSorter.Choose(s, Card(price: 3m)).Bin);
+        var round = System.Text.Json.JsonSerializer.Deserialize<BinSetup>(System.Text.Json.JsonSerializer.Serialize(new BinSetup { Rules = [new BinRule { Kind = RuleKind.Letters, Letters = "#" }, null] }))!;
+        Assert.Equal(RuleKind.Letters, round.Rules[0]!.Kind);
+        Assert.Null(round.Rules[1]);
+        Assert.Equal(1, BinSorter.Choose(round, Card(name: "1996 World Champion")).Bin);
+    }
+
+    [Fact]
     public void Alphabet_And_Rarity_And_Set()
     {
         var a = new BinSetup { BinsInUse = 9, By = SortBy.Alphabet };

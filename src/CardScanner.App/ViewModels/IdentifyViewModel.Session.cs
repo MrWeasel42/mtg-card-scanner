@@ -66,58 +66,14 @@ public partial class IdentifyViewModel
     private string? _lastCardId;
 
     // ---- start panel ----
-    public static readonly string[] SortByList = ["Price", "Alphabet", "Color", "Rarity", "Set"];
-    public static readonly int[] BinCountList = [2, 3, 4, 5, 6, 7, 8, 9];
     [ObservableProperty] private bool _setupOpen;
     [ObservableProperty] private string _setupName = "";
     [ObservableProperty] private bool _setupCatalog = true;
-    [ObservableProperty] private int _setupBinsInUse = 3;
-    [ObservableProperty] private string _setupSortBy = "Price";
-    [ObservableProperty] private string _setupPriceBreaks = "1, 5, 10, 25, 50";
-    [ObservableProperty] private string _setupAlphaRanges = "A-F, G-K, L-R, S-Z";
-    [ObservableProperty] private string _setupSetGroups = "";
-    [ObservableProperty] private string _setupPreview = "";
-    public bool SetupIsPrice => SetupSortBy == "Price";
-    public bool SetupIsAlpha => SetupSortBy == "Alphabet";
-    public bool SetupIsSet => SetupSortBy == "Set";
+    /// <summary>The bins, as a clickable picture of the machine (Start panel and Settings).</summary>
+    public BinEditorViewModel BinEditor { get; } = new();
 
-    partial void OnSetupSortByChanged(string value) { OnPropertyChanged(nameof(SetupIsPrice)); OnPropertyChanged(nameof(SetupIsAlpha)); OnPropertyChanged(nameof(SetupIsSet)); UpdatePreview(); }
-    partial void OnSetupBinsInUseChanged(int value) => UpdatePreview();
-    partial void OnSetupPriceBreaksChanged(string value) => UpdatePreview();
-    partial void OnSetupAlphaRangesChanged(string value) => UpdatePreview();
-    partial void OnSetupSetGroupsChanged(string value) => UpdatePreview();
-
-    private BinSetup SetupToBins()
-    {
-        var b = new BinSetup
-        {
-            BinsInUse = Math.Clamp(SetupBinsInUse, 2, BinSetup.MaxBins),
-            By = Enum.TryParse<SortBy>(SetupSortBy, out var by) ? by : SortBy.Price,
-        };
-        var breaks = SetupPriceBreaks.Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries)
-            .Select(t => decimal.TryParse(t.Trim().TrimStart('$'), NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : -1)
-            .Where(d => d > 0).Distinct().OrderBy(d => d).ToList();
-        if (breaks.Count > 0) b.PriceBreaks = breaks;
-        var alpha = SetupAlphaRanges.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-        if (alpha.Count > 0) b.AlphaRanges = alpha;
-        b.SetGroups = SetupSetGroups.Split(['\n', '\r', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-        return b;
-    }
-
-    private void BinsToSetup(BinSetup b)
-    {
-        SetupBinsInUse = b.BinsInUse;
-        SetupSortBy = b.By.ToString();
-        SetupPriceBreaks = string.Join(", ", b.PriceBreaks.Select(d => d.ToString("0.##", CultureInfo.InvariantCulture)));
-        SetupAlphaRanges = string.Join(", ", b.AlphaRanges);
-        SetupSetGroups = string.Join("\n", b.SetGroups);
-    }
-
-    private void UpdatePreview()
-    {
-        var labels = BinSorter.BinLabels(SetupToBins());
-        SetupPreview = string.Join("\n", labels.Select((l, i) => $"Bin {i + 1}: {l}"));
-    }
+    private BinSetup SetupToBins() => BinEditor.ToSetup();
+    private void BinsToSetup(BinSetup b) => BinEditor.Load(b);
 
     [RelayCommand]
     private void OpenSessionSetup()
@@ -125,7 +81,6 @@ public partial class IdentifyViewModel
         SetupName = $"Scan {DateTime.Now:MMM d, h:mm tt}";
         SetupCatalog = _settings.CatalogMode;
         BinsToSetup(_settings.Bins);
-        UpdatePreview();
         SetupOpen = true;
     }
 
@@ -181,7 +136,6 @@ public partial class IdentifyViewModel
     {
         SetupCatalog = _settings.CatalogMode;
         BinsToSetup(_settings.Bins);
-        UpdatePreview();
     }
 
     /// <summary>Saves the bin-setup fields as the default for new sessions (and for the phone / machine).</summary>

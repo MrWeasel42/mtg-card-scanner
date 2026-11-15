@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CardScanner.App.ViewModels"
+             xmlns:views="using:CardScanner.App.Views"
              x:Class="CardScanner.App.Views.IdentifyView"
              DragDrop.AllowDrop="True">
   <UserControl.Styles>
@@ -543,7 +544,7 @@
   </Grid>
   <!-- Start-session panel -->
   <Border IsVisible="{Binding SetupOpen}" Background="#B0000000">
-    <Border Classes="card" Width="640" MaxHeight="760" Padding="22" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <Border Classes="card" Width="1000" MaxHeight="860" Padding="22" HorizontalAlignment="Center" VerticalAlignment="Center">
       <ScrollViewer>
         <StackPanel Spacing="14">
           <TextBlock Classes="h1" Text="Start a scan session" />
@@ -558,35 +559,7 @@
               <RadioButton GroupName="mode" IsChecked="{Binding !SetupCatalog}" Content="Sort: bins only, no CSV" />
             </StackPanel>
           </StackPanel>
-          <Grid ColumnDefinitions="*,16,*">
-            <StackPanel Spacing="4">
-              <TextBlock Classes="muted" Text="Bins in use (counted from the feeder)" />
-              <ComboBox ItemsSource="{x:Static vm:IdentifyViewModel.BinCountList}" SelectedItem="{Binding SetupBinsInUse}" HorizontalAlignment="Stretch" />
-              <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" Text="The prototype has 3. The last bin in use is the end of the line and takes the flagged cards." />
-            </StackPanel>
-            <StackPanel Grid.Column="2" Spacing="4">
-              <TextBlock Classes="muted" Text="Sort by" />
-              <ComboBox ItemsSource="{x:Static vm:IdentifyViewModel.SortByList}" SelectedItem="{Binding SetupSortBy}" HorizontalAlignment="Stretch" />
-            </StackPanel>
-          </Grid>
-          <StackPanel Spacing="4" IsVisible="{Binding SetupIsPrice}">
-            <TextBlock Classes="muted" Text="Price brackets: where each bin ends, in US dollars" />
-            <TextBox Text="{Binding SetupPriceBreaks}" Watermark="1, 5, 10, 25, 50" />
-          </StackPanel>
-          <StackPanel Spacing="4" IsVisible="{Binding SetupIsAlpha}">
-            <TextBlock Classes="muted" Text="Letter ranges, one bin each" />
-            <TextBox Text="{Binding SetupAlphaRanges}" Watermark="A-F, G-K, L-R, S-Z" />
-          </StackPanel>
-          <StackPanel Spacing="4" IsVisible="{Binding SetupIsSet}">
-            <TextBlock Classes="muted" Text="Set codes, one bin per line (e.g. MH3, MH2). Everything else: Other sets" />
-            <TextBox Text="{Binding SetupSetGroups}" AcceptsReturn="True" MinHeight="90" />
-          </StackPanel>
-          <StackPanel Spacing="4">
-            <TextBlock Classes="muted" Text="Where cards go" />
-            <Border Padding="10" CornerRadius="8" Background="{DynamicResource InsetBrush}">
-              <TextBlock FontFamily="Consolas,Menlo,monospace" FontSize="12" Text="{Binding SetupPreview}" />
-            </Border>
-          </StackPanel>
+          <views:BinEditorView DataContext="{Binding BinEditor}" />
           <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
             <Button Content="Cancel" Command="{Binding CancelSessionSetupCommand}" />
             <Button Classes="accent" Content="▶ Start" Command="{Binding StartSessionFromSetupCommand}" />

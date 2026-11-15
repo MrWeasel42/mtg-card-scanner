@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CardScanner.App.ViewModels"
+             xmlns:views="using:CardScanner.App.Views"
              x:Class="CardScanner.App.Views.SettingsView">
   <UserControl.Styles>
     <Style Selector="TextBlock.section">
@@ -15,7 +16,7 @@
   </UserControl.Styles>
 
   <ScrollViewer>
-    <StackPanel Margin="28,22" MaxWidth="860" HorizontalAlignment="Left" Spacing="16">
+    <StackPanel Margin="28,22" MaxWidth="1040" HorizontalAlignment="Left" Spacing="16">
       <StackPanel Orientation="Horizontal" Spacing="14">
         <Button Content="← Back" Command="{Binding BackCommand}" />
         <TextBlock Classes="h1" Text="Settings" VerticalAlignment="Center" />
@@ -67,35 +68,7 @@
             <RadioButton GroupName="defmode" IsChecked="{Binding Scan.SetupCatalog}" Content="Catalog: identify, sort and write a CSV" />
             <RadioButton GroupName="defmode" IsChecked="{Binding !Scan.SetupCatalog}" Content="Sort: bins only, no CSV" />
           </StackPanel>
-          <Grid ColumnDefinitions="*,16,*">
-            <StackPanel Spacing="4">
-              <TextBlock Classes="muted" Text="Bins in use (counted from the feeder)" />
-              <ComboBox ItemsSource="{x:Static vm:IdentifyViewModel.BinCountList}" SelectedItem="{Binding Scan.SetupBinsInUse}" HorizontalAlignment="Stretch" />
-              <TextBlock Classes="note" Text="The prototype has 3. The last bin in use is the end of the line and takes the flagged cards." />
-            </StackPanel>
-            <StackPanel Grid.Column="2" Spacing="4">
-              <TextBlock Classes="muted" Text="Sort by" />
-              <ComboBox ItemsSource="{x:Static vm:IdentifyViewModel.SortByList}" SelectedItem="{Binding Scan.SetupSortBy}" HorizontalAlignment="Stretch" />
-            </StackPanel>
-          </Grid>
-          <StackPanel Spacing="4" IsVisible="{Binding Scan.SetupIsPrice}">
-            <TextBlock Classes="muted" Text="Price brackets: where each bin ends, in US dollars" />
-            <TextBox Text="{Binding Scan.SetupPriceBreaks}" Watermark="1, 5, 10, 25, 50" />
-          </StackPanel>
-          <StackPanel Spacing="4" IsVisible="{Binding Scan.SetupIsAlpha}">
-            <TextBlock Classes="muted" Text="Letter ranges, one bin each" />
-            <TextBox Text="{Binding Scan.SetupAlphaRanges}" Watermark="A-F, G-K, L-R, S-Z" />
-          </StackPanel>
-          <StackPanel Spacing="4" IsVisible="{Binding Scan.SetupIsSet}">
-            <TextBlock Classes="muted" Text="Set codes, one bin per line (e.g. MH3, MH2). Everything else: Other sets" />
-            <TextBox Text="{Binding Scan.SetupSetGroups}" AcceptsReturn="True" MinHeight="90" />
-          </StackPanel>
-          <StackPanel Spacing="4">
-            <TextBlock Classes="muted" Text="Where cards go" />
-            <Border Padding="10" CornerRadius="8" Background="{DynamicResource InsetBrush}">
-              <TextBlock FontFamily="Consolas,Menlo,monospace" FontSize="12" Text="{Binding Scan.SetupPreview}" />
-            </Border>
-          </StackPanel>
+          <views:BinEditorView DataContext="{Binding Scan.BinEditor}" />
           <StackPanel Orientation="Horizontal" Spacing="12">
             <Button Classes="accent" Content="Save as default" Command="{Binding SaveBinsCommand}" />
             <TextBlock Text="{Binding BinsSavedText}" Foreground="{DynamicResource GoodTextBrush}" VerticalAlignment="Center" TextWrapping="Wrap" />

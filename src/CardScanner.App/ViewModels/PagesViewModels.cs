@@ -123,12 +123,16 @@ public partial class SettingsViewModel : ObservableObject
     {
         _main = main;
         Scan = scan;
+        Scan.BinEditor.Changed += () => { if (_shown) BinsSavedText = "Not saved yet: press Save as default."; };
     }
+    private bool _shown;
 
     public void Refresh()
     {
+        _shown = false;
         Scan.LoadSetupDefaults();
         BinsSavedText = "";
+        _shown = true;
         OnPropertyChanged(nameof(Theme));
         OnPropertyChanged(nameof(LayoutChoice));
     }
@@ -164,5 +168,5 @@ public partial class SettingsViewModel : ObservableObject
         BinsSavedText = $"✓ Saved {DateTime.Now:h:mm tt}. New sessions (and the phone / machine) use this setup.";
     }
 
-    [RelayCommand] private void Back() => _main.GoBack();
+    [RelayCommand] private void Back() { _shown = false; _main.GoBack(); }
 }
