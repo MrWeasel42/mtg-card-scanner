@@ -5,7 +5,7 @@
         x:Class="CardScanner.App.Views.MainWindow"
         Title="MTG Card Scanner"
         Icon="/Assets/app.ico"
-        Background="{StaticResource WindowBackground}"
+        Background="{DynamicResource WindowBackground}"
         Width="1200" Height="840" MinWidth="860" MinHeight="580"
         WindowStartupLocation="CenterScreen">
   <Window.DataTemplates>
@@ -15,13 +15,22 @@
     <DataTemplate DataType="{x:Type vm:IdentifyViewModel}">
       <views:IdentifyView />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:HomeViewModel}">
+      <views:HomeView />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
+      <views:SettingsView />
+    </DataTemplate>
   </Window.DataTemplates>
 
   <DockPanel>
     <!-- Header -->
-    <Border DockPanel.Dock="Top" Padding="18,10" Background="{StaticResource HeaderBackground}"
-            BorderThickness="0,0,0,1" BorderBrush="{StaticResource PanelEdgeBrush}">
+    <Border DockPanel.Dock="Top" Padding="18,10" Background="{DynamicResource HeaderBackground}"
+            BorderThickness="0,0,0,1" BorderBrush="{DynamicResource PanelEdgeBrush}">
       <Grid ColumnDefinitions="Auto,*,Auto">
+        <!-- logo and name: back to Home -->
+        <Button Command="{Binding GoHomeCommand}" IsEnabled="{Binding Ready}" Background="Transparent" BorderThickness="0"
+                Padding="4,2" Cursor="Hand" ToolTip.Tip="Home">
         <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
           <Image Source="/Assets/logo.png" Width="40" Height="40" />
           <StackPanel VerticalAlignment="Center" Spacing="0">
@@ -35,6 +44,7 @@
             <TextBlock Classes="muted" FontSize="12" Text="Snap it. Scan it. Sort it." />
           </StackPanel>
         </StackPanel>
+        </Button>
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
           <Border Classes="pill" IsVisible="{Binding CatalogText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
             <TextBlock Classes="muted" FontSize="12" Text="{Binding CatalogText}" />

@@ -3,35 +3,66 @@
              x:Class="CardScanner.App.App"
              RequestedThemeVariant="Dark">
   <!-- "Card table at night": deep navy, teal scan-beam accent, gold highlights. -->
+  <!-- Theme colours. Dark: "card table at night" (deep navy, teal scan-beam accent, gold). Light: paper and slate.
+       Views use DynamicResource for these so switching the theme in Settings repaints straight away. -->
   <Application.Resources>
-    <Color x:Key="NavyDeep">#0B1020</Color>
-    <Color x:Key="Navy">#111830</Color>
-    <Color x:Key="Panel">#18213A</Color>
-    <Color x:Key="PanelEdge">#28344F</Color>
-    <Color x:Key="Teal">#2DD4BF</Color>
-    <Color x:Key="Gold">#F5B942</Color>
-    <Color x:Key="Muted">#94A3B8</Color>
-    <SolidColorBrush x:Key="NavyBrush" Color="{StaticResource Navy}" />
-    <SolidColorBrush x:Key="PanelBrush" Color="{StaticResource Panel}" />
-    <SolidColorBrush x:Key="PanelEdgeBrush" Color="{StaticResource PanelEdge}" />
-    <SolidColorBrush x:Key="TealBrush" Color="{StaticResource Teal}" />
-    <SolidColorBrush x:Key="GoldBrush" Color="{StaticResource Gold}" />
-    <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource Muted}" />
-    <LinearGradientBrush x:Key="WindowBackground" StartPoint="0%,0%" EndPoint="100%,100%">
-      <GradientStop Color="#141C34" Offset="0" />
-      <GradientStop Color="#0B1020" Offset="1" />
-    </LinearGradientBrush>
-    <LinearGradientBrush x:Key="HeaderBackground" StartPoint="0%,0%" EndPoint="100%,0%">
-      <GradientStop Color="#1B2547" Offset="0" />
-      <GradientStop Color="#121A33" Offset="0.6" />
-      <GradientStop Color="#0F2A33" Offset="1" />
-    </LinearGradientBrush>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="NavyBrush" Color="#111830" />
+          <SolidColorBrush x:Key="PanelBrush" Color="#18213A" />
+          <SolidColorBrush x:Key="PanelEdgeBrush" Color="#28344F" />
+          <SolidColorBrush x:Key="InsetBrush" Color="#0F1528" />
+          <SolidColorBrush x:Key="InsetEdgeBrush" Color="#3A4A6B" />
+          <SolidColorBrush x:Key="TealBrush" Color="#2DD4BF" />
+          <SolidColorBrush x:Key="TealTextBrush" Color="#5EEAD4" />
+          <SolidColorBrush x:Key="GoldBrush" Color="#F5B942" />
+          <SolidColorBrush x:Key="MutedBrush" Color="#94A3B8" />
+          <SolidColorBrush x:Key="WarnTextBrush" Color="#FBBF24" />
+          <SolidColorBrush x:Key="GoodTextBrush" Color="#4ADE80" />
+          <SolidColorBrush x:Key="PillBrush" Color="#2228344F" />
+          <LinearGradientBrush x:Key="WindowBackground" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#141C34" Offset="0" />
+            <GradientStop Color="#0B1020" Offset="1" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="HeaderBackground" StartPoint="0%,0%" EndPoint="100%,0%">
+            <GradientStop Color="#1B2547" Offset="0" />
+            <GradientStop Color="#121A33" Offset="0.6" />
+            <GradientStop Color="#0F2A33" Offset="1" />
+          </LinearGradientBrush>
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="NavyBrush" Color="#E8EDF5" />
+          <SolidColorBrush x:Key="PanelBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="PanelEdgeBrush" Color="#D5DCE8" />
+          <SolidColorBrush x:Key="InsetBrush" Color="#F1F4F9" />
+          <SolidColorBrush x:Key="InsetEdgeBrush" Color="#C9D2E0" />
+          <SolidColorBrush x:Key="TealBrush" Color="#0D9488" />
+          <SolidColorBrush x:Key="TealTextBrush" Color="#0F766E" />
+          <SolidColorBrush x:Key="GoldBrush" Color="#B7791F" />
+          <SolidColorBrush x:Key="MutedBrush" Color="#5B6B82" />
+          <SolidColorBrush x:Key="WarnTextBrush" Color="#B45309" />
+          <SolidColorBrush x:Key="GoodTextBrush" Color="#15803D" />
+          <SolidColorBrush x:Key="PillBrush" Color="#14334155" />
+          <LinearGradientBrush x:Key="WindowBackground" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#F6F8FB" Offset="0" />
+            <GradientStop Color="#E9EEF5" Offset="1" />
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="HeaderBackground" StartPoint="0%,0%" EndPoint="100%,0%">
+            <GradientStop Color="#FFFFFF" Offset="0" />
+            <GradientStop Color="#F3F6FA" Offset="0.6" />
+            <GradientStop Color="#E6F4F2" Offset="1" />
+          </LinearGradientBrush>
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
   </Application.Resources>
 
   <Application.Styles>
     <FluentTheme>
       <FluentTheme.Palettes>
         <ColorPaletteResources x:Key="Dark" Accent="#2DD4BF" AltHigh="#0B1020" RegionColor="#111830" />
+        <ColorPaletteResources x:Key="Light" Accent="#0D9488" RegionColor="#F6F8FB" />
       </FluentTheme.Palettes>
     </FluentTheme>
 
@@ -40,19 +71,19 @@
       <Setter Property="FontWeight" Value="Bold" />
     </Style>
     <Style Selector="TextBlock.muted">
-      <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
     </Style>
     <Style Selector="TextBlock.gold">
-      <Setter Property="Foreground" Value="{StaticResource GoldBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource GoldBrush}" />
     </Style>
     <Style Selector="TextBlock.teal">
-      <Setter Property="Foreground" Value="{StaticResource TealBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TealBrush}" />
     </Style>
 
     <!-- Panels -->
     <Style Selector="Border.card">
-      <Setter Property="Background" Value="{StaticResource PanelBrush}" />
-      <Setter Property="BorderBrush" Value="{StaticResource PanelEdgeBrush}" />
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource PanelEdgeBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="14" />
       <Setter Property="Padding" Value="16" />
@@ -61,8 +92,8 @@
     <Style Selector="Border.pill">
       <Setter Property="CornerRadius" Value="999" />
       <Setter Property="Padding" Value="9,2" />
-      <Setter Property="Background" Value="#2228344F" />
-      <Setter Property="BorderBrush" Value="{StaticResource PanelEdgeBrush}" />
+      <Setter Property="Background" Value="{DynamicResource PillBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource PanelEdgeBrush}" />
       <Setter Property="BorderThickness" Value="1" />
     </Style>
 
@@ -77,7 +108,7 @@
     </Style>
 
     <Style Selector="ProgressBar">
-      <Setter Property="Foreground" Value="{StaticResource TealBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TealBrush}" />
       <Setter Property="CornerRadius" Value="4" />
     </Style>
     <!-- Default tooltips are capped at 320px wide, which cropped the big card previews to their middle. -->

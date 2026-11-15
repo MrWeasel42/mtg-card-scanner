@@ -24,6 +24,21 @@ public sealed class UiSettings
     public CardScanner.Core.Sorting.BinSetup Bins { get; set; } = new();
     public bool CatalogMode { get; set; } = true;
 
+    /// <summary>"Dark", "Light" or "System".</summary>
+    public string Theme { get; set; } = "Dark";
+
+    /// <summary>Applies a theme name to the running app.</summary>
+    public static void ApplyTheme(string theme)
+    {
+        if (Avalonia.Application.Current is not { } app) return;
+        app.RequestedThemeVariant = theme switch
+        {
+            "Light" => Avalonia.Styling.ThemeVariant.Light,
+            "System" => Avalonia.Styling.ThemeVariant.Default,
+            _ => Avalonia.Styling.ThemeVariant.Dark,
+        };
+    }
+
     [JsonIgnore] private string _path = "";
 
     public static UiSettings Load(AppPaths paths)

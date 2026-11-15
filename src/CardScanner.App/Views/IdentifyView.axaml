@@ -7,13 +7,13 @@
     <Style Selector="Border.choice">
       <Setter Property="Padding" Value="8" />
       <Setter Property="Margin" Value="0,0,10,10" />
-      <Setter Property="Background" Value="#0F1528" />
+      <Setter Property="Background" Value="{DynamicResource InsetBrush}" />
       <Setter Property="BorderThickness" Value="2" />
-      <Setter Property="BorderBrush" Value="{StaticResource PanelEdgeBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource PanelEdgeBrush}" />
       <Setter Property="CornerRadius" Value="10" />
     </Style>
     <Style Selector="Border.choice:pointerover">
-      <Setter Property="BorderBrush" Value="{StaticResource TealBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource TealBrush}" />
     </Style>
     <Style Selector="Border.choice.chosen">
       <Setter Property="BorderBrush" Value="#22C55E" />
@@ -29,7 +29,7 @@
       <Setter Property="Background" Value="Transparent" />
     </Style>
     <Style Selector="Button.imgbtn:pointerover Border.pic">
-      <Setter Property="BorderBrush" Value="{StaticResource TealBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource TealBrush}" />
     </Style>
     <Style Selector="Border.pic">
       <Setter Property="BorderThickness" Value="2" />
@@ -40,12 +40,12 @@
       <Setter Property="FontSize" Value="13" />
     </Style>
     <Style Selector="Button.tab.on">
-      <Setter Property="BorderBrush" Value="{StaticResource TealBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource TealBrush}" />
       <Setter Property="BorderThickness" Value="2" />
       <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="Rectangle.dropzone">
-      <Setter Property="Stroke" Value="#3A4A6B" />
+      <Setter Property="Stroke" Value="{DynamicResource InsetEdgeBrush}" />
       <Setter Property="StrokeThickness" Value="2" />
       <Setter Property="StrokeDashArray" Value="6,4" />
       <Setter Property="RadiusX" Value="16" />
@@ -53,7 +53,7 @@
       <Setter Property="Fill" Value="#0C132588" />
     </Style>
     <Style Selector="Panel.hover Rectangle.dropzone">
-      <Setter Property="Stroke" Value="{StaticResource TealBrush}" />
+      <Setter Property="Stroke" Value="{DynamicResource TealBrush}" />
       <Setter Property="Fill" Value="#102A3355" />
     </Style>
   </UserControl.Styles>
@@ -81,8 +81,8 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border Padding="8,4" Margin="0,0,6,6" CornerRadius="8" BorderThickness="1" BorderBrush="#3A4A6B"
-                          Background="#0F1528" IsVisible="{Binding !IsOff}" MinWidth="78">
+                  <Border Padding="8,4" Margin="0,0,6,6" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource InsetEdgeBrush}"
+                          Background="{DynamicResource InsetBrush}" IsVisible="{Binding !IsOff}" MinWidth="78">
                     <StackPanel Spacing="1">
                       <StackPanel Orientation="Horizontal" Spacing="6">
                         <TextBlock FontSize="11" Classes="muted" Text="{Binding Bin, StringFormat='Bin {0}'}" />
@@ -117,29 +117,7 @@
         <Button Content="⇩ Export CSV" Command="{Binding ExportCsvCommand}" ToolTip.Tip="ManaBox and Moxfield CSVs of every identified card on the list. Saved in Documents\MTG Card Scanner." />
         <Button Content="📁 Sessions" Command="{Binding OpenSessionsFolderCommand}" ToolTip.Tip="Past sessions: each has its CSVs and a summary (Documents\MTG Card Scanner)" />
         <Button Content="📄 Results log" Command="{Binding OpenLogFolderCommand}" />
-        <Button Content="⚙ Settings">
-          <Button.Flyout>
-            <Flyout Placement="BottomEdgeAlignedRight">
-              <StackPanel Spacing="14" Width="380" Margin="4">
-                <StackPanel Spacing="4">
-                  <CheckBox IsChecked="{Binding AssumeNonFoil, Mode=TwoWay}" Content="Assume non-foil when the photo can't tell" />
-                  <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="28,0,0,0"
-                             Text="Off: those cards wait in “Check finish” for you. Turn on once the machine's camera can see foil sheen." />
-                </StackPanel>
-                <StackPanel Spacing="4">
-                  <CheckBox IsChecked="{Binding PhoneLinkOn, Mode=TwoWay}" Content="Phone link (Android scanner app)" />
-                  <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="28,0,0,0"
-                             Text="Phone and PC on the same home network (the PC can be on a cable). If the phone can't find the PC, click the firewall button below, or type the address shown here into the phone app's Settings." />
-                  <TextBlock FontSize="12" TextWrapping="Wrap" Margin="28,0,0,0" Text="{Binding PhoneLinkStatus}" />
-                  <StackPanel Orientation="Horizontal" Spacing="8" Margin="28,4,0,0">
-                    <Button Content="Allow phone link through firewall" FontSize="12" Command="{Binding AllowFirewallCommand}" />
-                  </StackPanel>
-                  <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="28,0,0,0" Text="{Binding FirewallText}" />
-                </StackPanel>
-              </StackPanel>
-            </Flyout>
-          </Button.Flyout>
-        </Button>
+        <Button Content="⚙ Settings" Command="{Binding OpenSettingsCommand}" ToolTip.Tip="All settings: theme, compare view, finish, phone link, default bins" />
       </StackPanel>
     </Grid>
 
@@ -194,7 +172,7 @@
         <Button Padding="12,6" ToolTip.Tip="Filter by rarity or price, and change the sort order">
           <StackPanel Orientation="Horizontal" Spacing="8">
             <!-- funnel -->
-            <Path Data="M0,0 L14,0 L8.5,6.5 L8.5,12 L5.5,10.5 L5.5,6.5 Z" Fill="{StaticResource TealBrush}" VerticalAlignment="Center" />
+            <Path Data="M0,0 L14,0 L8.5,6.5 L8.5,12 L5.5,10.5 L5.5,6.5 Z" Fill="{DynamicResource TealBrush}" VerticalAlignment="Center" />
             <TextBlock Text="{Binding FilterLabel}" VerticalAlignment="Center" FontSize="13" />
           </StackPanel>
           <Button.Flyout>
@@ -244,7 +222,7 @@
                     </Border>
                   </Button>
                   <TextBlock Classes="muted" FontSize="11" Text="{Binding ScanLabel}" ToolTip.Tip="{Binding Photo}" TextTrimming="CharacterEllipsis" />
-                  <TextBlock FontSize="11" Foreground="#5EEAD4" Text="{Binding BinText}" TextWrapping="Wrap" MaxWidth="176"
+                  <TextBlock FontSize="11" Foreground="{DynamicResource TealTextBrush}" Text="{Binding BinText}" TextWrapping="Wrap" MaxWidth="176"
                              IsVisible="{Binding BinText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                   <Button Content="{Binding FlipLabel}" FontSize="12" Padding="10,4" IsVisible="{Binding CanFlip}"
                           Command="{Binding FlipCommand}"
@@ -288,14 +266,14 @@
                     <StackPanel Orientation="Horizontal" Spacing="8">
                       <Border Classes="pill" Background="#1A22C55E" BorderBrush="#22C55E" IsVisible="{Binding IsPinned}"
                               ToolTip.Tip="What printed on the card pins this exact printing">
-                        <TextBlock Text="{Binding PinText}" FontSize="12" Foreground="#4ADE80" />
+                        <TextBlock Text="{Binding PinText}" FontSize="12" Foreground="{DynamicResource GoodTextBrush}" />
                       </Border>
                       <Border Classes="pill" Background="#1A2DD4BF" BorderBrush="#2DD4BF" IsVisible="{Binding IsSoftPin}"
                               ToolTip.Tip="Pinned without a printed set code (older and retro frames, Japanese printings). Worth a glance when spot-checking.">
-                        <TextBlock Text="worth a glance" FontSize="12" Foreground="#5EEAD4" />
+                        <TextBlock Text="worth a glance" FontSize="12" Foreground="{DynamicResource TealTextBrush}" />
                       </Border>
                       <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding IsFlagged}">
-                        <TextBlock Text="{Binding FlagReason, StringFormat='⚠ Needs a look: {0}'}" FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding FlagReason, StringFormat='⚠ Needs a look: {0}'}" FontSize="12" Foreground="{DynamicResource WarnTextBrush}" TextWrapping="Wrap" />
                       </Border>
                     </StackPanel>
                     <TextBlock Classes="muted" FontSize="12" Text="{Binding ReadText}" TextWrapping="Wrap" />
@@ -309,7 +287,7 @@
                       <TextBlock Text="{Binding FinishNote}" VerticalAlignment="Center" FontSize="12"
                                  Classes="muted" IsVisible="{Binding !FinishUnsure}" />
                       <TextBlock Text="{Binding FinishNote, StringFormat='⚠ {0}'}" VerticalAlignment="Center" FontSize="12"
-                                 Foreground="#FBBF24" IsVisible="{Binding FinishUnsure}" />
+                                 Foreground="{DynamicResource WarnTextBrush}" IsVisible="{Binding FinishUnsure}" />
                     </StackPanel>
                   </StackPanel>
 
@@ -383,16 +361,16 @@
                   IsVisible="{Binding IsTopLayout}">
             <WrapPanel DataContext="{Binding Item}" HorizontalAlignment="Center">
               <Border Classes="pill" Background="#1A22C55E" BorderBrush="#22C55E" IsVisible="{Binding IsPinned}" Margin="0,0,8,6">
-                <TextBlock Text="{Binding PinText}" FontSize="12" Foreground="#4ADE80" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding PinText}" FontSize="12" Foreground="{DynamicResource GoodTextBrush}" TextWrapping="Wrap" />
               </Border>
               <Border Classes="pill" Background="#1A2DD4BF" BorderBrush="#2DD4BF" IsVisible="{Binding IsSoftPin}" Margin="0,0,8,6">
-                <TextBlock Text="worth a glance" FontSize="12" Foreground="#5EEAD4" />
+                <TextBlock Text="worth a glance" FontSize="12" Foreground="{DynamicResource TealTextBrush}" />
               </Border>
               <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding IsFlagged}" Margin="0,0,8,6">
-                <TextBlock Text="{Binding FlagReason, StringFormat='⚠ Needs a look: {0}'}" FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap" MaxWidth="900" />
+                <TextBlock Text="{Binding FlagReason, StringFormat='⚠ Needs a look: {0}'}" FontSize="12" Foreground="{DynamicResource WarnTextBrush}" TextWrapping="Wrap" MaxWidth="900" />
               </Border>
               <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding FinishUnsure}" Margin="0,0,8,6">
-                <TextBlock Text="{Binding FinishNote, StringFormat='✨ Finish: {0}'}" FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap" MaxWidth="900" />
+                <TextBlock Text="{Binding FinishNote, StringFormat='✨ Finish: {0}'}" FontSize="12" Foreground="{DynamicResource WarnTextBrush}" TextWrapping="Wrap" MaxWidth="900" />
               </Border>
             </WrapPanel>
             <TextBlock DataContext="{Binding Item}" Classes="teal" FontSize="12" Text="{Binding DetailNote, StringFormat='🔎 {0}'}" TextAlignment="Center"
@@ -418,7 +396,7 @@
 
       <!-- Side panel (left or right): queue, scan number, tags, what was read, and all the buttons -->
       <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="{Binding PanelColumn}" IsVisible="{Binding IsPanelLayout}"
-              Width="330" Margin="0,14,0,0" Padding="18" CornerRadius="14" Background="#0B1220" BorderBrush="#1E293B" BorderThickness="1">
+              Width="330" Margin="0,14,0,0" Padding="18" CornerRadius="14" Background="{DynamicResource InsetBrush}" BorderBrush="{DynamicResource PanelEdgeBrush}" BorderThickness="1">
         <DockPanel>
           <StackPanel DockPanel.Dock="Bottom" Spacing="8">
             <Button Classes="accent" Content="✓ This is the one" Command="{Binding PickThisCommand}" HorizontalAlignment="Stretch"
@@ -454,7 +432,7 @@
                 <TextBlock Classes="muted" FontSize="12" Text="{Binding Counter}" />
               </StackPanel>
               <TextBlock Text="{Binding PhotoName}" FontSize="16" Classes="muted" />
-              <Border Height="1" Background="#1E293B" />
+              <Border Height="1" Background="{DynamicResource PanelEdgeBrush}" />
               <StackPanel DataContext="{Binding Item}" Spacing="6" HorizontalAlignment="Left">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <TextBlock Text="Condition:" VerticalAlignment="Center" FontWeight="SemiBold" />
@@ -466,19 +444,19 @@
                   <CheckBox Content="Misprint" IsChecked="{Binding Misprint}" />
                 </StackPanel>
               </StackPanel>
-              <Border Height="1" Background="#1E293B" />
+              <Border Height="1" Background="{DynamicResource PanelEdgeBrush}" />
             <WrapPanel DataContext="{Binding Item}" HorizontalAlignment="Left">
               <Border Classes="pill" Background="#1A22C55E" BorderBrush="#22C55E" IsVisible="{Binding IsPinned}" Margin="0,0,8,6">
-                <TextBlock Text="{Binding PinText}" FontSize="12" Foreground="#4ADE80" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding PinText}" FontSize="12" Foreground="{DynamicResource GoodTextBrush}" TextWrapping="Wrap" />
               </Border>
               <Border Classes="pill" Background="#1A2DD4BF" BorderBrush="#2DD4BF" IsVisible="{Binding IsSoftPin}" Margin="0,0,8,6">
-                <TextBlock Text="worth a glance" FontSize="12" Foreground="#5EEAD4" />
+                <TextBlock Text="worth a glance" FontSize="12" Foreground="{DynamicResource TealTextBrush}" />
               </Border>
               <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding IsFlagged}" Margin="0,0,8,6">
-                <TextBlock Text="{Binding FlagReason, StringFormat='⚠ Needs a look: {0}'}" FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap" MaxWidth="280" />
+                <TextBlock Text="{Binding FlagReason, StringFormat='⚠ Needs a look: {0}'}" FontSize="12" Foreground="{DynamicResource WarnTextBrush}" TextWrapping="Wrap" MaxWidth="280" />
               </Border>
               <Border Classes="pill" Background="#1AF59E0B" BorderBrush="#F59E0B" IsVisible="{Binding FinishUnsure}" Margin="0,0,8,6">
-                <TextBlock Text="{Binding FinishNote, StringFormat='✨ Finish: {0}'}" FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap" MaxWidth="280" />
+                <TextBlock Text="{Binding FinishNote, StringFormat='✨ Finish: {0}'}" FontSize="12" Foreground="{DynamicResource WarnTextBrush}" TextWrapping="Wrap" MaxWidth="280" />
               </Border>
             </WrapPanel>
             <TextBlock DataContext="{Binding Item}" Classes="teal" FontSize="12" Text="{Binding DetailNote, StringFormat='🔎 {0}'}" TextAlignment="Left"
@@ -502,7 +480,7 @@
             <Image Name="LeftImg" Source="{Binding LeftShown}" Stretch="Uniform" />
             <Canvas IsHitTestVisible="False">
               <Border Name="LeftLens" Width="360" Height="360" ClipToBounds="True" IsVisible="False" CornerRadius="12"
-                      BorderBrush="{StaticResource TealBrush}" BorderThickness="2" Background="#000" BoxShadow="0 6 18 0 #90000000">
+                      BorderBrush="{DynamicResource TealBrush}" BorderThickness="2" Background="#000" BoxShadow="0 6 18 0 #90000000">
                 <Canvas><Image Name="LeftLensImg" Source="{Binding LeftShown}" Stretch="Fill" /></Canvas>
               </Border>
             </Canvas>
@@ -511,7 +489,7 @@
             <Image Name="RightImg" Source="{Binding RightShown}" Stretch="Uniform" />
             <Canvas IsHitTestVisible="False">
               <Border Name="RightLens" Width="360" Height="360" ClipToBounds="True" IsVisible="False" CornerRadius="12"
-                      BorderBrush="{StaticResource TealBrush}" BorderThickness="2" Background="#000" BoxShadow="0 6 18 0 #90000000">
+                      BorderBrush="{DynamicResource TealBrush}" BorderThickness="2" Background="#000" BoxShadow="0 6 18 0 #90000000">
                 <Canvas><Image Name="RightLensImg" Source="{Binding RightShown}" Stretch="Fill" /></Canvas>
               </Border>
             </Canvas>
@@ -605,7 +583,7 @@
           </StackPanel>
           <StackPanel Spacing="4">
             <TextBlock Classes="muted" Text="Where cards go" />
-            <Border Padding="10" CornerRadius="8" Background="#0F1528">
+            <Border Padding="10" CornerRadius="8" Background="{DynamicResource InsetBrush}">
               <TextBlock FontFamily="Consolas,Menlo,monospace" FontSize="12" Text="{Binding SetupPreview}" />
             </Border>
           </StackPanel>

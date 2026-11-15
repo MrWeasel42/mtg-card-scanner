@@ -169,6 +169,31 @@ public partial class IdentifyViewModel
         UpdateSessionText();
     }
 
+    // ---- used by the Home and Settings pages ----
+    internal UiSettings Settings => _settings;
+    internal AppPaths AppPaths => _paths;
+    /// <summary>Set by the main window: the ⚙ button on this page opens the Settings page.</summary>
+    public Action? RequestSettings { get; set; }
+    [RelayCommand] private void OpenSettings() => RequestSettings?.Invoke();
+
+    /// <summary>Fills the bin-setup fields from the saved default (Settings page).</summary>
+    internal void LoadSetupDefaults()
+    {
+        SetupCatalog = _settings.CatalogMode;
+        BinsToSetup(_settings.Bins);
+        UpdatePreview();
+    }
+
+    /// <summary>Saves the bin-setup fields as the default for new sessions (and for the phone / machine).</summary>
+    internal void SaveSetupDefaults()
+    {
+        _settings.Bins = SetupToBins();
+        _settings.CatalogMode = SetupCatalog;
+        _settings.Save();
+    }
+
+    internal static string ExportFolder => ExportRoot;
+
     private static string ExportRoot => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MTG Card Scanner");
 
     /// <summary>Every card scanned during the session: give it a bin and count it.</summary>

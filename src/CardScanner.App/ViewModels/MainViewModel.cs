@@ -24,12 +24,45 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private AppUpdater.Update? _appUpdate;
 
     public SetupViewModel Setup { get; }
+    public IdentifyViewModel? Scan { get; private set; }
+    public HomeViewModel? Home { get; private set; }
+    public SettingsViewModel? SettingsPage { get; private set; }
+    private object? _beforeSettings;
+
+    /// <summary>The pages can be switched once the card database is loaded.</summary>
+    [ObservableProperty] private bool _ready;
 
     public MainViewModel()
     {
         _updater = new CatalogUpdater(Paths);
         Setup = new SetupViewModel(this);
         CurrentPage = Setup;
+        UiSettings.ApplyTheme(UiSettings.Load(Paths).Theme);
+    }
+
+    /// <summary>The logo / name in the top left.</summary>
+    [RelayCommand]
+    private void GoHome()
+    {
+        if (Home is null) return;
+        Home.Refresh();
+        CurrentPage = Home;
+    }
+
+    public void ShowScan() { if (Scan is not null) CurrentPage = Scan; }
+
+    public void ShowSettings()
+    {
+        if (SettingsPage is null) return;
+        if (CurrentPage is not SettingsViewModel) _beforeSettings = CurrentPage;
+        SettingsPage.Refresh();
+        CurrentPage = SettingsPage;
+    }
+
+    public void GoBack()
+    {
+        if (_beforeSettings is HomeViewModel || _beforeSettings is null) GoHome();
+        else CurrentPage = _beforeSettings;
     }
 
     public async Task StartAsync()
@@ -83,7 +116,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
             _recognizer = await Task.Run(() => Recognizer.Load(Paths));
             old?.Dispose();
             CatalogText = $"App v{AppVersion} · Database {_recognizer.Manifest.CatalogVersion} · {_recognizer.Manifest.Cards:N0} printings";
-            CurrentPage = new IdentifyViewModel(_recognizer, Paths);
+            bool wasHome = Scan is null || CurrentPage is HomeViewModel || CurrentPage is SetupViewModel;
+            Scan = new IdentifyViewModel(_recognizer, Paths) { RequestSettings = ShowSettings };
+            Home = new HomeViewModel(this, Scan);
+            SettingsPage = new SettingsViewModel(this, Scan);
+            Ready = true;
+            if (wasHome) GoHome(); else ShowScan();
         }
         catch (Exception ex)
         {

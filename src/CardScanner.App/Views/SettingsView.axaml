@@ -1,0 +1,107 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CardScanner.App.ViewModels"
+             x:Class="CardScanner.App.Views.SettingsView">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.section">
+      <Setter Property="FontSize" Value="16" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.note">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <ScrollViewer>
+    <StackPanel Margin="28,22" MaxWidth="860" HorizontalAlignment="Left" Spacing="16">
+      <StackPanel Orientation="Horizontal" Spacing="14">
+        <Button Content="← Back" Command="{Binding BackCommand}" />
+        <TextBlock Classes="h1" Text="Settings" VerticalAlignment="Center" />
+      </StackPanel>
+
+      <!-- Look -->
+      <Border Classes="card">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="section" Text="Look" />
+          <Grid ColumnDefinitions="220,*" RowDefinitions="Auto,8,Auto">
+            <TextBlock Text="Theme" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" Width="220" ItemsSource="{x:Static vm:SettingsViewModel.ThemeList}" SelectedItem="{Binding Theme}" />
+            <TextBlock Grid.Row="2" Text="Compare view: info panel" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="2" Grid.Column="1" Width="220" ItemsSource="{x:Static vm:SettingsViewModel.LayoutList}" SelectedItem="{Binding LayoutChoice}" />
+          </Grid>
+          <TextBlock Classes="note" Text="System follows the Windows light / dark setting." />
+        </StackPanel>
+      </Border>
+
+      <!-- Recognition -->
+      <Border Classes="card">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="section" Text="Recognition" />
+          <CheckBox IsChecked="{Binding Scan.AssumeNonFoil, Mode=TwoWay}" Content="Assume non-foil when the photo can't tell" />
+          <TextBlock Classes="note" Margin="28,0,0,0"
+                     Text="Off: those cards wait in “Check finish” (and go to the Flagged bin in a Catalog session). Turn on once the machine's camera can see foil sheen." />
+        </StackPanel>
+      </Border>
+
+      <!-- Phone link -->
+      <Border Classes="card">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="section" Text="Phone link" />
+          <CheckBox IsChecked="{Binding Scan.PhoneLinkOn, Mode=TwoWay}" Content="Phone link (Android scanner app and the machine)" />
+          <TextBlock Classes="note" Margin="28,0,0,0"
+                     Text="Phone and PC on the same home network (the PC can be on a cable). If the phone can't find the PC, click the firewall button, or type the address shown here into the phone app's Settings." />
+          <TextBlock FontSize="12" TextWrapping="Wrap" Margin="28,0,0,0" Text="{Binding Scan.PhoneLinkStatus}" />
+          <Button Content="Allow phone link through firewall" FontSize="12" Margin="28,4,0,0" Command="{Binding Scan.AllowFirewallCommand}" />
+          <TextBlock Classes="note" Margin="28,0,0,0" Text="{Binding Scan.FirewallText}" />
+        </StackPanel>
+      </Border>
+
+      <!-- Default bin setup -->
+      <Border Classes="card">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="section" Text="Default session setup" />
+          <TextBlock Classes="note" Text="What the Start session panel opens with, and what the phone or the machine uses when it starts a session by itself. You can still change it each time you start a session." />
+          <StackPanel Orientation="Horizontal" Spacing="18">
+            <RadioButton GroupName="defmode" IsChecked="{Binding Scan.SetupCatalog}" Content="Catalog: identify, sort and write a CSV" />
+            <RadioButton GroupName="defmode" IsChecked="{Binding !Scan.SetupCatalog}" Content="Sort: bins only, no CSV" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,16,*">
+            <StackPanel Spacing="4">
+              <TextBlock Classes="muted" Text="Bins in use (counted from the feeder)" />
+              <ComboBox ItemsSource="{x:Static vm:IdentifyViewModel.BinCountList}" SelectedItem="{Binding Scan.SetupBinsInUse}" HorizontalAlignment="Stretch" />
+              <TextBlock Classes="note" Text="The prototype has 3. The last bin in use is the end of the line and takes the flagged cards." />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Spacing="4">
+              <TextBlock Classes="muted" Text="Sort by" />
+              <ComboBox ItemsSource="{x:Static vm:IdentifyViewModel.SortByList}" SelectedItem="{Binding Scan.SetupSortBy}" HorizontalAlignment="Stretch" />
+            </StackPanel>
+          </Grid>
+          <StackPanel Spacing="4" IsVisible="{Binding Scan.SetupIsPrice}">
+            <TextBlock Classes="muted" Text="Price brackets: where each bin ends, in US dollars" />
+            <TextBox Text="{Binding Scan.SetupPriceBreaks}" Watermark="1, 5, 10, 25, 50" />
+          </StackPanel>
+          <StackPanel Spacing="4" IsVisible="{Binding Scan.SetupIsAlpha}">
+            <TextBlock Classes="muted" Text="Letter ranges, one bin each" />
+            <TextBox Text="{Binding Scan.SetupAlphaRanges}" Watermark="A-F, G-K, L-R, S-Z" />
+          </StackPanel>
+          <StackPanel Spacing="4" IsVisible="{Binding Scan.SetupIsSet}">
+            <TextBlock Classes="muted" Text="Set codes, one bin per line (e.g. MH3, MH2). Everything else: Other sets" />
+            <TextBox Text="{Binding Scan.SetupSetGroups}" AcceptsReturn="True" MinHeight="90" />
+          </StackPanel>
+          <StackPanel Spacing="4">
+            <TextBlock Classes="muted" Text="Where cards go" />
+            <Border Padding="10" CornerRadius="8" Background="{DynamicResource InsetBrush}">
+              <TextBlock FontFamily="Consolas,Menlo,monospace" FontSize="12" Text="{Binding Scan.SetupPreview}" />
+            </Border>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <Button Classes="accent" Content="Save as default" Command="{Binding SaveBinsCommand}" />
+            <TextBlock Text="{Binding BinsSavedText}" Foreground="{DynamicResource GoodTextBrush}" VerticalAlignment="Center" TextWrapping="Wrap" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>
