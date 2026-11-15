@@ -378,6 +378,7 @@ public sealed class Recognizer : IDisposable
             foreach (var (id, s) in _index.Search(vec, topK))
                 scored.Add((new PrintingKey(id, "", "", "", ""), ImageWeight * s, s, false, false, false, false, false, false));
             flag = "Couldn't read the card's name or collector number — matched by picture only.";
+            if (setLock is not null) outsideLock ??= "Not from the locked sets: nothing in them looks like this card.";
         }
         scored.Sort((a, b) => b.Score.CompareTo(a.Score));
         // Printings whose border colour contradicts the photo go to the end of the list rather than
