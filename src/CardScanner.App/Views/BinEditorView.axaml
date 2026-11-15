@@ -108,7 +108,7 @@
             <TextBox Text="{Binding MinText}" Width="90" Watermark="0" />
             <TextBlock Text="up to $" VerticalAlignment="Center" />
             <TextBox Text="{Binding MaxText}" Width="90" Watermark="no limit" />
-            <TextBlock Classes="muted" FontSize="12" VerticalAlignment="Center" Text="(a card at exactly the top price goes to the next bin up)" />
+            <TextBlock Classes="muted" FontSize="12" VerticalAlignment="Center" Text="(both prices included: a card at exactly the top price stays in this bin)" />
           </StackPanel>
 
           <ItemsControl ItemsSource="{Binding Colors}" IsVisible="{Binding IsColor}">

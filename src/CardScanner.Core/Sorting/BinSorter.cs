@@ -20,7 +20,8 @@ public sealed class BinRule
     public RuleKind Kind { get; set; } = RuleKind.Price;
     /// <summary>Your own name for the bin; blank = described from the rule.</summary>
     public string Name { get; set; } = "";
-    /// <summary>Price range in USD: Min &lt;= price &lt; Max (either end may be open).</summary>
+    /// <summary>Price range in USD, both ends included: Min &lt;= price &lt;= Max (either end may be open). A card on
+    /// the edge between two bins goes to the first of them: "$0–0.50" takes a $0.50 card, "$0.51–1" the next cent up.</summary>
     public decimal? Min { get; set; }
     public decimal? Max { get; set; }
     /// <summary>W, U, B, R, G, M (multicolour), C (colourless), L (lands). A card counts as one of these (front face).</summary>
@@ -56,8 +57,8 @@ public sealed class BinRule
                 return (Min, Max) switch
                 {
                     (null, null) => "Any price",
-                    (null, { } hi) => $"Under {M(hi)}",
-                    ({ } lo, null) => $"{M(lo)}+",
+                    (null, { } hi) => $"Up to {M(hi)}",
+                    ({ } lo, null) => $"Over {M(lo)}",
                     ({ } lo, { } hi) => $"{M(lo)}–{M(hi)[1..]}",
                 };
             case RuleKind.Color:
@@ -89,7 +90,7 @@ public sealed class BinRule
         switch (Kind)
         {
             case RuleKind.Price:
-                return c.Price is { } p && (Min is not { } lo || p >= lo) && (Max is not { } hi || p < hi);
+                return c.Price is { } p && (Min is not { } lo || p >= lo) && (Max is not { } hi || p <= hi);
             case RuleKind.Color:
                 return Colors.Contains(ColorCodes[BinSorter.ColorIndex(c.Colors, c.TypeLine)]);
             case RuleKind.Letters:

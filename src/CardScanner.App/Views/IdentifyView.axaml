@@ -115,8 +115,8 @@
                 ToolTip.Tip="Name the session, pick Catalog or Sort and the bin rules. The phone app and the machine join it." />
         <Button Name="AddButton" Content="＋ Add photos" />
         <Button Content="Clear" Command="{Binding ClearCommand}" />
-        <Button Content="⇩ Export CSV" Command="{Binding ExportCsvCommand}" ToolTip.Tip="Pick the formats: ManaBox, Moxfield, Deckbox, TCGplayer list, General. Saved in Documents\MTG Card Scanner." />
-        <Button Content="📁 Sessions" Command="{Binding OpenSessionsFolderCommand}" ToolTip.Tip="Past sessions: each has its CSVs and a summary (Documents\MTG Card Scanner)" />
+        <Button Content="⇩ Export CSV" Command="{Binding ExportCsvCommand}" ToolTip.Tip="Pick the formats: ManaBox, Moxfield, Deckbox, TCGplayer list, General. Saved in the data folder (Home → Folders)." />
+        <Button Content="📁 Sessions" Command="{Binding OpenSessionsFolderCommand}" ToolTip.Tip="Past sessions: each has its CSVs and a summary (Home → Folders → Sessions)" />
         <Button Content="📄 Results log" Command="{Binding OpenLogFolderCommand}" />
         <Button Content="⚙ Settings" Command="{Binding OpenSettingsCommand}" ToolTip.Tip="All settings: theme, compare view, finish, phone link, default bins" />
       </StackPanel>
@@ -338,6 +338,12 @@
                     </ItemsControl>
                   </StackPanel>
 
+                  <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding HasResult}">
+                    <Button Content="🔎 Show every printing" FontSize="12" Command="{Binding ShowAllPrintingsCommand}"
+                            IsVisible="{Binding CanShowAllPrintings}"
+                            ToolTip.Tip="Right card, but the right printing isn't above? This lists every printing of it to pick from." />
+                    <TextBlock Classes="muted" FontSize="12" VerticalAlignment="Center" Text="{Binding AllPrintingsText}" />
+                  </StackPanel>
                   <TextBlock Classes="muted" FontSize="11" Text="{Binding Notes}" TextWrapping="Wrap" />
                 </StackPanel>
               </Grid>

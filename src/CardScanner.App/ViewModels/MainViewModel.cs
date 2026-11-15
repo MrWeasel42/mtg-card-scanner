@@ -37,6 +37,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _updater = new CatalogUpdater(Paths);
         Setup = new SetupViewModel(this);
         CurrentPage = Setup;
+        DataMigration.Run(Paths);
         UiSettings.ApplyTheme(UiSettings.Load(Paths).Theme);
     }
 

@@ -115,6 +115,21 @@ public class CardDetectorTests
         Assert.Equal(CardDetector.Height, found.Card.Height);
     }
 
+    // Real phone photos (Nov 15) where the card sits in the white scanner stand and fills about 40% of the photo.
+    [Theory]
+    [InlineData("shivan_fdn_206.jpg")]
+    [InlineData("hydroelectric_mh3_240_foil.jpg")]
+    [InlineData("blacksmiths_talent_blb_125_foil.jpg")]
+    public void Finds_a_card_inside_the_white_stand(string file)
+    {
+        using var photo = Cv2.ImRead(Path.Combine(AppContext.BaseDirectory, "Fixtures", "stand", file));
+        using var found = CardDetector.Detect(photo);
+        Assert.True(found.Found, $"no outline ({found.Method})");
+        double w = Math.Abs(found.Corners[1].X - found.Corners[0].X), h = Math.Abs(found.Corners[3].Y - found.Corners[0].Y);
+        double frac = w * h / (photo.Width * photo.Height);
+        Assert.InRange(frac, 0.25, 0.65);
+    }
+
     [Fact]
     public void Already_cropped_photo_is_used_as_is()
     {
@@ -573,9 +588,12 @@ public class BinSorterTests
     public void PriceBrackets_AllNineBins()
     {
         var s = new BinSetup { BinsInUse = 9, By = SortBy.Price };
-        Assert.Equal(["Under $1", "$1–5", "$5–10", "$10–25", "$25–50", "$50+"], BinSorter.Categories(s));
+        Assert.Equal(["Up to $1", "$1–5", "$5–10", "$10–25", "$25–50", "Over $50"], BinSorter.Categories(s));
         Assert.Equal(1, BinSorter.Choose(s, Card(price: 0.25m)).Bin);
-        Assert.Equal(2, BinSorter.Choose(s, Card(price: 1m)).Bin);      // edge goes up
+        Assert.Equal(1, BinSorter.Choose(s, Card(price: 1m)).Bin);      // on the edge: the lower bin ("equal or less")
+        Assert.Equal(2, BinSorter.Choose(s, Card(price: 1.01m)).Bin);
+        Assert.Equal(5, BinSorter.Choose(s, Card(price: 50m)).Bin);
+        Assert.Equal(6, BinSorter.Choose(s, Card(price: 50.01m)).Bin);
         Assert.Equal(2, BinSorter.Choose(s, Card(price: 4.99m)).Bin);
         Assert.Equal(6, BinSorter.Choose(s, Card(price: 120m)).Bin);
         Assert.Equal(9, BinSorter.Choose(s, Card(price: null)).Bin);     // no price: Flagged
@@ -642,7 +660,7 @@ public class BinSorterTests
     {
         var json = """{"BinsInUse":3,"By":"Price","PriceBreaks":[2,10]}""";
         var s = System.Text.Json.JsonSerializer.Deserialize<BinSetup>(json)!;
-        Assert.Equal(["Under $2", "$2–10", "Flagged + everything else"], BinSorter.BinLabels(s).Take(3));
+        Assert.Equal(["Up to $2", "$2–10", "Flagged + everything else"], BinSorter.BinLabels(s).Take(3));
         Assert.Equal(2, BinSorter.Choose(s, Card(price: 3m)).Bin);
         var round = System.Text.Json.JsonSerializer.Deserialize<BinSetup>(System.Text.Json.JsonSerializer.Serialize(new BinSetup { Rules = [new BinRule { Kind = RuleKind.Letters, Letters = "#" }, null] }))!;
         Assert.Equal(RuleKind.Letters, round.Rules[0]!.Kind);

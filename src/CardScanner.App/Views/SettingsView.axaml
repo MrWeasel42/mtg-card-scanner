@@ -16,7 +16,7 @@
   </UserControl.Styles>
 
   <ScrollViewer>
-    <StackPanel Margin="28,22" MaxWidth="1040" HorizontalAlignment="Left" Spacing="16">
+    <StackPanel Margin="28,22" MaxWidth="1040" HorizontalAlignment="Center" Spacing="16">
       <StackPanel Orientation="Horizontal" Spacing="14">
         <Button Content="← Back" Command="{Binding BackCommand}" />
         <TextBlock Classes="h1" Text="Settings" VerticalAlignment="Center" />
@@ -56,6 +56,18 @@
           <TextBlock FontSize="12" TextWrapping="Wrap" Margin="28,0,0,0" Text="{Binding Scan.PhoneLinkStatus}" />
           <Button Content="Allow phone link through firewall" FontSize="12" Margin="28,4,0,0" Command="{Binding Scan.AllowFirewallCommand}" />
           <TextBlock Classes="note" Margin="28,0,0,0" Text="{Binding Scan.FirewallText}" />
+        </StackPanel>
+      </Border>
+
+      <!-- Data folder -->
+      <Border Classes="card">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="section" Text="Data folder" />
+          <TextBlock Classes="note" Text="Everything the app saves is in one place: sessions (with their CSVs and crops), exports, logs and phone photos." />
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="{Binding DataFolderText}" VerticalAlignment="Center" TextWrapping="Wrap" />
+            <Button Content="📂 Open" Command="{Binding OpenDataFolderCommand}" />
+          </StackPanel>
         </StackPanel>
       </Border>
 

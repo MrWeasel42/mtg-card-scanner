@@ -92,9 +92,11 @@ public partial class HomeViewModel : ObservableObject
     [RelayCommand] private void OpenSettings() => _main.ShowSettings();
 
     [RelayCommand] private void OpenSessionsFolder() => OpenFolder(IdentifyViewModel.ExportFolder);
+    [RelayCommand] private void OpenDataFolder() => OpenFolder(Scan.AppPaths.Root);
+    [RelayCommand] private void OpenExportsFolder() => OpenFolder(Scan.AppPaths.ExportsDir);
     [RelayCommand] private void OpenLogsFolder() => OpenFolder(Scan.AppPaths.LogsDir);
-    [RelayCommand] private void OpenCropsFolder() => OpenFolder(Path.Combine(Scan.AppPaths.LogsDir, "crops"));
-    [RelayCommand] private void OpenPhonePhotosFolder() => OpenFolder(Path.Combine(Scan.AppPaths.Root, "phone_scans"));
+    [RelayCommand] private void OpenPhonePhotosFolder() => OpenFolder(Scan.AppPaths.PhonePhotosDir);
+    public string DataFolderText => Scan.AppPaths.Root;
     [RelayCommand] private void OpenRecent(RecentSession? s) { if (s is not null) OpenFolder(s.Folder); }
 
     internal static void OpenFolder(string dir)
@@ -169,4 +171,7 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand] private void Back() { _shown = false; _main.GoBack(); }
+
+    public string DataFolderText => Scan.AppPaths.Root;
+    [RelayCommand] private void OpenDataFolder() => HomeViewModel.OpenFolder(Scan.AppPaths.Root);
 }

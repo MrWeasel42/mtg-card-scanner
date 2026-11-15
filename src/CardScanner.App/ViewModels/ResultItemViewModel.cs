@@ -145,6 +145,41 @@ public partial class ResultItemViewModel : ObservableObject
         _owner.ApplyFilter();
     }
 
+    // ---- Every printing of the card, when the right one isn't among the best matches ----
+    [ObservableProperty] private bool _allPrintingsShown;
+    [ObservableProperty] private string _allPrintingsText = "";
+    public bool CanShowAllPrintings => HasResult && !AllPrintingsShown && Top is not null;
+    partial void OnAllPrintingsShownChanged(bool value) => OnPropertyChanged(nameof(CanShowAllPrintings));
+
+    [RelayCommand]
+    private async Task ShowAllPrintings()
+    {
+        var name = Top?.Card.Name;
+        if (name is null) return;
+        var have = Candidates.Select(c => c.Card.Id).ToHashSet();
+        var more = _owner.Catalog.PrintingsOf(name).Where(c => !have.Contains(c.Id)).Reverse().ToList();   // newest first
+        AllPrintingsShown = true;
+        AllPrintingsText = more.Count == 0 ? "That's every printing of this card." : $"Added the other {more.Count} printing{(more.Count == 1 ? "" : "s")} of {name}, newest first.";
+        int rank = Candidates.Count + 1;
+        var added = new List<CandidateViewModel>();
+        foreach (var c in more)
+        {
+            var vm = new CandidateViewModel(new Candidate(c, 0, 0, true, false, false), rank++, this);
+            Candidates.Add(vm);
+            Others.Add(vm);
+            added.Add(vm);
+        }
+        foreach (var vm in added)
+        {
+            try
+            {
+                vm.ImagePath = await _owner.Thumbs.GetPathAsync(vm.Card);
+                vm.Thumbnail = Images.SmallFromFile(vm.ImagePath, 360);
+            }
+            catch (Exception ex) { Log.Error($"Printing picture {vm.Card.Id}", ex); }
+        }
+    }
+
     /// <summary>Re-number the candidates in a new order, keeping their pictures.</summary>
     private void Rebuild(List<CandidateViewModel> order)
     {

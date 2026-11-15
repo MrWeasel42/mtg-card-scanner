@@ -334,14 +334,10 @@ public partial class IdentifyViewModel : ObservableObject
         }
     }
 
-    /// <summary>logs/crops/&lt;session folder name&gt; while a session runs, else logs/crops/&lt;date&gt; no session.</summary>
-    private string CropsDir()
-    {
-        var root = Path.Combine(_paths.LogsDir, "crops");
-        return SessionActive && _sessionDir.Length > 0
-            ? Path.Combine(root, Path.GetFileName(_sessionDir))
-            : Path.Combine(root, $"{DateTime.Now:yyyy-MM-dd} no session");
-    }
+    /// <summary>The session's own Crops folder while a session runs, else Logs\Crops\&lt;date&gt;.</summary>
+    private string CropsDir() => SessionActive && _sessionDir.Length > 0
+        ? Path.Combine(_sessionDir, "Crops")
+        : Path.Combine(_paths.LooseCropsDir, DateTime.Now.ToString("yyyy-MM-dd"));
 
     /// <summary>
     /// Keeps a copy of each straightened card (what the scanner actually looked at) in logs/crops, plus how

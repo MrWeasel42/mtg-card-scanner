@@ -33,7 +33,17 @@ public static class CardDetector
         using var small = new Mat();
         Cv2.Resize(photo, small, new Size(0, 0), scale, scale, InterpolationFlags.Area);
 
-        var (quad, refit) = FindCardQuad(small);
+        var (quad, refit) = FindCardQuad(small, RetrievalModes.External);
+        // The card inside something bright (the white stand of a phone scanner): its outline is inside the
+        // stand's, so outer outlines alone never see it. Look at inner outlines too, and snap onto the edges.
+        bool inner = false;
+        if (quad is null)
+        {
+            // Only something clearly smaller than the photo: on a photo that's already just the card, the card's own
+            // printed frame is an inner outline too (about 85% of the photo).
+            (quad, _) = FindCardQuad(small, RetrievalModes.List, maxFraction: 0.7);
+            inner = quad is not null;
+        }
         if (quad is null)
         {
             // No outline found: assume the photo is already cropped to the card.
@@ -44,8 +54,8 @@ public static class CardDetector
 
         // A refit outline hugs the outside of the edge band (and any shadow): slide each side onto the
         // sharpest nearby edge.
-        string method = refit ? "refit" : "outline";
-        if (refit) { quad = SnapToEdges(small, quad); method += "+snap"; }
+        string method = inner ? "inner outline" : refit ? "refit" : "outline";
+        if (refit || inner) { quad = SnapToEdges(small, quad); method += "+snap"; }
         // White-bordered card on a light background? The outline may be the frame inside the border.
         if (WhiteBorder.Extend(small, quad) is { } wider) { quad = wider; method += "+white border"; }
 
@@ -107,7 +117,7 @@ public static class CardDetector
         return card;
     }
 
-    private static (Point2f[]? Quad, bool Refit) FindCardQuad(Mat img)
+    private static (Point2f[]? Quad, bool Refit) FindCardQuad(Mat img, RetrievalModes mode, double maxFraction = 0.9)
     {
         using var blurred = new Mat();
         Cv2.GaussianBlur(img, blurred, new Size(5, 5), 0);
@@ -121,13 +131,13 @@ public static class CardDetector
         {
             foreach (var mask in masks)
             {
-                Cv2.FindContours(mask, out Point[][] contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+                Cv2.FindContours(mask, out Point[][] contours, out _, mode, ContourApproximationModes.ApproxSimple);
                 foreach (var c in contours.OrderByDescending(c => Cv2.ContourArea(c)))
                 {
                     double area = Cv2.ContourArea(c);
                     if (area < minArea) break;
                     // The photo's own frame is roughly card-shaped too; never mistake it for the card.
-                    if (area > img.Width * img.Height * 0.9) continue;
+                    if (area > img.Width * img.Height * maxFraction) continue;
                     var quad = QuadFromContour(c, area);
                     if (quad is not null && (TouchesEdge(quad, img.Width, img.Height) || !LooksLikeCard(quad))) continue;
                     if (quad is not null && IsSquare(quad)) return (OrderCorners(quad), false);

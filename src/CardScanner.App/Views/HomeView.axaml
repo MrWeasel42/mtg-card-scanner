@@ -95,14 +95,17 @@
         <Border Grid.Column="2" Classes="card" VerticalAlignment="Top">
           <StackPanel Spacing="4">
             <TextBlock Text="Folders" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,6" />
-            <Button Classes="folder" Content="📁 Sessions and CSVs" Command="{Binding OpenSessionsFolderCommand}"
-                    ToolTip.Tip="Documents\MTG Card Scanner: one folder per session with its ManaBox and Moxfield CSVs" />
-            <Button Classes="folder" Content="📄 Results logs" Command="{Binding OpenLogsFolderCommand}"
-                    ToolTip.Tip="identify_results CSV: every card with how it was read and which bin it went to" />
-            <Button Classes="folder" Content="🖼 Crops" Command="{Binding OpenCropsFolderCommand}"
-                    ToolTip.Tip="The straightened card images, one folder per session" />
+            <Button Classes="folder" Content="📂 Data folder (everything)" Command="{Binding OpenDataFolderCommand}"
+                    ToolTip.Tip="{Binding DataFolderText}" />
+            <Button Classes="folder" Content="📁 Sessions" Command="{Binding OpenSessionsFolderCommand}"
+                    ToolTip.Tip="One folder per session: summary, CSVs and the card crops" />
+            <Button Classes="folder" Content="⇩ Exports" Command="{Binding OpenExportsFolderCommand}"
+                    ToolTip.Tip="CSVs exported outside a session" />
+            <Button Classes="folder" Content="📄 Logs" Command="{Binding OpenLogsFolderCommand}"
+                    ToolTip.Tip="Results log (every card, how it was read, its bin), errors.log, crops from outside sessions" />
             <Button Classes="folder" Content="📱 Phone photos" Command="{Binding OpenPhonePhotosFolderCommand}"
-                    ToolTip.Tip="Photos the phone sent, one folder per day" />
+                    ToolTip.Tip="Photos the phone or the machine sent, one folder per day" />
+            <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" Text="{Binding DataFolderText}" />
           </StackPanel>
         </Border>
       </Grid>

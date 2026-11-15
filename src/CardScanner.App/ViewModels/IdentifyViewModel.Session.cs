@@ -9,7 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace CardScanner.App.ViewModels;
 
-/// <summary>What gets saved for a scan session (Documents\MTG Card Scanner\&lt;date&gt; &lt;name&gt;\session.json).</summary>
+/// <summary>What gets saved for a scan session (data folder\Sessions\&lt;date&gt; &lt;name&gt;\session.json).</summary>
 public sealed class SessionRecord
 {
     public string Id { get; set; } = "";
@@ -127,6 +127,8 @@ public partial class IdentifyViewModel
 
     // ---- used by the Home and Settings pages ----
     internal UiSettings Settings => _settings;
+    internal CardScanner.Core.Catalog.CardCatalog Catalog => _recognizer.Catalog;
+    internal ThumbnailCache Thumbs => _thumbs;
     internal AppPaths AppPaths => _paths;
     /// <summary>Set by the main window: the ⚙ button on this page opens the Settings page.</summary>
     public Action? RequestSettings { get; set; }
@@ -149,7 +151,7 @@ public partial class IdentifyViewModel
 
     internal static string ExportFolder => ExportRoot;
 
-    private static string ExportRoot => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MTG Card Scanner");
+    private static string ExportRoot => Log.Paths.SessionsDir;
 
     /// <summary>Every card scanned during the session: give it a bin and count it.</summary>
     private void AddToSession(ResultItemViewModel item)
@@ -261,7 +263,7 @@ public partial class IdentifyViewModel
         catch (Exception ex) { Log.Error("Open sessions folder", ex); }
     }
 
-    /// <summary>Outside a session: every identified card on the list, to Documents\MTG Card Scanner.</summary>
+    /// <summary>Outside a session: every identified card on the list, to data folder\Exports.</summary>
 
     /// <summary>Writes the chosen export formats (see <see cref="CsvExport"/>). Cards marked "not listed" or "only the
     /// name is right" are left out; flagged cards nobody reviewed go in with their best guess.</summary>
@@ -319,7 +321,7 @@ public partial class IdentifyViewModel
         _settings.ExportFormats = chosen;
         _settings.Save();
         ExportOpen = false;
-        var dir = SessionActive && _sessionDir.Length > 0 ? _sessionDir : Path.Combine(ExportRoot, $"{DateTime.Now:yyyy-MM-dd HHmm} export");
+        var dir = SessionActive && _sessionDir.Length > 0 ? _sessionDir : Path.Combine(_paths.ExportsDir, $"{DateTime.Now:yyyy-MM-dd HHmm} export");
         WriteExports(ExportItems(), dir, SessionActive ? _session : null, chosen);
         try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{dir}\"") { UseShellExecute = true }); }
         catch (Exception ex) { Log.Error("Open export folder", ex); }
@@ -386,7 +388,7 @@ public partial class IdentifyViewModel
         if (paused) return (409, new { ok = false, paused = true, error = "Paused on the PC." });
         if (!active) await ui.InvokeAsync(() => BeginSession($"Phone scan {DateTime.Now:MMM d, h:mm tt}", _settings.CatalogMode, _settings.Bins));
 
-        var dir = Path.Combine(_paths.Root, "phone_scans", DateTime.Now.ToString("yyyy-MM-dd"));
+        var dir = Path.Combine(_paths.PhonePhotosDir, DateTime.Now.ToString("yyyy-MM-dd"));
         Directory.CreateDirectory(dir);
         var file = Path.Combine(dir, $"phone_{DateTime.Now:HHmmss_fff}.jpg");
         await File.WriteAllBytesAsync(file, req.Body);
