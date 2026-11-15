@@ -25,6 +25,8 @@ public sealed class SessionRecord
     public string? ManaBoxCsv { get; set; }
     public string? MoxfieldCsv { get; set; }
     public List<string> Exports { get; set; } = [];
+    /// <summary>Set lock: only these sets were considered (empty = the whole catalog).</summary>
+    public List<string> SetLock { get; set; } = [];
 }
 
 /// <summary>One bin's tile in the session panel.</summary>
@@ -70,6 +72,19 @@ public partial class IdentifyViewModel
     [ObservableProperty] private bool _setupOpen;
     [ObservableProperty] private string _setupName = "";
     [ObservableProperty] private bool _setupCatalog = true;
+    /// <summary>Optional set lock for the session: "HOB, HOC".</summary>
+    [ObservableProperty] private string _setupSetLock = "";
+    [ObservableProperty] private string _setupSetLockInfo = "";
+    partial void OnSetupSetLockChanged(string value)
+    {
+        if (_recognizer is null) { SetupSetLockInfo = ""; return; }   // (page tests run without a catalog)
+        var (known, unknown) = _recognizer.CheckSets(SplitSets(value));
+        SetupSetLockInfo = known.Count == 0 && unknown.Count == 0 ? "Off: every set is considered."
+            : string.Join(" · ", known.Select(k => $"{k.ToUpperInvariant()} ({_recognizer.PrintingsInSet(k)} printings)"))
+              + (unknown.Count > 0 ? $"  ⚠ not a set code: {string.Join(", ", unknown.Select(u => u.ToUpperInvariant()))}" : "");
+    }
+    private static IEnumerable<string> SplitSets(string text) =>
+        text.Split([',', ' ', ';', '/', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     /// <summary>The bins, as a clickable picture of the machine (Start panel and Settings).</summary>
     public BinEditorViewModel BinEditor { get; } = new();
 
@@ -80,6 +95,8 @@ public partial class IdentifyViewModel
     private void OpenSessionSetup()
     {
         SetupName = $"Scan {DateTime.Now:MMM d, h:mm tt}";
+        SetupSetLock = "";
+        OnSetupSetLockChanged("");
         SetupCatalog = _settings.CatalogMode;
         BinsToSetup(_settings.Bins);
         SetupOpen = true;
@@ -96,15 +113,18 @@ public partial class IdentifyViewModel
         _settings.CatalogMode = SetupCatalog;
         _settings.Save();
         SetupOpen = false;
-        BeginSession(string.IsNullOrWhiteSpace(SetupName) ? $"Scan {DateTime.Now:MMM d, h:mm tt}" : SetupName.Trim(), SetupCatalog, bins);
+        var lockSets = _recognizer is null ? [] : _recognizer.CheckSets(SplitSets(SetupSetLock)).Known;
+        BeginSession(string.IsNullOrWhiteSpace(SetupName) ? $"Scan {DateTime.Now:MMM d, h:mm tt}" : SetupName.Trim(), SetupCatalog, bins, lockSets);
     }
 
     /// <summary>Starts a session (from the start panel, or from the phone / machine with the last setup).</summary>
-    private void BeginSession(string name, bool catalog, BinSetup bins)
+    private void BeginSession(string name, bool catalog, BinSetup bins, List<string>? setLock = null)
     {
+        if (_recognizer is not null) _recognizer.SetLock = setLock is { Count: > 0 } ? new HashSet<string>(setLock) : null;
         _session = new SessionRecord
         {
             Id = DateTime.Now.ToString("yyyyMMdd_HHmmss"), Name = name, Catalog = catalog, Started = DateTime.Now, Bins = bins.Clone(),
+            SetLock = setLock ?? [],
         };
         var safe = string.Concat(name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '-' : c)).Trim();
         _sessionDir = Path.Combine(ExportRoot, $"{DateTime.Now:yyyy-MM-dd HHmm} {safe}");
@@ -198,7 +218,8 @@ public partial class IdentifyViewModel
         var mins = Math.Max(0.5, (DateTime.Now - _session.Started).TotalMinutes);
         int n = _sessionItems.Count;
         int open = _sessionItems.Count(i => i.Bin?.WantedBin == 0 && i.Verdict == Verdict.None);
-        SessionTitle = $"{(_session.Catalog ? "📋 Catalog" : "🗂 Sort")} · {_session.Name}" + (SessionPaused ? " · paused" : "") +
+        SessionTitle = $"{(_session.Catalog ? "📋 Catalog" : "🗂 Sort")} · {_session.Name}" +
+            (_session.SetLock.Count > 0 ? $" · 🔒 {string.Join(", ", _session.SetLock.Select(x => x.ToUpperInvariant()))}" : "") + (SessionPaused ? " · paused" : "") +
                        (SessionReviewing ? " · stopped" : "");
         SessionStats = $"{n} card{(n == 1 ? "" : "s")} · {n / mins:0.0} per minute" +
                        (_session.NoCardPhotos > 0 ? $" · {_session.NoCardPhotos} photo{(_session.NoCardPhotos == 1 ? "" : "s")} with no card skipped" : "");
@@ -249,6 +270,7 @@ public partial class IdentifyViewModel
         SessionActive = false;
         SessionReviewing = false;
         _session = null;
+        if (_recognizer is not null) _recognizer.SetLock = null;
         _stopRequested = false;
     }
 

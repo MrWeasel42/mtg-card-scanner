@@ -202,6 +202,31 @@ public class RecognizerTests
     }
 
     [Fact]
+    public void Set_lock_keeps_its_sets_and_flags_others()
+    {
+        var paths = FixturePaths();
+        using var rec = Recognizer.Load(paths);
+        using var card = CardDetectorTests.LoadFixtureCard(2);
+        using var photo = CardDetectorTests.FakePhoto(card, 4);
+        rec.SetLock = new HashSet<string> { "tst" };
+        var inLock = rec.Identify(photo, "locked");
+        Assert.Equal("Test Card 2", inLock.Best!.Card.Name);
+        Assert.False(inLock.FlagReason?.StartsWith("Not from the locked sets") == true);
+        rec.SetLock = new HashSet<string> { "hob" };                    // a set this catalog doesn't have a card of
+        var outside = rec.Identify(photo, "outside");
+        Assert.False(outside.Pinned);
+        Assert.StartsWith("Not from the locked sets", outside.FlagReason);
+        rec.SetLock = null;
+        Assert.Equal((["tst"], ["xyz"]), (rec.CheckSets(["TST", "xyz"]).Known, rec.CheckSets(["TST", "xyz"]).Unknown), new LockComparer());
+    }
+
+    private sealed class LockComparer : IEqualityComparer<(List<string>, List<string>)>
+    {
+        public bool Equals((List<string>, List<string>) a, (List<string>, List<string>) b) => a.Item1.SequenceEqual(b.Item1) && a.Item2.SequenceEqual(b.Item2);
+        public int GetHashCode((List<string>, List<string>) o) => 0;
+    }
+
+    [Fact]
     public void Identifies_an_upside_down_card()
     {
         var paths = FixturePaths();

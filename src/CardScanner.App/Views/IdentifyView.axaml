@@ -339,6 +339,10 @@
                   </StackPanel>
 
                   <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding HasResult}">
+                    <TextBox Text="{Binding PrintingFilter}" Width="230" FontSize="12" Watermark="Find a set: HOB, or hobbit"
+                             ToolTip.Tip="Set code or part of the set name (several with commas). Shows only those printings above." />
+                    <TextBlock Text="This card has no printing that matches." FontSize="12" VerticalAlignment="Center"
+                               Foreground="{DynamicResource WarnTextBrush}" IsVisible="{Binding NoPrintingMatch}" />
                     <Button Content="🔎 Show every printing" FontSize="12" Command="{Binding ShowAllPrintingsCommand}"
                             IsVisible="{Binding CanShowAllPrintings}"
                             ToolTip.Tip="Right card, but the right printing isn't above? This lists every printing of it to pick from." />
@@ -564,6 +568,13 @@
               <RadioButton GroupName="mode" IsChecked="{Binding SetupCatalog}" Content="Catalog: identify, sort and write a CSV" />
               <RadioButton GroupName="mode" IsChecked="{Binding !SetupCatalog}" Content="Sort: bins only, no CSV" />
             </StackPanel>
+          </StackPanel>
+          <StackPanel Spacing="4">
+            <TextBlock Classes="muted" Text="Only these sets (optional): set lock" />
+            <TextBox Text="{Binding SetupSetLock}" Watermark="e.g. HOB, HOC   (blank = every set)" />
+            <TextBlock FontSize="12" TextWrapping="Wrap" Text="{Binding SetupSetLockInfo}" />
+            <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                       Text="Opening boosters? Lock to their sets: only those printings are considered, so it's quicker and can't drift to a reprint. A card from any other set goes to the Flagged bin. Add any bonus sheet the boosters include (e.g. SPG for Special Guests)." />
           </StackPanel>
           <views:BinEditorView DataContext="{Binding BinEditor}" />
           <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">

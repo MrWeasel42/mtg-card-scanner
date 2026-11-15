@@ -147,6 +147,24 @@ public sealed class Recognizer : IDisposable
         return jpeg;
     }
 
+    /// <summary>
+    /// Set lock (e.g. HOB, HOC while opening Hobbit boxes): only printings from these sets are considered, which is
+    /// faster and can't drift to a look-alike reprint. A card that clearly isn't from them (its name or its set code
+    /// reads as something else) is flagged. Null or empty = the whole catalog.
+    /// </summary>
+    public IReadOnlySet<string>? SetLock { get; set; }
+
+    /// <summary>The set codes in a lock that the catalog knows, and the ones it doesn't.</summary>
+    public (List<string> Known, List<string> Unknown) CheckSets(IEnumerable<string> codes)
+    {
+        var known = new List<string>(); var unknown = new List<string>();
+        foreach (var c in codes.Select(c => c.Trim().ToLowerInvariant()).Where(c => c.Length > 0).Distinct())
+            (_cards.HasSet(c) ? known : unknown).Add(c);
+        return (known, unknown);
+    }
+
+    public int PrintingsInSet(string setCode) => _cards.PrintingsInSet(setCode).Count;
+
     public RecognitionResult IdentifyFile(string path, int topK = 8, bool? forceUpsideDown = null)
     {
         using var photo = Cv2.ImRead(path, ImreadModes.Color); // applies phone rotation (EXIF)
@@ -263,16 +281,42 @@ public sealed class Recognizer : IDisposable
         foreach (var h in viewHits)
             nameScore[h.Key] = Math.Max(nameScore.GetValueOrDefault(h.Key), h.Score);
         var pool = new Dictionary<string, PrintingKey>();
+        var setLock = SetLock is { Count: > 0 } sl0 ? sl0 : null;
+        bool Allowed(PrintingKey p) => setLock is null || setLock.Contains(p.SetCode.ToLowerInvariant())
+           ;
         foreach (var key in nameScore.Keys)
-            foreach (var p in _cards.PrintingsOfName(key)) pool[p.Id] = p;
+            foreach (var p in _cards.PrintingsOfName(key)) if (Allowed(p)) pool[p.Id] = p;
         foreach (var set in collector.SetCodes)
             foreach (var num in collector.Numbers)
-                foreach (var p in _cards.PrintingsAt(set, num)) pool[p.Id] = p;
+                foreach (var p in _cards.PrintingsAt(set, num)) if (Allowed(p)) pool[p.Id] = p;
         // The closest pictures always get a say, so a misread name ("Flying" → Fling) can't shut out
         // the card the photo obviously shows (a Secret Lair token whose set code didn't read).
+        // With a set lock, every printing of the locked sets gets that say instead (a few hundred at most).
         var pictureIds = new HashSet<string>();
-        foreach (var (id, _) in _index.Search(vec, PictureCandidates))
-            if (_cards.ById(id) is { } p && !pool.ContainsKey(id)) { pool[id] = p; pictureIds.Add(id); }
+        if (setLock is null)
+        {
+            foreach (var (id, _) in _index.Search(vec, PictureCandidates))
+                if (_cards.ById(id) is { } p && !pool.ContainsKey(id)) { pool[id] = p; pictureIds.Add(id); }
+        }
+        else
+        {
+            var close = setLock.SelectMany(s => _cards.PrintingsInSet(s)).Where(p => _index.Contains(p.Id) && !pool.ContainsKey(p.Id))
+                .Select(p => (P: p, Sim: _index.Similarity(vec, p.Id))).OrderByDescending(t => t.Sim).Take(PictureCandidates);
+            foreach (var (p, _) in close) { pool[p.Id] = p; pictureIds.Add(p.Id); }
+        }
+        // Clearly from somewhere else: a confident name read with no printing in the locked sets, or a set code
+        // + number that point at a real printing outside them.
+        string? outsideLock = null;
+        if (setLock is not null)
+        {
+            var strongName = nameScore.Where(kv => kv.Value >= 0.95).Select(kv => kv.Key)
+                .FirstOrDefault(k => _cards.PrintingsOfName(k).Count > 0 && !_cards.PrintingsOfName(k).Any(Allowed));
+            var otherSet = collector.SetCodes.FirstOrDefault(sc => !setLock.Contains(sc)
+                && collector.Numbers.Any(n => _cards.PrintingsAt(sc, n).Count > 0));
+            if (strongName is not null) outsideLock = $"Not from the locked sets: the name reads as {_cards.PrintingsOfName(strongName)[0].Name}.";
+            else if (otherSet is not null && !collector.SetCodes.Any(setLock.Contains))
+                outsideLock = $"Not from the locked sets: the set code reads {otherSet.ToUpperInvariant()}.";
+        }
 
         // "No set code" also covers a set code misread from the artist / copyright text that matches none of
         // the possible printings (Incendiary Command read "nc1" out of "Inc. 179/301").
@@ -459,6 +503,7 @@ public sealed class Recognizer : IDisposable
         }
 
         if (listDoubt) { pinned = false; pinReason = null; }
+        if (outsideLock is not null) { pinned = false; pinReason = null; flag = outsideLock; }
         if (flag is null && best is not null && !pinned && !listSeen && !listAbsent
             && candidates.Any(c => c.Card.IsListReprint && c.Card.Name == best.Card.Name))
             flag = "Might be a List reprint — check the bottom-left corner for the List symbol.";

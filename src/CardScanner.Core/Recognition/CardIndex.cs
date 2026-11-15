@@ -28,6 +28,7 @@ public sealed partial class CardIndex
     private readonly Dictionary<string, List<PrintingKey>> _byName = new();
     private readonly Dictionary<string, List<PrintingKey>> _byCollector = new();
     private readonly Dictionary<string, PrintingKey> _byId = new();
+    private readonly Dictionary<string, List<PrintingKey>> _bySet = new(StringComparer.OrdinalIgnoreCase);
     private readonly string[] _names;
     private readonly Dictionary<int, List<int>> _namesByLength = new();
 
@@ -70,6 +71,8 @@ public sealed partial class CardIndex
                     list.Add(p);
                 }
             }
+            if (!_bySet.TryGetValue(p.SetCode, out var sl)) _bySet[p.SetCode] = sl = [];
+            sl.Add(p);
             var ck = CollectorKey(p.SetCode, p.Number);
             if (!_byCollector.TryGetValue(ck, out var cl)) _byCollector[ck] = cl = [];
             cl.Add(p);
@@ -85,6 +88,10 @@ public sealed partial class CardIndex
     }
 
     public PrintingKey? ById(string id) => _byId.GetValueOrDefault(id);
+
+    /// <summary>Every printing in a set (any case of the code).</summary>
+    public IReadOnlyList<PrintingKey> PrintingsInSet(string setCode) => _bySet.TryGetValue(setCode, out var l) ? l : [];
+    public bool HasSet(string setCode) => _bySet.ContainsKey(setCode);
 
     public IReadOnlyList<PrintingKey> PrintingsOfName(string normalizedName) =>
         _byName.TryGetValue(normalizedName, out var l) ? l : [];

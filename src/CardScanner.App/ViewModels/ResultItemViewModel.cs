@@ -149,6 +149,34 @@ public partial class ResultItemViewModel : ObservableObject
     [ObservableProperty] private bool _allPrintingsShown;
     [ObservableProperty] private string _allPrintingsText = "";
     public bool CanShowAllPrintings => HasResult && !AllPrintingsShown && Top is not null;
+
+    /// <summary>Narrows the printings shown: set code ("HOB", "hob") or part of the set name ("hobbit").
+    /// Several at once with commas.</summary>
+    [ObservableProperty] private string _printingFilter = "";
+    partial void OnPrintingFilterChanged(string value)
+    {
+        RefilterOthers();
+        // searching means "the right one isn't up there": bring in every printing to search through
+        if (value.Trim().Length > 0 && !AllPrintingsShown && Top is not null) _ = ShowAllPrintings();
+    }
+
+    private static bool PrintingMatches(CardInfo c, string filter)
+    {
+        var terms = filter.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (terms.Length == 0) return true;
+        return terms.Any(t => c.SetCode.Equals(t, StringComparison.OrdinalIgnoreCase)
+                              || c.SetName.Contains(t, StringComparison.OrdinalIgnoreCase)
+                              || (t.Length >= 2 && c.SetCode.StartsWith(t, StringComparison.OrdinalIgnoreCase))
+                              || c.CollectorNumber.Equals(t.TrimStart('#'), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void RefilterOthers()
+    {
+        Others.Clear();
+        foreach (var c in Candidates.Where(c => c.Rank > 1 && PrintingMatches(c.Card, PrintingFilter))) Others.Add(c);
+        NoPrintingMatch = Others.Count == 0 && PrintingFilter.Trim().Length > 0;
+    }
+    [ObservableProperty] private bool _noPrintingMatch;
     partial void OnAllPrintingsShownChanged(bool value) => OnPropertyChanged(nameof(CanShowAllPrintings));
 
     [RelayCommand]
@@ -166,9 +194,10 @@ public partial class ResultItemViewModel : ObservableObject
         {
             var vm = new CandidateViewModel(new Candidate(c, 0, 0, true, false, false), rank++, this);
             Candidates.Add(vm);
-            Others.Add(vm);
+            if (PrintingMatches(vm.Card, PrintingFilter)) Others.Add(vm);
             added.Add(vm);
         }
+        NoPrintingMatch = Others.Count == 0 && PrintingFilter.Trim().Length > 0;
         foreach (var vm in added)
         {
             try
@@ -190,7 +219,7 @@ public partial class ResultItemViewModel : ObservableObject
         {
             var vm = new CandidateViewModel(o.Source, rank++, this) { ImagePath = o.ImagePath, Thumbnail = o.Thumbnail };
             Candidates.Add(vm);
-            if (vm.Rank > 1) Others.Add(vm);
+            if (vm.Rank > 1 && PrintingMatches(vm.Card, PrintingFilter)) Others.Add(vm);
         }
     }
 
