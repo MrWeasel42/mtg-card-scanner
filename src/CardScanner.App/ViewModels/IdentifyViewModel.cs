@@ -334,6 +334,15 @@ public partial class IdentifyViewModel : ObservableObject
         }
     }
 
+    /// <summary>logs/crops/&lt;session folder name&gt; while a session runs, else logs/crops/&lt;date&gt; no session.</summary>
+    private string CropsDir()
+    {
+        var root = Path.Combine(_paths.LogsDir, "crops");
+        return SessionActive && _sessionDir.Length > 0
+            ? Path.Combine(root, Path.GetFileName(_sessionDir))
+            : Path.Combine(root, $"{DateTime.Now:yyyy-MM-dd} no session");
+    }
+
     /// <summary>
     /// Keeps a copy of each straightened card (what the scanner actually looked at) in logs/crops, plus how
     /// its outline was found, so crop problems can be investigated from the files alone.
@@ -342,7 +351,7 @@ public partial class IdentifyViewModel : ObservableObject
     {
         try
         {
-            var dir = Path.Combine(_paths.LogsDir, "crops");
+            var dir = CropsDir();
             Directory.CreateDirectory(dir);
             var safe = string.Concat($"{result.Folder}_{Path.GetFileNameWithoutExtension(result.Source)}".Split(Path.GetInvalidFileNameChars()));
             File.WriteAllBytes(Path.Combine(dir, safe + ".jpg"), result.CardImageJpeg);
@@ -366,7 +375,7 @@ public partial class IdentifyViewModel : ObservableObject
         try
         {
             if (item.Result is not { } r) return;
-            var dir = Path.Combine(_paths.LogsDir, "crops");
+            var dir = CropsDir();
             Directory.CreateDirectory(dir);
             var safe = string.Concat($"{r.Folder}_{Path.GetFileNameWithoutExtension(r.Source)}".Split(Path.GetInvalidFileNameChars()));
             File.WriteAllBytes(Path.Combine(dir, safe + "_straightened.jpg"), jpeg);

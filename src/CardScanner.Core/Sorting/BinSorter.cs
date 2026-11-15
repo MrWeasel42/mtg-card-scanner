@@ -152,10 +152,12 @@ public static class BinSorter
         return list;
     }
 
-    /// <summary>0 White … 4 Green, 5 Multicolor, 6 Colorless, 7 Lands (any card whose type line has Land).</summary>
+    /// <summary>0 White … 4 Green, 5 Multicolor, 6 Colorless, 7 Lands (the front face is a land). Double-faced
+    /// cards go by their front face: a blue creature with a land on the back is Blue.</summary>
     public static int ColorIndex(string colors, string typeLine)
     {
-        if (typeLine.Contains("Land", StringComparison.OrdinalIgnoreCase)) return 7;
+        var front = typeLine.Split(" // ")[0];
+        if (front.Contains("Land", StringComparison.OrdinalIgnoreCase)) return 7;
         var cs = "WUBRG".Where(ch => colors.Contains(ch)).ToList();
         return cs.Count switch { 0 => 6, 1 => "WUBRG".IndexOf(cs[0]), _ => 5 };
     }

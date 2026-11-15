@@ -582,6 +582,8 @@ public class BinSorterTests
     [Fact]
     public void Colors_Lands_Multicolor()
     {
+        Assert.Equal(1, BinSorter.ColorIndex("U", "Creature — Weird // Land"));          // MDFC: front face decides
+        Assert.Equal(7, BinSorter.ColorIndex("", "Land // Land"));
         var s = new BinSetup { BinsInUse = 9, By = SortBy.Color };
         Assert.Equal(4, BinSorter.Choose(s, Card(colors: "R")).Bin);
         Assert.Equal(6, BinSorter.Choose(s, Card(colors: "U,R")).Bin);
