@@ -224,12 +224,12 @@
   "note": "the card's tail leaves the nip at X 136; fins touch down at X 131"
  },
  {
-  "label": "Belt loop = whole number of 105 mm fin pitches",
+  "label": "Belt loop = factory 1220 mm closed loop = whole number of fin pitches",
   "overlap": 0,
-  "gap": 1050.0,
-  "need": 1050,
+  "gap": 1220.0,
+  "need": 1220,
   "ok": true,
-  "note": "1050.0 mm = 10 x 105; +6 bins adds 12 pitches"
+  "note": "1220.0 mm = 10 x 122 (61 teeth per fin)"
  },
  {
   "label": "Feed-shaft pulley (122 mm loop) vs base",
@@ -338,7 +338,7 @@
  {
   "label": "PSU vs bin 1",
   "overlap": 0.0,
-  "gap": 24.0,
+  "gap": 58.0,
   "need": 5.0,
   "ok": true,
   "note": ""
@@ -394,7 +394,7 @@
  {
   "label": "Bin 1 vs its module (posts, back wall, sensor mount)",
   "overlap": 0.0,
-  "gap": 1.0,
+  "gap": 5.0,
   "need": 0.8,
   "ok": true,
   "note": "slides out the front between the 2.5 mm posts"
@@ -434,7 +434,7 @@
  {
   "label": "Bin 2 vs its module (posts, back wall, sensor mount)",
   "overlap": 0.0,
-  "gap": 1.0,
+  "gap": 5.0,
   "need": 0.8,
   "ok": true,
   "note": "slides out the front between the 2.5 mm posts"
@@ -442,7 +442,7 @@
  {
   "label": "End bin vs end module walls, posts, end cap, ramp",
   "overlap": 0.0,
-  "gap": 1.0,
+  "gap": 5.0,
   "need": 0.8,
   "ok": true,
   "note": ""
@@ -450,7 +450,7 @@
  {
   "label": "End ramp vs end module walls and end cap",
   "overlap": 0.0,
-  "gap": 5.0,
+  "gap": 13.5,
   "need": 0.5,
   "ok": true,
   "note": "flange screws up under the back strip"
