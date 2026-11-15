@@ -322,9 +322,9 @@ public partial class IdentifyViewModel
     private void WriteExports(List<ResultItemViewModel> items, string dir, SessionRecord? s)
     {
         var rows = items.Where(r => r.HasResult && r.ShownCard is not null && r.Verdict is not (Verdict.NotListed or Verdict.NameOnly))
-            .GroupBy(r => (r.ShownCard!.Id, Finish: r.SelectedFinish?.Key ?? "nonfoil", r.Condition,
+            .GroupBy(r => (r.ShownCard!.Id, Finish: r.SelectedFinish?.Key ?? "nonfoil", r.Condition, r.Altered, r.Misprint,
                            Unchecked: r.Verdict == Verdict.None && r.Bin?.WantedBin == 0))
-            .Select(g => (Card: g.First().ShownCard!, g.Key.Finish, g.Key.Condition, g.Key.Unchecked, Qty: g.Count()))
+            .Select(g => (Card: g.First().ShownCard!, g.Key.Finish, g.Key.Condition, g.Key.Altered, g.Key.Misprint, g.Key.Unchecked, Qty: g.Count()))
             .OrderBy(r => r.Card.Name).ToList();
         if (rows.Count == 0) { ExportText = "Nothing to export yet."; return; }
         try { Directory.CreateDirectory(dir); } catch { }
@@ -334,13 +334,15 @@ public partial class IdentifyViewModel
             "Lightly Played" => "lightly_played", "Moderately Played" => "moderately_played",
             "Heavily Played" => "heavily_played", "Damaged" => "damaged", _ => "near_mint",
         };
-        var mb = new StringBuilder("Name,Set code,Collector number,Foil,Rarity,Quantity,Condition,Language,Scryfall ID\n");
-        var mx = new StringBuilder("\"Count\",\"Name\",\"Edition\",\"Condition\",\"Language\",\"Foil\",\"Collector Number\",\"Tags\"\n");
-        foreach (var (card, fin, cond, unchecked_, qty) in rows)
+        // ManaBox: its own export's columns; language as a Scryfall code ("en", "ja", "ph"...). The Scryfall ID pins
+        // the exact printing either way. Moxfield: its collection import (Deckbox-style), language by name.
+        var mb = new StringBuilder("Name,Set code,Set name,Collector number,Foil,Rarity,Quantity,Scryfall ID,Misprint,Altered,Condition,Language\n");
+        var mx = new StringBuilder("\"Count\",\"Name\",\"Edition\",\"Condition\",\"Language\",\"Foil\",\"Collector Number\",\"Alter\",\"Tags\"\n");
+        foreach (var (card, fin, cond, altered, misprint, unchecked_, qty) in rows)
         {
-            mb.Append($"{Q(card.Name)},{card.SetCode.ToUpperInvariant()},{Q(card.CollectorNumber)},{(fin == "nonfoil" ? "normal" : fin)},{card.Rarity},{qty},{ManaCond(cond)},{card.LanguageName},{card.Id}\n");
+            mb.Append($"{Q(card.Name)},{card.SetCode.ToUpperInvariant()},{Q(card.SetName)},{Q(card.CollectorNumber)},{(fin == "nonfoil" ? "normal" : fin)},{card.Rarity},{qty},{card.Id},{(misprint ? "true" : "false")},{(altered ? "true" : "false")},{ManaCond(cond)},{card.Lang}\n");
             string mxFoil = fin switch { "foil" => "foil", "etched" => "etched", _ => "" };
-            mx.Append($"\"{qty}\",{Q(card.Name)},\"{card.SetCode.ToLowerInvariant()}\",{Q(string.IsNullOrEmpty(cond) ? "Near Mint" : cond)},\"{card.LanguageName}\",\"{mxFoil}\",{Q(card.CollectorNumber)},\"{(unchecked_ ? "needs-check" : "")}\"\n");
+            mx.Append($"\"{qty}\",{Q(card.Name)},\"{card.SetCode.ToLowerInvariant()}\",{Q(string.IsNullOrEmpty(cond) ? "Near Mint" : cond)},\"{card.LanguageName}\",\"{mxFoil}\",{Q(card.CollectorNumber)},\"{(altered ? "True" : "False")}\",\"{(unchecked_ ? "needs-check" : "")}\"\n");
         }
         string baseName = s is null ? "cards" : string.Concat(s.Name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '-' : c));
         var pMb = Path.Combine(dir, $"{baseName} - ManaBox.csv");
