@@ -48,8 +48,9 @@ public sealed class CardCatalog : IDisposable
         "special_foil, price_usd, price_usd_foil, price_usd_etched, image_url, rarity, colors, type_line";
     private readonly string Columns;
 
-    /// <summary>Printed set size ("/280") per set code, from the catalog's set_info table (empty on older catalogs).</summary>
-    public IReadOnlyDictionary<string, int> SetSizes { get; }
+    /// <summary>Sizes a card of each set may print after the slash ("/280"): printed size and booster size.
+    /// From the catalog's set_info table (empty on older catalogs).</summary>
+    public IReadOnlyDictionary<string, HashSet<int>> SetSizes { get; }
 
     public CardCatalog(string dbPath)
     {
@@ -62,13 +63,17 @@ public sealed class CardCatalog : IDisposable
         _con.Open();
         bool Has(string sql) { using var c = _con.CreateCommand(); c.CommandText = sql; return c.ExecuteScalar() is not null; }
         Columns = BaseColumns + (Has("SELECT 1 FROM pragma_table_info('cards') WHERE name = 'lang'") ? ", lang" : ", 'en'");
-        var sizes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var sizes = new Dictionary<string, HashSet<int>>(StringComparer.OrdinalIgnoreCase);
         if (Has("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'set_info'"))
         {
             using var c = _con.CreateCommand();
             c.CommandText = "SELECT set_code, printed_size FROM set_info WHERE printed_size > 0";
             using var r = c.ExecuteReader();
-            while (r.Read()) sizes[r.GetString(0)] = r.GetInt32(1);
+            while (r.Read())
+            {
+                if (!sizes.TryGetValue(r.GetString(0), out var set)) sizes[r.GetString(0)] = set = [];
+                set.Add(r.GetInt32(1));
+            }
         }
         SetSizes = sizes;
     }

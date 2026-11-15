@@ -188,6 +188,17 @@ def english_set_codes(bulk_path) -> set[str]:
     return {c.get("set") for c in iter_raw_cards(bulk_path) if c.get("lang") == "en"}
 
 
+def booster_max_numbers(bulk_path) -> dict[str, int]:
+    """Highest plain collector number among each set's booster cards: what most cards print after the slash
+    ("124/280" in M20, whose Scryfall printed_size of 345 also counts the cards that aren't in boosters)."""
+    best: dict[str, int] = {}
+    for c in iter_raw_cards(bulk_path):
+        n = c.get("collector_number", "")
+        if c.get("booster") and n.isdigit():
+            best[c["set"]] = max(best.get(c["set"], 0), int(n))
+    return best
+
+
 def to_record(card: dict, languages: set[str] = LANGUAGES, english_sets: set[str] | None = None) -> dict | None:
     """Convert a raw Scryfall card into the record we store. Returns None to skip it.
     Other-language printings are kept when they belong to a set with English printings: default_cards only

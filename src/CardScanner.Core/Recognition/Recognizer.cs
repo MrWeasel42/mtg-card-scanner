@@ -281,7 +281,7 @@ public sealed class Recognizer : IDisposable
             || (p.SetCode is "plst" or "ulst" && p.Number.Split('-') is [var os, _] && collector.SetCodes.Contains(os.ToLowerInvariant()));
         bool noSetCode = collector.SetCodes.Count == 0 || !pool.Values.Any(SetHit);
         // "124/280": the set size settles reprints that share a number (Act of Treason M10 #124 vs M20 #124).
-        int? SizeOf(PrintingKey p)
+        HashSet<int>? SizesOf(PrintingKey p)
         {
             var code = p.SetCode is "plst" or "ulst" && p.Number.Split('-') is [var os, _] ? os : p.SetCode;
             return _catalog.SetSizes.TryGetValue(code, out var n) ? n : null;
@@ -314,7 +314,7 @@ public sealed class Recognizer : IDisposable
                 _ => false,
             };
             bool yearMatch = collector.CopyrightYear is { } cy && p.ReleaseYear == cy;
-            bool sizeMatch = num && collector.SetTotals.Count > 0 && SizeOf(p) is { } size && collector.SetTotals.Contains(size);
+            bool sizeMatch = num && collector.SetTotals.Count > 0 && SizesOf(p) is { } sizes && sizes.Overlaps(collector.SetTotals);
             double score = ImageWeight * sim + ns + (num ? NumberBonus : 0) + (set ? SetBonus : 0) + (pinnedByCollector ? BothBonus : 0)
                 + (yearMatch && !pinnedByCollector ? YearBonus : 0)
                 + (sizeMatch && !pinnedByCollector ? SizeBonus : 0)
@@ -396,7 +396,7 @@ public sealed class Recognizer : IDisposable
                 .GroupBy(t => GroupS(t.P)).Select(g => g.First()).ToList();
             var sized = same.Where(t => t.Size).ToList();
             if (sized.Count == 1 && sized[0].P.Id == best.Card.Id && !listDoubtFor(best.Card.Name))
-            { pinned = true; pinReason = $"name + number + set size (/{SizeOf(sized[0].P)})"; }
+            { pinned = true; pinReason = $"name + number + set size (/{string.Join("/", collector.SetTotals)})"; }
         }
         // 2003-2014 frames print a copyright year and "179/301" but no set code. When the number didn't read,
         // the year alone can still single out one printing (Creeping Renaissance: ISD 2011 vs C18 2018).

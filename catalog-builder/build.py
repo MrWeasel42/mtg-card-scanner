@@ -93,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
     n_cards = db.replace_cards(con, records)
     print(f"{n_cards:,} printings")
     try:
-        print(f"{db.replace_set_sizes(con, scryfall.get_set_sizes(USER_AGENT)):,} set sizes")
+        print(f"{db.replace_set_sizes(con, scryfall.get_set_sizes(USER_AGENT), scryfall.booster_max_numbers(bulk)):,} set sizes")
     except Exception as e:  # the set sizes only help tell reprints apart: never fail the build over them
         print(f"Set sizes skipped: {e}")
 
