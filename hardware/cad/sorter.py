@@ -437,6 +437,9 @@ CAM_D_MIN, CAM_D_MAX = 158.0, 205.0
 CAM_SLOT_Z0 = PATH + 44 + CAM_D_MIN + CAM_HOLE_DZ   # lens tip is 44 below the PCB underside
 CAM_SLOT_Z1 = PATH + 44 + CAM_D_MAX + CAM_HOLE_DZ
 HOOD_H = 266.0        # lens-to-card 160-205 mm with 2 mm over the camera at the top; prints 256 tall (Neptune 4 Pro: 265)
+PI_Z = PATH + HOOD_H - 52.0   # Pi 5 centre height on the back of the hood (board 85 x 56, long edge level)
+PI_TAB_DX, PI_TAB_DZ = 52.0, 22.0   # pi_mount's M3 tabs, from the Pi centre
+CAM_CABLE_Z = PATH + HOOD_H - 15.0  # camera ribbon slot in the back wall, just above the Pi
 
 def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True, bay=False):
     """One side of a track module (side = -1 front, +1 back). Wall + top strip with belt run + foot.
@@ -552,7 +555,13 @@ def hood():
         h = h.cut(box(xa - 1, xb + 1, -1.7, 1.7, CAM_SLOT_Z0, CAM_SLOT_Z1))
         for zz in (CAM_SLOT_Z0, CAM_SLOT_Z1):
             h = h.cut(cyl_x(0, zz, 1.7, xa - 1, xb + 1))
-    h = h.cut(box(SCAN_X - 12, SCAN_X + 12, 30, 34, PATH + HOOD_H - 4, PATH + HOOD_H + 1))
+    # Pi 5 rides on the outside of the back wall (pi_mount): 4 pads with M3 inserts, and a 24 x 4 mm slot above
+    # the Pi for the camera ribbon (the 300 mm cable that comes with the camera reaches with ~10 cm spare).
+    for px in (-PI_TAB_DX, PI_TAB_DX):
+        for pz in (-PI_TAB_DZ, PI_TAB_DZ):
+            h = h.union(box(SCAN_X + px - 5, SCAN_X + px + 5, y1 - 0.5, y1 + 6, PI_Z + pz - 5, PI_Z + pz + 5))
+            h = h.cut(cyl_y(SCAN_X + px, PI_Z + pz, M3_INSERT / 2, y1 - 1, y1 + 7))
+    h = h.cut(box(SCAN_X - 12, SCAN_X + 12, y1 - 4, y1 + 1, CAM_CABLE_Z - 2, CAM_CABLE_Z + 2))
     # LED channel ledges (aluminium channel 17 x 8 mm) at 90 mm above the card, all round
     zled = PATH + 90
     h = h.union(box(x0 + 3, x1 - 3, y0 + 3, y0 + 14, zled - 2, zled))
@@ -580,6 +589,22 @@ def camera_plate():
     for dx in (-15, 15):
         for dy in (-15, 15):
             p = p.cut(cyl_z(dx, dy, 1.35, -1, 5))
+    return p
+
+def pi_mount():
+    """Holds the Pi 5 on the outside of the hood's back wall, board upright, cooler facing out (free air).
+    Pi on 4 x M2.5 x 6 into self-tapping bosses (58 x 49); plate on the hood's 4 pads with 4 x M3 x 8 into inserts.
+    Local frame: plate in XZ, back face on y = 0 (against the pads), Pi centre at x = z = 0."""
+    T = 3.0
+    p = box(-PI_TAB_DX - 6, PI_TAB_DX + 6, 0, T, -PI_TAB_DZ - 6, PI_TAB_DZ + 6)
+    p = p.cut(box(-30, 30, -1, T + 1, -14, 14))                  # window: less plastic, air behind the board
+    for px in (-PI_TAB_DX, PI_TAB_DX):
+        for pz in (-PI_TAB_DZ, PI_TAB_DZ):
+            p = p.cut(cyl_y(px, pz, M3 / 2, -1, T + 1))
+    for dx in (-29, 29):
+        for dz in (-24.5, 24.5):
+            p = p.union(cyl_y(dx, dz, 3, T, T + 6))
+            p = p.cut(cyl_y(dx, dz, 1.05, T - 1, T + 7))         # M2.5 self-tap
     return p
 
 def polarizer_cap():
@@ -715,19 +740,16 @@ def end_cap():
 
 # ============================================================================ ELECTRONICS, POWER, SCREEN
 def electronics_tray():
-    """Slides into the feeder base under the hopper. Pi 5 (58 x 49 mm M2.5 pattern) at the front so its ports
-    face the service cover; motor board, servo driver, 6 V step-down and LED MOSFET on a 10 mm grid of M3
-    holes behind it. Zip-tie slots along both edges for the looms."""
+    """Slides into the feeder base under the hopper. SKR Pico (same 58 x 49 mm M2.5 pattern as a Pi) at the front
+    on 8 mm bosses; servo driver, 6 V step-down and LED MOSFET on a 10 mm grid of M3 holes behind it. Zip-tie
+    slots along both edges for the looms. (The Pi 5 lives on the back of the hood, next to the camera.)"""
     T = 3.0
     t = box(0, 133, -54, 54, 0, T)
     for dx in (0, 58):
         for dy in (0, 49):
             xh, yh = 12 + dx, -50 + 3.5 + dy
-            t = t.union(cyl_z(xh, yh, 3, T, T + 5))
-            t = t.cut(cyl_z(xh, yh, 1.4, -1, T + 6))
-            t = t.cut(cyl_z(xh, yh, 2.6, -1, 2.6))          # counterbore: M2.5 x 12 heads sit flush underneath
-    # SKR Pico stacks above the Pi on 4 printed skr_post columns: an M2.5 x 12 from under the tray goes up
-    # through the tray post and the Pi and threads into the column; the SKR screws on top with M2.5 x 6.
+            t = t.union(cyl_z(xh, yh, 3, T, T + 8))
+            t = t.cut(cyl_z(xh, yh, 1.05, T, T + 9))          # M2.5 x 6 self-tap from the top
     for x in range(80, 131, 10):
         for y in range(10, 51, 10):
             t = t.cut(cyl_z(x, y, 1.7, -1, T + 1))
@@ -738,13 +760,6 @@ def electronics_tray():
         for y in (-52, 52):
             t = t.cut(box(x, x + 3, y - 1.5, y + 1.5, -1, T + 1))
     return t
-
-def skr_post():
-    """40 mm printed column (Pi top face to SKR underside) for the SKR Pico over the Pi 5. Plain self-tapping
-    holes for M2.5 at both ends. Prints upright; 4 needed."""
-    p = cyl_z(0, 0, 3.0, 0, 40)
-    p = p.cut(cyl_z(0, 0, 1.05, -1, 9)).cut(cyl_z(0, 0, 1.05, 31, 41))
-    return p
 
 def bay_cover():
     """Front cover of the electronics bay: vent slots + a 30 mm fan position. 4 x M3."""
@@ -904,6 +919,7 @@ PRINTED = {
     "scan_side_back":  (lambda: scan_side_back(), 1, "PETG", "On its outer face."),
     "scan_floor":      (scan_floor, 1, "PLA matte black", "Top face DOWN on the smooth side of the plate: flat, slick, dull."),
     "hood":            (hood, 1, "PLA matte black", "Upside down (roof on the plate), tree supports for the tunnel only. ~16 h."),
+    "pi_mount":        (pi_mount, 1, "PETG", "Flat, bosses up. Pi 5 on 4 x M2.5 x 6; to the hood's back pads with 4 x M3 x 8."),
     "camera_plate":    (camera_plate, 1, "PETG", "Tabs up. 2 M3 inserts in the tabs; clamps to the hood ribs with 2 x M3 x 10."),
     "polarizer_cap":   (polarizer_cap, 1, "PETG", ""),
     "bin_side_back":   (lambda: bin_module_side(1), 2, "PETG", "On its outer face; one per bin module."),
@@ -917,7 +933,6 @@ PRINTED = {
     "end_cap":         (end_cap, 1, "PETG", ""),
     "end_ramp":        (end_ramp, 1, "PETG", "Ramp face DOWN on the smooth side of the plate (slick), tree supports under the flange."),
     "electronics_tray":(electronics_tray, 1, "PETG", "Flat."),
-    "skr_post":        (skr_post, 4, "PETG", "Upright, 100% infill. Holds the SKR Pico 40 mm over the Pi."),
     "bay_cover":       (bay_cover, 1, "PLA matte black", "Flat, outside face down."),
     "psu_cradle":      (psu_cradle, 2, "PETG", "On its back."),
     "inlet_plate":     (inlet_plate, 1, "PETG", "Flat. Cutout 47.5 x 27.5 mm for a snap-in C14 inlet; check yours."),
@@ -944,6 +959,7 @@ def placed():
     P["scan_side_back"] = scan_side_back()
     P["scan_floor"] = scan_floor()
     P["hood"] = hood()
+    P["pi_mount"] = pi_mount().translate((SCAN_X, 75.0 + 6, PI_Z))
     for i, xb in enumerate(BIN_X[:2]):
         x0 = xb - PITCH / 2
         P[f"bin_side_back_{i}"] = bin_module_side(1).translate((x0, 0, 0))

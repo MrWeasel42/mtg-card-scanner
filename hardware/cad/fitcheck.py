@@ -134,20 +134,24 @@ stack = stack.rotate((0, 0, PATH), (1, 0, PATH), -TOWER_LEAN).rotate((xi1, 0, PA
 check("Full card stack (550 raw) vs hopper walls", stack, P["raw_tower"], 0.5, "nothing inside the L: braces are on the outside")
 # --- electronics bay
 tray_z = RAIL_Z + 17.2 + 3
-pi = B.pi5().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, tray_z + 5))
-skr = B.skr_pico().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, tray_z + 5 + 1.6 + 40))
-inner_free = box(4, 146, -56, 56, RAIL_Z + 6, PATH - 4)
+skr = B.skr_pico().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, tray_z + 8))
 shafts = cyl_y(FEED_X, FEED_Z, 9.5, -60, 60).union(cyl_y(EXIT_X, EXIT_Z, 9.5, -60, 60))
-check("Pi 5 + cables vs feeder base", pi, base, 1.0, "12 mm finger room at the USB end; the SKR talks over UART")
-check("SKR Pico + plugs (on 40 mm standoffs) vs base", skr, base, 1.0)
+check("SKR Pico + plugs (on 8 mm tray bosses) vs base", skr, base, 1.0, "the Pi talks to it over UART from the hood")
 check("SKR Pico + plugs vs roller shafts/pulleys", skr, shafts, 3.0)
-posts = None
-for dx in (0, 58):
-    for dy in (0, 49):
-        c = skr_post().translate((8.5 + 12 + dx, -50 + 3.5 + dy, tray_z + 5 + 1.6))
-        posts = c if posts is None else posts.union(c)
-check("Printed SKR posts vs feeder base, shafts", posts, base.union(shafts), 1.0)
-check("SKR Pico vs Pi 5 (airflow gap)", skr.cut(box(-100,300,-100,100,-100,tray_z+5+1.6+40)), B.pi5().translate((8.5 + 12 - 3.5, -50, tray_z + 5)).cut(box(-100,0,-100,100,-100,100)), 15.0, "Pi cooler needs air")
+# --- Pi 5 on the back of the hood, board upright, cooler facing out
+from sorter import PI_Z, pi_mount
+pi_local = B.pi5().translate((-32.5, -28, 0))                 # hole-pattern centre at the origin
+pi = pi_local.rotate((0, 0, 0), (1, 0, 0), -90).translate((SCAN_X, 75.0 + 6 + 3 + 6, PI_Z))
+check("Pi 5 (+cooler, finger room) vs hood", pi, P["hood"], 1.0)
+check("Pi 5 vs its mount plate", pi, P["pi_mount"], 0.0, "sits on the bosses")
+others = pr(*[k for k in P if k not in ("hood", "pi_mount")])
+check("Pi 5 vs everything else", pi, others, 3.0)
+check("Pi mount vs everything but the hood", P["pi_mount"], others, 2.0)
+# camera ribbon: Pi CSI connector (near the board's top edge) out, up through the back-wall slot, to the camera
+from sorter import CAM_CABLE_Z
+cam_top = PATH + CAM_D + 44 + 2                                # camera PCB top face at the default 200 mm
+run = (CAM_CABLE_Z - (PI_Z + 18)) + 15 + 75 + abs(CAM_CABLE_Z - cam_top) + 30   # up the board, through the wall, across to centre, to the camera, +30 slack
+checks.append(dict(label="Camera ribbon run (Pi CSI -> slot -> camera) vs 300 mm cable", overlap=0, gap=round(300 - run, 1), need=40, ok=300 - run >= 40, note=f"~{run:.0f} mm with bends; cable 300 mm"))
 # --- PSU under the scanner
 psu = B.lrs100().translate((PSU_X0, 0, RAIL_Z + 5))
 scan = pr("scan_side_front", "scan_side_back", "scan_floor")
