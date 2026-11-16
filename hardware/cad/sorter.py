@@ -526,7 +526,7 @@ def scan_side_back():
     return f
 
 def scan_floor():
-    """Solid matte-black floor under the camera, between the strips (Y -35..35). Slots let the fins pass."""
+    """Solid matte-green floor under the camera (green stands out best against black, white and borderless card edges), between the strips (Y -35..35). Slots let the fins pass."""
     x0, x1 = SCAN_X0, SCAN_X1
     fl = box(x0 + 0.5, x1 - 5.5, -STRIP_IN + 0.2, STRIP_IN - 0.2, PATH - 3, PATH)   # tie-bar plate covers the last 5 mm
     fl = fl.cut(fin_groove(x0 - 1, x1 + 1, STRIP_IN))
@@ -917,8 +917,8 @@ PRINTED = {
     "feeder_base":     (feeder_base, 1, "PETG", "Upright, 15% gyroid, 4 walls. ~19 h."),
     "raw_tower":       (raw_tower, 1, "PETG", "Upright, 3 walls. L-shaped: back + exit walls, leans 3 deg back and 3 deg toward the exit."),
     "gate_plate":      (gate_plate, 1, "PETG", "Foot down. Glue a 1.5 mm silicone pad strip under the foot."),
-    "feed_roller":     (feed_roller, 1, "PETG", "Flat on its end, 100% infill. Fit three 24 x 3.5 mm O-rings."),
-    "exit_roller":     (exit_roller, 2, "PETG", "Flat on its end, 100% infill. Two 16 x 3.5 mm O-rings each."),
+    "feed_roller":     (feed_roller, 1, "PETG", "Flat on its end, 100% infill. Three 16 ID x 3.5 mm O-rings (23 OD), same as the exit rollers."),
+    "exit_roller":     (exit_roller, 2, "PETG", "Flat on its end, 100% infill. Two 16 ID x 3.5 mm O-rings (23 OD) each."),
     "pressure_arm":    (pressure_arm, 1, "PETG", "Flat."),
     "stack_weight":    (stack_weight, 1, "PLA", "Fill the pocket with about 50 g (2 oz) of coins or nuts."),
     "fin":             (fin, 24, "PETG", "12 + 12 mirrored (10 per side + spares). On its side, 0.12 mm layers. Glue a 3 x 3 mm silicone square in the face pocket."),
@@ -931,7 +931,7 @@ PRINTED = {
     "motor_standoff":  (motor_standoff, 2, "PETG", "Standing on a side wall, 5 walls. One for the feed motor, one for the track motor. M3 x 8 to the motor, M3 x 10 to the wall."),
     "scan_side_front": (lambda: side_frame(SCAN_X0, SCAN_X1, -1, bin_opening=False), 1, "PETG", "On its outer face."),
     "scan_side_back":  (lambda: scan_side_back(), 1, "PETG", "On its outer face."),
-    "scan_floor":      (scan_floor, 1, "PLA matte black", "Top face DOWN on the smooth side of the plate: flat, slick, dull."),
+    "scan_floor":      (scan_floor, 1, "PLA matte green", "Top face DOWN on the smooth side of the plate: flat, slick, dull."),
     "hood":            (hood, 1, "PLA matte black", "Upside down (roof on the plate), tree supports for the tunnel only. ~16 h."),
     "pi_mount":        (pi_mount, 1, "PETG", "Flat, bosses up. Pi 5 on 4 x M2.5 x 6; to the hood's back pads with 4 x M3 x 8."),
     "camera_plate":    (camera_plate, 1, "PETG", "Tabs up. 2 M3 inserts in the tabs; clamps to the hood ribs with 2 x M3 x 10."),

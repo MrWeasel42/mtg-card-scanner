@@ -255,14 +255,61 @@ class Sorter:
             self._logf.close()
 
 
+def bench(cfg: dict, args) -> int:
+    """Bench tests that need no PC: one door, all doors, one photo, bin levels."""
+    if args.door:
+        b, us = args.door
+        d = hw.Doors(cfg)
+        d._pulse(d.cfg[b]["channel"], us)
+        print(f"Door {b} held at {us} us. Ctrl+C to stop.", flush=True)
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            return 0
+    if args.test_doors:
+        d = hw.Doors(cfg)
+        for b in d.cfg:
+            for _ in range(3):
+                d.set(b, open_=True); time.sleep(0.6)
+                d.set(b, open_=False); time.sleep(0.6)
+            print(f"Door {b} done.", flush=True)
+        return 0
+    if args.photo:
+        m = hw.Klipper(cfg["moonraker"])
+        m.lights(float(cfg["camera"]["lights_pwm"]))
+        cam = hw.Camera(cfg)
+        time.sleep(cfg["camera"]["settle_ms"] / 1000)
+        open(args.photo, "wb").write(cam.jpeg())
+        m.lights(0.0)
+        print(f"Saved {args.photo}", flush=True)
+        return 0
+    if args.levels:
+        lv = hw.Levels(cfg)
+        try:
+            while True:
+                print("  ".join(f"bin {i + 1}: {mm} mm" for i, mm in enumerate(lv.distances())), flush=True)
+                time.sleep(1)
+        except KeyboardInterrupt:
+            return 0
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Card sorter")
     ap.add_argument("--config", default=os.path.join(HERE, "config.yaml"))
     ap.add_argument("--sim", type=int, metavar="CARDS", help="run with pretend hardware and a pretend PC")
     ap.add_argument("--limit", type=int, help="stop feeding after this many cards")
     ap.add_argument("--home-only", action="store_true", help="home the belt and stop (for setting home_to_station_mm)")
+    ap.add_argument("--door", nargs=2, type=int, metavar=("BIN", "US"),
+                    help="hold one door servo at a pulse width in microseconds (for finding closed_us / open_us)")
+    ap.add_argument("--test-doors", action="store_true", help="open and close every door 3 times using config.yaml")
+    ap.add_argument("--photo", metavar="FILE", help="lights on, take one photo to FILE (focus and polarizer setup)")
+    ap.add_argument("--levels", action="store_true", help="print each bin-level sensor's distance in mm, every second")
     args = ap.parse_args(argv)
     cfg = yaml.safe_load(open(args.config))
+    if args.door or args.test_doors or args.photo or args.levels:
+        return bench(cfg, args)
     log_dir = os.path.join(os.path.expanduser("~"), "sorter_logs")
 
     if args.sim is not None:
