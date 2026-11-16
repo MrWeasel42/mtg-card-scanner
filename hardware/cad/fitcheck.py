@@ -208,7 +208,12 @@ for d in (CAM_D_MIN, CAM_D_MAX):
     check(f"HQ camera at lens height {d:.0f} mm vs hood", cam, P["hood"], 2.0, "clamped to the slotted roof ribs")
 # --- screen
 check("Screen wall mount (between hopper and hood) vs front wire channel", P["mount_wall_gap"], P["scan_side_front"].cut(box(120, 230, -60, -54.9, PATH - 40, PATH)), 0.5)
-check("Display in cradle vs bay cover / base", B.display().translate((0, 0, 0)).translate((75, -63 - 4 - 14 - 3, 60)), pr("feeder_base", "bay_cover"), 0.0, "display sits in the cradle, tilted 25 deg")
+disp = screen_placed(box(-94.75, 94.75, -15, 0, -7, 113))
+check("Display in cradle vs hood", disp, P["hood"], 2.0, "screen on the hood front, tilted back")
+check("Display + cradle vs everything else", disp.union(P["screen_cradle"]), pr(*[k for k in P if k not in ("hood", "mount_front", "screen_cradle")]), 3.0)
+check("Screen mount vs hood (only the pads)", P["mount_front"], P["hood"], 0.0)
+dsi = (PATH + HOOD_H - PI_Z) + 150 + 2 * 9 + (PATH + HOOD_H - (SCREEN_MZ - SCREEN_H / 2 + 20)) + 25 + 30   # Pi up to the roof, over, down the front to the cradle slot, +30 slack
+checks.append(dict(label="Display ribbon run (Pi -> over the roof -> screen) vs 500 mm cable", overlap=0, gap=round(500 - dsi, 1), need=40, ok=500 - dsi >= 40, note=f"~{dsi:.0f} mm; the short cable in the display box won't reach"))
 # --- wiring
 loom_back = 8 * 3 + 8 * 2 + 9 * 3          # servo + emitter + bin-full conductors, full 9-bin build
 area = loom_back * 3.1416 * (1.1 / 2) ** 2

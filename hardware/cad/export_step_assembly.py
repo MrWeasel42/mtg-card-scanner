@@ -31,6 +31,11 @@ add(motor_standoff().translate((FEED_X, 60, FEED_Z)), name="motor_standoff_feed"
 add(motor_standoff().translate((END_SHAFT_X, WALL_OUT, PUL_Z)), name="motor_standoff_track", color=petg)
 add(B.lrs100().translate((PSU_X0, 0, RAIL_Z + 5)), name="PSU_LRS-100-24_with_wire_space", color=alu)
 add(B.hq_camera().translate((SCAN_X, 0, PATH + CAM_D + 44)), name="Pi_HQ_camera_6mm_lens", color=dark)
+green = cq.Color(0.1, 0.45, 0.25); screen = cq.Color(0.05, 0.05, 0.08)
+pi_board = B.pi5().translate((-32.5, -28, 0)).rotate((0, 0, 0), (1, 0, 0), -90).translate((SCAN_X, 75.0 + 6 + 3 + 6, PI_Z))
+add(pi_board, name="Raspberry_Pi_5_with_cooler", color=green)
+add(B.skr_pico().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, RAIL_Z + 17.2 + 3 + 8)), name="SKR_Pico", color=green)
+add(screen_placed(box(-94.75, 94.75, -15, 0, -7, 113)), name="Touch_Display_2", color=screen)
 yc = (BELT_Y0 + BELT_Y1) / 2
 for s in (-1, 1):
     y0, y1 = sorted((s * BELT_Y0, s * BELT_Y1))

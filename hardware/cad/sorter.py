@@ -440,6 +440,8 @@ HOOD_H = 266.0        # lens-to-card 160-205 mm with 2 mm over the camera at the
 PI_Z = PATH + HOOD_H - 52.0   # Pi 5 centre height on the back of the hood (board 85 x 56, long edge level)
 PI_TAB_DX, PI_TAB_DZ = 52.0, 22.0   # pi_mount's M3 tabs, from the Pi centre
 CAM_CABLE_Z = PATH + HOOD_H - 15.0  # camera ribbon slot in the back wall, just above the Pi
+SCREEN_MZ = PATH + HOOD_H - 70.0    # screen mount (and screen centre) height on the hood front
+SCREEN_TILT = 15.0                  # screen leans back this many degrees
 
 def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True, bay=False):
     """One side of a track module (side = -1 front, +1 back). Wall + top strip with belt run + foot.
@@ -562,6 +564,10 @@ def hood():
             h = h.union(box(SCAN_X + px - 5, SCAN_X + px + 5, y1 - 0.5, y1 + 6, PI_Z + pz - 5, PI_Z + pz + 5))
             h = h.cut(cyl_y(SCAN_X + px, PI_Z + pz, M3_INSERT / 2, y1 - 1, y1 + 7))
     h = h.cut(box(SCAN_X - 12, SCAN_X + 12, y1 - 4, y1 + 1, CAM_CABLE_Z - 2, CAM_CABLE_Z + 2))
+    # screen mount pads on the outside of the front wall (mount_front, 2 x M3 inserts 116 mm apart)
+    for px in (-58, 58):
+        h = h.union(box(SCAN_X + px - 5, SCAN_X + px + 5, y0 - 6, y0 + 0.5, SCREEN_MZ - 8, SCREEN_MZ + 8))
+        h = h.cut(cyl_y(SCAN_X + px, SCREEN_MZ, M3_INSERT / 2, y0 - 7, y0 + 1))
     # LED channel ledges (aluminium channel 17 x 8 mm) at 90 mm above the card, all round
     zled = PATH + 90
     h = h.union(box(x0 + 3, x1 - 3, y0 + 3, y0 + 14, zled - 2, zled))
@@ -839,8 +845,10 @@ def mount_wall():
     g = gopro(3, 14, base_w=26).rotate((0, 0, 0), (1, 0, 0), -90).translate((0, 5, 0))
     return m.union(g)
 
-def mount_bay():
-    """Screen mount on the front of the electronics bay: replaces two of the bay cover screws."""
+def mount_front():
+    """Screen mount on the front of the hood (default spot, close to the Pi so the 500 mm display ribbon reaches
+    over the roof): 2 x M3 x 10 into the hood's front pads. Also fits the electronics bay front (two of the
+    bay cover screws, same 116 mm spacing) if the screen ever goes back down there."""
     m = box(-62, 62, -4, 0, -8, 8)
     for x in (-63 + 5, 63 - 5):
         m = m.cut(cyl_y(x, 0, M3 / 2, -5, 1))
@@ -853,6 +861,12 @@ def gopro_arm(length=90.0):
     a = a.union(gopro(2, 10, base_w=10, base_t=0.01).translate((0, 0, length)))
     a = a.union(gopro(3, 10, base_w=16, base_t=0.01).rotate((0, 0, 0), (1, 0, 0), 180))
     return a
+
+def screen_placed(shape):
+    """Puts a shape in the screen cradle's frame (pivot on mount_front's prongs, centred, tilted back)."""
+    piv = (SCAN_X, -75.0 - 6 - 4 - 14, SCREEN_MZ)
+    return (shape.translate((0, -3 - 12, -(SCREEN_H + 4) / 2)).rotate((0, 0, 0), (1, 0, 0), -SCREEN_TILT)
+            .translate(piv))
 
 def screen_cradle():
     """Holds the 7 in Touch Display 2 by its edges (lips) with a slot for the ribbon cable, plus a 2-prong
@@ -938,7 +952,7 @@ PRINTED = {
     "inlet_plate":     (inlet_plate, 1, "PETG", "Flat. Cutout 47.5 x 27.5 mm for a snap-in C14 inlet; check yours."),
     "channel_cover":   (channel_cover, 6, "PLA", "On its back. Clips over the wire channels."),
     "screen_cradle":   (screen_cradle, 1, "PETG", "Face down. Check the display size on arrival. GoPro tab on the back."),
-    "mount_bay":       (mount_bay, 1, "PETG", "Screen mount on the electronics bay front (default spot)."),
+    "mount_front":     (mount_front, 1, "PETG", "Screen mount on the hood front (default spot): 2 x M3 x 10 into the hood's pads."),
     "mount_wall":      (mount_wall, 2, "PETG", "Bolts to any module wall: between hopper and scanner, or on the back for an arm over the track."),
     "mount_roof":      (mount_roof, 1, "PETG", "Optional: screen on top of the hood."),
     "gopro_arm":       (gopro_arm, 2, "PETG", "100% infill. Or use store-bought GoPro extension arms."),
@@ -972,13 +986,9 @@ def placed():
     for xc in (PSU_X0 + 8, PSU_X0 + PSU_L - 26):
         P[f"psu_cradle_{int(xc)}"] = psu_cradle().translate((xc, 0, 0))
     P["inlet_plate"] = inlet_plate().translate((SCAN_X0 + 32, WALL_OUT, RAIL_Z + 29))
-    # default screen spot: on the front of the electronics bay, tilted back 25 degrees
-    bay_y = -63.0; bay_z = RAIL_Z + 6 + 66
-    P["mount_bay"] = mount_bay().translate((75, bay_y, bay_z))
-    piv = (75, bay_y - 4 - 14, bay_z)
-    P["screen_cradle"] = (screen_cradle().translate((0, -3 - 12, -(SCREEN_H + 4) / 2))
-                          .rotate((0, 0, 0), (0, 0, 1), 180).translate((0, 0, 0))
-                          .rotate((0, 0, 0), (1, 0, 0), 25).translate(piv))
+    # default screen spot: on the front of the hood, near the Pi (500 mm ribbon over the roof), tilted back
+    P["mount_front"] = mount_front().translate((SCAN_X, -75.0 - 6, SCREEN_MZ))
+    P["screen_cradle"] = screen_placed(screen_cradle())
     P["mount_wall_gap"] = mount_wall().rotate((0, 0, 0), (0, 0, 1), 180).translate((175, -WALL_OUT - 9, PATH - 21))
     xe = BIN_X[1] + PITCH / 2
     P["end_side_front"] = end_side(-1).translate((xe, 0, 0))

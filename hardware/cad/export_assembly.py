@@ -47,9 +47,7 @@ BY = [BIN_Y, BIN_Y, BIN_Y]
 for i, h in enumerate((60, 25, 90)):
     put(f"cards_in_bin{i}", box(BIN_X[i] - 44, BIN_X[i] + 44, BY[i] - 31.5, BY[i] + 31.5, 2, 2 + h * 0.3), "stack")
 # the 7 in display in its cradle (picture only)
-bay_y = -63.0; bay_z = RAIL_Z + 6 + 66; piv = (75, bay_y - 4 - 14, bay_z)
-disp = (box(-94.75, 94.75, -15, 0, -7, 113).translate((0, -3 - 12, -(SCREEN_H + 4) / 2))
-        .rotate((0, 0, 0), (0, 0, 1), 180).rotate((0, 0, 0), (1, 0, 0), 25).translate(piv))
+disp = screen_placed(box(-94.75, 94.75, -15, 0, -7, 113))
 put("display", disp, "screen")
 # PSU on its side under the scanner
 put("psu", box(PSU_X0, PSU_X0 + PSU_L, -PSU_H / 2, PSU_H / 2, RAIL_Z + 5, RAIL_Z + 5 + PSU_W), "alu")
