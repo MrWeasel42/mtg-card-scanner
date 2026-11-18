@@ -145,3 +145,12 @@ def test_other_language_kept_only_in_english_sets():
     r = scryfall.to_record(base, english_sets={"trk"})
     assert r is not None and r["lang"] == "kl" and r["name"] == "Kahless"
     assert scryfall.to_record(dict(base, set="xyz"), english_sets={"trk"}) is None
+
+
+def test_record_keeps_tcgplayer_ids():
+    from builder import scryfall
+    base = {"id": "x", "name": "Lightning Bolt", "set": "m11", "collector_number": "149", "lang": "en",
+            "games": ["paper"], "layout": "normal", "image_uris": {"normal": "u"}, "tcgplayer_id": 37442}
+    r = scryfall.to_record(base)
+    assert r["tcgplayer_id"] == "37442" and r["tcgplayer_etched_id"] is None
+    assert scryfall.to_record(dict(base, tcgplayer_id=None))["tcgplayer_id"] is None

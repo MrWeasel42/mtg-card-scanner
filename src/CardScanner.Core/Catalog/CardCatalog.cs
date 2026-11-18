@@ -21,7 +21,9 @@ public sealed record CardInfo(
     string Rarity = "",
     string Colors = "",
     string TypeLine = "",
-    string Lang = "en")
+    string Lang = "en",
+    string TcgplayerId = "",
+    string TcgplayerEtchedId = "")
 {
     /// <summary>The language printed on the card, as CSV exports name it ("English", "Japanese", "Klingon"...).</summary>
     public string LanguageName => LanguageNames.TryGetValue(Lang, out var n) ? n : Lang;
@@ -62,7 +64,9 @@ public sealed class CardCatalog : IDisposable
         }.ToString());
         _con.Open();
         bool Has(string sql) { using var c = _con.CreateCommand(); c.CommandText = sql; return c.ExecuteScalar() is not null; }
-        Columns = BaseColumns + (Has("SELECT 1 FROM pragma_table_info('cards') WHERE name = 'lang'") ? ", lang" : ", 'en'");
+        Columns = BaseColumns + (Has("SELECT 1 FROM pragma_table_info('cards') WHERE name = 'lang'") ? ", lang" : ", 'en'")
+                  + (Has("SELECT 1 FROM pragma_table_info('cards') WHERE name = 'tcgplayer_id'")
+                     ? ", tcgplayer_id, tcgplayer_etched_id" : ", NULL, NULL");
         var sizes = new Dictionary<string, HashSet<int>>(StringComparer.OrdinalIgnoreCase);
         if (Has("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'set_info'"))
         {
@@ -114,9 +118,10 @@ public sealed class CardCatalog : IDisposable
         r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4),
         Str(r, 5), Str(r, 6), Str(r, 7), Str(r, 8), Str(r, 9),
         Dec(r, 10), Dec(r, 11), Dec(r, 12), Str(r, 13), Str(r, 14), Str(r, 15), Str(r, 16),
-        Str(r, 17) is { Length: > 0 } lang ? lang : "en");
+        Str(r, 17) is { Length: > 0 } lang ? lang : "en", Any(r, 18), Any(r, 19));
 
     private static string Str(SqliteDataReader r, int i) => r.IsDBNull(i) ? "" : r.GetString(i);
+    private static string Any(SqliteDataReader r, int i) => r.IsDBNull(i) ? "" : Convert.ToString(r.GetValue(i), System.Globalization.CultureInfo.InvariantCulture) ?? "";
     private static decimal? Dec(SqliteDataReader r, int i) => r.IsDBNull(i) ? null : (decimal)r.GetDouble(i);
 
     public void Dispose() => _con.Dispose();

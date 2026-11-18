@@ -258,4 +258,7 @@ def to_record(card: dict, languages: set[str] = LANGUAGES, english_sets: set[str
         "image_url": image_url,
         "image_status": card.get("image_status", ""),
         "lang": card.get("lang", "en"),
+        # TCGplayer's product IDs (what TCGplayer's own imports and the ROCA sorter match on); etched foils are a separate product
+        "tcgplayer_id": str(card["tcgplayer_id"]) if card.get("tcgplayer_id") else None,
+        "tcgplayer_etched_id": str(card["tcgplayer_etched_id"]) if card.get("tcgplayer_etched_id") else None,
     }

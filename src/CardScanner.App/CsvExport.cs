@@ -19,6 +19,7 @@ public static class CsvExport
         new("Moxfield", "Moxfield", "Moxfield collection import (Collection → Import → CSV). Unreviewed flagged cards are tagged needs-check.", "Moxfield.csv"),
         new("Deckbox", "Deckbox", "Deckbox inventory import (also read by many other collection sites).", "Deckbox.csv"),
         new("TCGplayer", "TCGplayer list", "A Mass Entry list (1 Card Name [SET]) to paste at tcgplayer.com/massentry to price or buy the cards. TCGplayer has no collection import for non-sellers.", "TCGplayer Mass Entry.txt"),
+        new("Roca", "ROCA / TCGplayer", "Same columns as a ROCA Sorter export: one row per scan with TCGplayer product ID, bin, REJECT for flagged cards, confidence and photo. Good for comparing runs and for TCGplayer-based tools.", "ROCA style.csv"),
         new("General", "General CSV", "One row per scanned card with everything: printing, finish, price, colours, type, bin, why it was flagged.", "All details.csv"),
     ];
 
@@ -48,6 +49,7 @@ public static class CsvExport
                 "Moxfield" => Moxfield(rows),
                 "Deckbox" => Deckbox(rows),
                 "TCGplayer" => Tcgplayer(rows),
+                "Roca" => Roca(items),
                 _ => General(usable),
             };
             var path = Path.Combine(dir, $"{baseName} - {f.FileSuffix}");
@@ -100,6 +102,46 @@ public static class CsvExport
         var sb = new StringBuilder();
         foreach (var g in rows.GroupBy(r => (Name: r.Card.Name.Split(" // ")[0], Set: r.Card.SetCode.ToUpperInvariant())))
             sb.Append($"{g.Sum(r => r.Qty)} {g.Key.Name} [{g.Key.Set}]\n");
+        return sb.ToString();
+    }
+
+    // ROCA Sorter Max export: same header and value style (rejects first with Sequence ID 0 and bin REJECT,
+    // then sorted cards numbered 1, 2, 3...). Names and set names are Scryfall's, not TCGplayer's.
+    private static string Roca(IReadOnlyList<ResultItemViewModel> items)
+    {
+        var sb = new StringBuilder("Sequence ID,Output Bin ID,Rejected,TCGp Product ID,OmniChannel ID,Product Line,Set Name,Card Name,Number,Rarity,Condition ID,Condition,Finish,TCG Market Price,Confidence,Image Path\n");
+        static bool Known(ResultItemViewModel r) => r.HasResult && r.ShownCard is not null && r.Verdict is not (Verdict.NotListed or Verdict.NameOnly);
+        static bool Rejected(ResultItemViewModel r) => !Known(r) || (r.IsFlagged && r.Verdict == Verdict.None);
+        var ordered = items.Where(r => r.HasResult).OrderBy(r => !Rejected(r)).ThenBy(r => r.ScanNumber).ToList();
+        int seq = 0;
+        foreach (var r in ordered)
+        {
+            bool rej = Rejected(r);
+            var c = Known(r) ? r.ShownCard : null;
+            string finish = r.SelectedFinish?.Key ?? "nonfoil";
+            string tcgId = c is null ? "" : finish == "etched" && c.TcgplayerEtchedId.Length > 0 ? c.TcgplayerEtchedId
+                         : c.TcgplayerId.Length > 0 ? c.TcgplayerId : "Unavailable";
+            string cond = Cond(r.Condition);
+            int condId = cond switch { "Lightly Played" => 2, "Moderately Played" => 3, "Heavily Played" => 4, "Damaged" => 5, _ => 1 };
+            string rarity = c?.Rarity switch
+            {
+                "common" => "C", "uncommon" => "U", "rare" => "R", "mythic" => "M", "special" => "S", null or "" => "",
+                var x => x[..1].ToUpperInvariant(),
+            };
+            sb.Append(string.Join(",", new[]
+            {
+                rej ? "0" : (++seq).ToString(CultureInfo.InvariantCulture),
+                rej ? "REJECT" : r.Bin?.Bin.ToString(CultureInfo.InvariantCulture) ?? "",
+                rej ? "Y" : "N",
+                tcgId, "", c is null ? "" : "Magic", Q(c?.SetName), Q(c?.Name), Q(c?.CollectorNumber), rarity,
+                condId.ToString(CultureInfo.InvariantCulture), cond,
+                c is null ? "" : finish switch { "foil" => "Foil", "etched" => "Etched", _ => "Normal" },
+                (r.Price ?? 0m).ToString("0.##", CultureInfo.InvariantCulture),
+                c is null ? "None" : r.IsFlagged ? "FAIR" : "GOOD",
+                Q(r.Photo),
+            }));
+            sb.Append('\n');
+        }
         return sb.ToString();
     }
 
