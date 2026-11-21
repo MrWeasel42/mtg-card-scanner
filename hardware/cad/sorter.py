@@ -132,7 +132,7 @@ def fin_groove(x0, x1, y_out):
 def feeder_base():
     """Head unit: hopper floor, feed roller, exit roller, both motors, start of the edge belts.
     Footprint 150 x 130 mm (5.9 x 5.1 in), 185 mm (7.3 in) tall, prints upright without supports
-    (window openings are bridged). Walls 4 mm."""
+    (window openings and the hopper floor are bridged; parts hanging under the floor have 45 degree webs). Walls 4 mm."""
     X0, X1, Y0, Y1 = 0.0, 150.0, -60.0, 60.0
     shell = box(X0, X1, Y0, Y1, RAIL_Z, PATH)
     inner = box(X0 + 4, X1 - 4, Y0 + 4, Y1 - 4, RAIL_Z + 6, PATH - 4)
@@ -159,8 +159,22 @@ def feeder_base():
     b = b.cut(box(X1 - 5, X1 + 1, -17, 17, EXIT_Z - 14, PATH - 4))
     b = b.cut(box(FEED_X - 10, EXIT_X + 10, -56, -38, PATH - 4.1, PATH - 2.2))   # recess over both pulleys + the loop (122 mm loop)   # exit roller (D23.6) reaches past the end wall's inner face
     # feed roller shaft: 685ZZ bearings (11 mm OD x 5) in inner ribs at |Y| 24..29 (small enough to stay under the floor)
-    for y in (-29, 24):
-        b = b.union(box(FEED_X - 12, FEED_X + 12, y, y + 5, FEED_Z - 14, PATH - 4))
+    # The ribs hang from the hopper floor, so they're tied to a wall at 45 degrees and the base still prints
+    # upright with no support inside the closed box. Back rib: two 3 mm webs out to the back wall (clear of the
+    # feed shaft). Front rib: its underside slopes down toward -X and runs on as a 5 mm strut to the left wall
+    # (the front side is taken by the 122 mm loop and its pulleys).
+    zr0, ztop, yw = FEED_Z - 14, PATH - 4, 60.0 - 4
+    rib = (cq.Workplane("XZ").polyline([(FEED_X - 8, zr0), (FEED_X + 8, zr0), (FEED_X + 12, zr0 + 4),
+                                        (FEED_X + 12, ztop), (FEED_X - 12, ztop), (FEED_X - 12, zr0 + 4)])
+           .close().extrude(-5).translate((0, 24, 0)))
+    b = b.union(rib)
+    for xw in (FEED_X - 8, FEED_X + 5):
+        prof = [(24.0, zr0), (yw + 1, zr0 - (yw + 1 - 24.0)), (yw + 1, ztop), (24.0, ztop)]
+        b = b.union(cq.Workplane("YZ").polyline(prof).close().extrude(3).translate((xw, 0, 0)))
+    xr1, xw0 = FEED_X + 12, X0 + 3                       # front rib right edge, left inner wall (+1 overlap)
+    k = (zr0 + 2) - xr1                                  # underside line z = x + k through the rib's low corner
+    front = [(xw0, xw0 + k), (xr1, xr1 + k), (xr1, ztop), (FEED_X - 12, ztop), (FEED_X - 12, FEED_X - 12 + k + 8), (xw0, xw0 + k + 8)]
+    b = b.union(cq.Workplane("XZ").polyline(front).close().extrude(-5).translate((0, -29, 0)))
     b = b.cut(cyl_y(FEED_X, FEED_Z, SEAT_685 / 2, -30, 30))
     b = b.cut(cyl_y(FEED_X, FEED_Z, 3.0, Y0 - 1, Y1 + 1))
     # exit roller shaft through both walls
@@ -189,11 +203,15 @@ def feeder_base():
     b = b.cut(fin_groove(FIN_START_X - 7, X1 + 1, 40.0))
     for sg in (-1, 1):
         b = b.union(guide_rail(TAPER_X0, X1, sg, chamfer=False))
+        # the rails sit over the fin lanes here: fill the lane under them so they're joined to the floor
+        # (fin fingers stop at |Y| 32.75, inside the rail; the fin bridge passes over the top)
+        b = b.union(guide_rail(TAPER_X0, X1, sg, chamfer=False).translate((0, 0, -(GROOVE_D + 0.15))))
     # card-clear sensor (TCRT5000 reflective IR) under a slot in the floor at X 127, |Y| 22: the track only
     # steps once the card's tail has left it, so a fin can't come down on a card
     b = b.cut(box(122.5, 131.5, -24.0, -20.0, PATH - 5, PATH + 1))
     b = b.cut(box(121.8, 132.2, -25.0, -19.0, PATH - 12, PATH - 3.9))
     b = b.union(box(119.8, 134.2, -27.0, -17.0, PATH - 13, PATH - 4).cut(box(121.8, 132.2, -25.0, -19.0, PATH - 14, PATH - 3.9)))
+    # (this pocket hangs under the floor: the only spot on the base that needs printed support)
     # tower dovetail rails on top (tower slides on from the back, +Y)
     for x in (TOWER_X0 - 9, TOWER_X0 + TOWER_IN_X - 3):     # exit-side rail sits under the tower wall (fins sweep past it)
         b = b.union(box(x, x + 6, -40, 40, PATH, PATH + 3))
