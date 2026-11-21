@@ -35,11 +35,11 @@ FIN_PITCHES = 10                   # 3-bin build: factory closed loop 1220 mm = 
 CARD_L, CARD_W = 88.0, 63.0
 SCAN_X = 128.0 + PITCH + CARD_L / 2   # card centre when photographed (294): fin face lands at 128, one pitch on
 BIN_X = [SCAN_X + PITCH * (k + 1) for k in range(3)]   # bin centres (416, 538, 660): bin 1, bin 2, end-of-line bin
-# Hole sizes tuned on the PETG fit coupon (Neptune 4 Pro, 0.4 nozzle, flow 0.95): printed holes come out
-# ~0.2-0.3 mm under size, small holes more.
-M5 = 5.6; M3 = 3.5; M3_INSERT = 4.6   # clearance / heat-set insert holes (insert: 4.3 lead, 5.0 knurl)
+# Hole sizes tuned on the PETG fit coupon (Neptune 4 Pro, 0.4 nozzle, flow 0.95). Measured: a printed hole comes
+# out about 0.07 + 0.78/d mm under size (16 mm: -0.12, 5 mm: -0.23, 4 mm: -0.27, 2 mm: -0.46).
+M5 = 5.6; M3 = 3.6; M3_INSERT = 4.7   # clearance (prints 3.3) / heat-set insert (prints 4.45: 4.32 lead drops in, 5.04 knurl melts)
 SEAT_685 = 11.3; SEAT_625 = 16.3      # bearing seats (11 / 16 mm OD): firm hand press
-PILOT_M2, PILOT_M25 = 2.0, 2.3        # self-tapping pilots
+PILOT_M2, PILOT_M25 = 2.1, 2.5        # self-tapping pilots: print ~1.66 (M2 core 1.57) and ~2.12 (M2.5 core 2.01)
 M2 = 2.2
 FIN_START_X = 131.0   # start idlers (stub shafts in the posts on the feeder base); fins land here, 5 mm behind the exit nip
 END_SHAFT_X = FIN_START_X + (FIN_PITCHES * PITCH - 2 * math.pi * PUL_R) / 2   # drive shaft in the end module (711)
@@ -322,7 +322,7 @@ def belt_drill_jig():
     for k in range(int(L / 2)):
         j = j.union(box(2 * k + 0.6, 2 * k + 1.4, -5.1, 5.1, 3, 3.75))   # tooth ridges at 2 mm pitch
     for x in (2.0 + 1.0, 2.0 + 1.0 + PITCH):
-        j = j.cut(cyl_z(x, 0, 1.2, -1, 8))     # 2 mm drill guide (prints ~2.1)
+        j = j.cut(cyl_z(x, 0, 1.25, -1, 8))    # 2 mm drill guide (prints ~2.1)
     j = j.union(box(0, L, -9, -5.1, 6, 9)).union(box(0, L, 5.1, 9, 6, 9))  # lips; a strip of tape holds the belt
     return j
 
@@ -413,11 +413,11 @@ def fit_coupon():
             c = c.cut(cyl_z(x, y, d / 2, T - depth, T + 1))
             if push: c = c.cut(cyl_z(x, y, push / 2, -1, T))
             labels.append((x, y - (max(dias) / 2 + 3.2), f"{d:g}" + ("*" if abs(d - design) < 1e-6 else "")))
-    row(10.0, [4.4, 4.5, 4.6, 4.7, 4.8], M3_INSERT, 5.5)
+    row(10.0, [4.5, 4.6, 4.7, 4.8, 4.9], M3_INSERT, 5.5)
     row(27.0, [11.2, 11.3, 11.4], SEAT_685, 5.0, push=7.0, x0=16.0)
     row(48.0, [16.2, 16.3, 16.4], SEAT_625, 5.0, push=10.0, x0=16.0)
     row(68.0, [5.1, 5.3, 5.5], 5.5, T + 1, x0=8.0, dx=11.0)
-    row(68.0, [1.8, 2.0, 2.2], PILOT_M2, T + 1, x0=50.0, dx=8.0)
+    row(68.0, [1.9, 2.1, 2.3], PILOT_M2, T + 1, x0=50.0, dx=8.0)
     # back rib with horizontal holes (hinge pin 2.0/2.1/2.2, frame vs door; shaft 5.5) and the nut trap
     rib = box(0, W, D, D + 8, 0, 16)
     for x, d in ((12, 2.0), (24, 2.1), (36, 2.2), (54, 5.3), (70, 5.5)):
