@@ -35,7 +35,11 @@ FIN_PITCHES = 10                   # 3-bin build: factory closed loop 1220 mm = 
 CARD_L, CARD_W = 88.0, 63.0
 SCAN_X = 128.0 + PITCH + CARD_L / 2   # card centre when photographed (294): fin face lands at 128, one pitch on
 BIN_X = [SCAN_X + PITCH * (k + 1) for k in range(3)]   # bin centres (416, 538, 660): bin 1, bin 2, end-of-line bin
-M5 = 5.4; M3 = 3.3; M3_INSERT = 4.0   # clearance / heat-set insert holes
+# Hole sizes tuned on the PETG fit coupon (Neptune 4 Pro, 0.4 nozzle, flow 0.95): printed holes come out
+# ~0.2-0.3 mm under size, small holes more.
+M5 = 5.6; M3 = 3.5; M3_INSERT = 4.6   # clearance / heat-set insert holes (insert: 4.3 lead, 5.0 knurl)
+SEAT_685 = 11.3; SEAT_625 = 16.3      # bearing seats (11 / 16 mm OD): firm hand press
+PILOT_M2, PILOT_M25 = 2.0, 2.3        # self-tapping pilots
 M2 = 2.2
 FIN_START_X = 131.0   # start idlers (stub shafts in the posts on the feeder base); fins land here, 5 mm behind the exit nip
 END_SHAFT_X = FIN_START_X + (FIN_PITCHES * PITCH - 2 * math.pi * PUL_R) / 2   # drive shaft in the end module (711)
@@ -157,15 +161,15 @@ def feeder_base():
     # feed roller shaft: 685ZZ bearings (11 mm OD x 5) in inner ribs at |Y| 24..29 (small enough to stay under the floor)
     for y in (-29, 24):
         b = b.union(box(FEED_X - 12, FEED_X + 12, y, y + 5, FEED_Z - 14, PATH - 4))
-    b = b.cut(cyl_y(FEED_X, FEED_Z, 5.55, -30, 30))
+    b = b.cut(cyl_y(FEED_X, FEED_Z, SEAT_685 / 2, -30, 30))
     b = b.cut(cyl_y(FEED_X, FEED_Z, 3.0, Y0 - 1, Y1 + 1))
     # exit roller shaft through both walls
     # exit roller bearings sit in slots (+-2 mm along X) so the 122 mm belt can be tensioned
     for yy in ((Y0 - 1, Y0 + 5), (Y1 - 5, Y1 + 1)):
-        b = b.cut(cyl_y(EXIT_X - 2, EXIT_Z, 8.05, *yy)).cut(cyl_y(EXIT_X + 2, EXIT_Z, 8.05, *yy)).cut(box(EXIT_X - 2, EXIT_X + 2, yy[0], yy[1], EXIT_Z - 8.05, EXIT_Z + 8.05))
+        b = b.cut(cyl_y(EXIT_X - 2, EXIT_Z, SEAT_625 / 2, *yy)).cut(cyl_y(EXIT_X + 2, EXIT_Z, SEAT_625 / 2, *yy)).cut(box(EXIT_X - 2, EXIT_X + 2, yy[0], yy[1], EXIT_Z - SEAT_625 / 2, EXIT_Z + SEAT_625 / 2))
     # feed motor on the back wall at the feed shaft (on a 30 mm standoff)
     for (x, z) in ((FEED_X, FEED_Z),):
-        b = b.cut(cyl_y(x, z, 8.05, Y1 - 5, Y1 + 1))      # 625 bearing seat in the wall; shaft passes out to the coupler
+        b = b.cut(cyl_y(x, z, SEAT_625 / 2, Y1 - 5, Y1 + 1))      # 625 bearing seat in the wall; shaft passes out to the coupler
         for dx in (-1, 1):
             for dz in (-1, 1):
                 b = b.cut(cyl_y(x + dx * NEMA_HOLES / 2, z + dz * NEMA_HOLES / 2, M3_INSERT / 2, Y1 - 6.5, Y1 + 1))
@@ -305,7 +309,7 @@ def fin():
     f = f.union(box(0, 5, yf0, 1.75, zb0, zb1))                         # bridge
     f = f.union(box(1.5, 5, yf0, yf1, z_floor - (GROOVE_D - 0.5), zb0))  # finger (pushing face at x = 5)
     f = f.cut(box(4.0, 5.1, yf0 + 1.5, yf0 + 4.5, z_floor - 0.2, z_floor + 2.8))   # pad pocket, 1 mm deep
-    f = f.cut(cyl_z(2.0, 0, 0.8, -4.5, 0.1))                            # 1.6 mm pilot for the M2 screw
+    f = f.cut(cyl_z(2.0, 0, PILOT_M2 / 2, -4.5, 0.1))                    # pilot for the M2 self-tapping screw
     return f
 
 def belt_drill_jig():
@@ -318,7 +322,7 @@ def belt_drill_jig():
     for k in range(int(L / 2)):
         j = j.union(box(2 * k + 0.6, 2 * k + 1.4, -5.1, 5.1, 3, 3.75))   # tooth ridges at 2 mm pitch
     for x in (2.0 + 1.0, 2.0 + 1.0 + PITCH):
-        j = j.cut(cyl_z(x, 0, 1.05, -1, 8))
+        j = j.cut(cyl_z(x, 0, 1.2, -1, 8))     # 2 mm drill guide (prints ~2.1)
     j = j.union(box(0, L, -9, -5.1, 6, 9)).union(box(0, L, 5.1, 9, 6, 9))  # lips; a strip of tape holds the belt
     return j
 
@@ -362,7 +366,7 @@ def track_pulley(drive=False):
         p = p.cut(cyl_z(0, yg, 1.6, 0, 9))                                   # M3 x 4 grub, sits below the hub surface
         p = p.cut(box(-2.9, 2.9, yh0 - 1, yg + 1.3, 3.0, 5.6))               # M3 nut slides in from the hub end
     else:
-        p = p.cut(cyl_y(0, 0, 5.55, -10, 10)).union(cyl_y(0, 0, 5.55, -0.5, 0.5).cut(cyl_y(0, 0, 4.0, -1, 1)))
+        p = p.cut(cyl_y(0, 0, SEAT_685 / 2, -10, 10)).union(cyl_y(0, 0, SEAT_685 / 2, -0.5, 0.5).cut(cyl_y(0, 0, 4.0, -1, 1)))
     return p
 
 def sensor_clip():
@@ -409,11 +413,11 @@ def fit_coupon():
             c = c.cut(cyl_z(x, y, d / 2, T - depth, T + 1))
             if push: c = c.cut(cyl_z(x, y, push / 2, -1, T))
             labels.append((x, y - (max(dias) / 2 + 3.2), f"{d:g}" + ("*" if abs(d - design) < 1e-6 else "")))
-    row(10.0, [3.9, 4.0, 4.1, 4.2, 4.3], M3_INSERT, 5.5)
-    row(27.0, [10.9, 11.0, 11.1, 11.2], 11.1, 5.0, push=7.0, x0=14.0)
-    row(48.0, [16.0, 16.1, 16.2], 16.1, 5.0, push=10.0, x0=16.0)
+    row(10.0, [4.4, 4.5, 4.6, 4.7, 4.8], M3_INSERT, 5.5)
+    row(27.0, [11.2, 11.3, 11.4], SEAT_685, 5.0, push=7.0, x0=16.0)
+    row(48.0, [16.2, 16.3, 16.4], SEAT_625, 5.0, push=10.0, x0=16.0)
     row(68.0, [5.1, 5.3, 5.5], 5.5, T + 1, x0=8.0, dx=11.0)
-    row(68.0, [1.5, 1.6, 1.7], 1.6, T + 1, x0=50.0, dx=8.0)
+    row(68.0, [1.8, 2.0, 2.2], PILOT_M2, T + 1, x0=50.0, dx=8.0)
     # back rib with horizontal holes (hinge pin 2.0/2.1/2.2, frame vs door; shaft 5.5) and the nut trap
     rib = box(0, W, D, D + 8, 0, 16)
     for x, d in ((12, 2.0), (24, 2.1), (36, 2.2), (54, 5.3), (70, 5.5)):
@@ -421,11 +425,11 @@ def fit_coupon():
         star = "*" if d in (2.1, 5.5) else ""
         labels.append((x, D - 2.6, f"{d:g}{star}"))
     rib = rib.cut(box(84, 89.8, D - 1, D + 9, 7.0, 9.6))                           # M3 nut trap 5.8 x 2.6
-    rib = rib.cut(cyl_z(86.9, D + 4, 1.6, 0, 17))
+    rib = rib.cut(cyl_z(86.9, D + 4, M3 / 2, 0, 17))
     c = c.union(rib)
     labels.append((86.9, D - 2.6, "nut"))
     for (x, y, t) in labels:
-        c = c.cut(cq.Workplane("XY").text(t, 3.2, 0.6, halign="center", valign="center").translate((x, y, T - 0.6)))
+        c = c.union(cq.Workplane("XY").text(t, 4.0, 0.6, halign="center", valign="center", kind="bold").translate((x, y, T)))   # raised: reads better than cut
     return c
 
 # ============================================================================ SCANNER
@@ -610,7 +614,7 @@ def pi_mount():
     for dx in (-29, 29):
         for dz in (-24.5, 24.5):
             p = p.union(cyl_y(dx, dz, 3, T, T + 6))
-            p = p.cut(cyl_y(dx, dz, 1.05, T - 1, T + 7))         # M2.5 self-tap
+            p = p.cut(cyl_y(dx, dz, PILOT_M25 / 2, T - 1, T + 7))   # M2.5 self-tap
     return p
 
 def polarizer_cap():
@@ -709,7 +713,7 @@ def end_side(side):
     xs = END_SHAFT_X - (BIN_X[1] + PITCH / 2)            # drive shaft position in this module (112)
     f = f.cut(cyl_y(xs, PUL_Z, 2.75, -WALL_OUT - 1, WALL_OUT + 1))
     yb0, yb1 = sorted((s * (WALL_OUT - 5.2), s * (WALL_OUT + 0.1)))
-    f = f.cut(cyl_y(xs, PUL_Z, 8.05, yb0, yb1))           # 625 bearing seat (outer face)
+    f = f.cut(cyl_y(xs, PUL_Z, SEAT_625 / 2, yb0, yb1))           # 625 bearing seat (outer face)
     f = f.cut(box(xs - 20, END_L + 1, *sorted((s * 35.0, s * WALL_IN_UP)), PATH, WALL_TOP + 1))  # room for pulley + fins
     if s > 0:   # ramp flange screws into the underside of the back strip
         for xh in (6.5 + 15, PITCH - 5.0 - 15):
@@ -755,7 +759,7 @@ def electronics_tray():
         for dy in (0, 49):
             xh, yh = 12 + dx, -50 + 3.5 + dy
             t = t.union(cyl_z(xh, yh, 3, T, T + 8))
-            t = t.cut(cyl_z(xh, yh, 1.05, T, T + 9))          # M2.5 x 6 self-tap from the top
+            t = t.cut(cyl_z(xh, yh, PILOT_M25 / 2, T, T + 9))          # M2.5 x 6 self-tap from the top
     for x in range(80, 131, 10):
         for y in range(10, 51, 10):
             t = t.cut(cyl_z(x, y, 1.7, -1, T + 1))
