@@ -368,6 +368,7 @@ public partial class IdentifyViewModel
     private async Task<(int, object)> HandlePhoneRequestAsync(PhoneLink.Request req)
     {
         var ui = Avalonia.Threading.Dispatcher.UIThread;
+        if (await HandleMachineRequestAsync(req) is { } machineReply) return machineReply;
         switch (req.Path)
         {
             case "/api/session/start":

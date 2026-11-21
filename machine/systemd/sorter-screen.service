@@ -1,0 +1,20 @@
+[Unit]
+Description=Card sorter touchscreen (Chromium kiosk on the Touch Display)
+After=card-sorter.service systemd-user-sessions.service
+Wants=card-sorter.service
+Conflicts=getty@tty1.service
+
+[Service]
+User=pi
+PAMName=login
+TTYPath=/dev/tty1
+StandardInput=tty
+UtmpIdentifier=tty1
+UtmpMode=user
+ExecStartPre=/usr/bin/python3 /home/pi/mtg-card-scanner/machine/systemd/wait-for-app.py
+ExecStart=/usr/bin/cage -d -- /usr/bin/chromium --kiosk --noerrdialogs --disable-infobars --no-first-run --disable-session-crashed-bubble --disable-features=Translate --overscroll-history-navigation=0 --disable-pinch --password-store=basic --ozone-platform=wayland http://localhost:8080/?kiosk=1
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=graphical.target

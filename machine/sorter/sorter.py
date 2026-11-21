@@ -48,7 +48,11 @@ class Stop(Exception):
 
 
 class SessionOver(Exception):
-    """The session was stopped on the PC."""
+    """The session was stopped (on the touchscreen, in a browser, or on the PC)."""
+
+
+class EStop(Stop):
+    """The emergency stop was pressed."""
 
 
 class Sorter:
@@ -64,6 +68,12 @@ class Sorter:
         self.count = 0
         self.stopping = False                             # the PC said stop: no more feeding, clear the track
         self.bin_counts = {b: 0 for b in range(1, self.in_use + 1)}
+        # read by the touchscreen service
+        self.on_say = None                                # callback(msg)
+        self.alert: dict | None = None                    # {"kind": "full"|"empty"|"paused"|..., "text": ...}
+        self.last_levels: list[int] = []
+        self.phase = "idle"
+        self.estop = False
         os.makedirs(log_dir, exist_ok=True)
         self.log_path = os.path.join(log_dir, f"sort_{dt.datetime.now():%Y%m%d_%H%M%S}.csv")
         self._logf = open(self.log_path, "w", newline="")
@@ -73,6 +83,27 @@ class Sorter:
 
     def say(self, msg: str) -> None:
         print(f"[{dt.datetime.now():%H:%M:%S}] {msg}", flush=True)
+        if self.on_say:
+            self.on_say(msg)
+
+    def nap(self, s: float) -> None:
+        """sleep, but the emergency stop ends it at once"""
+        if self.estop:
+            raise EStop("Emergency stop pressed.")
+        self.sleep(s)
+        if self.estop:
+            raise EStop("Emergency stop pressed.")
+
+    def control(self) -> None:
+        """Between cycles: hold while paused; on Stop, stop feeding and clear the track."""
+        if self.estop:
+            raise EStop("Emergency stop pressed.")
+        st = self.pc.status()
+        if st.get("stop") or not st.get("active"):
+            self.stopping = True
+            return
+        if st.get("paused"):
+            self.wait_while_paused()
 
     # ---------------------------------------------------------------- PC session
     def join_session(self) -> None:
@@ -85,16 +116,23 @@ class Sorter:
 
     def wait_while_paused(self) -> None:
         said = False
-        while True:
-            st = self.pc.status()
-            if st.get("stop") or not st.get("active"):
-                raise SessionOver()
-            if not st.get("paused"):
-                return
-            if not said:
-                self.say("Paused on the PC. Waiting...")
-                said = True
-            self.sleep(self.cfg["pc"]["poll_s"])
+        self.m.lights(0)
+        try:
+            while True:
+                st = self.pc.status()
+                if st.get("stop") or not st.get("active"):
+                    self.stopping = True
+                    return
+                if not st.get("paused"):
+                    return
+                if not said:
+                    self.say("Paused. Waiting...")
+                    self.alert = {"kind": "paused", "text": "Paused"}
+                    said = True
+                self.nap(min(self.cfg["pc"]["poll_s"], 0.5))
+        finally:
+            if self.alert and self.alert.get("kind") == "paused":
+                self.alert = None
 
     # ---------------------------------------------------------------- homing
     def home(self) -> None:
@@ -129,7 +167,7 @@ class Sorter:
         cam = self.cfg["camera"]
         while True:
             self.m.lights(cam["lights_pwm"])
-            self.sleep(cam["settle_ms"] / 1000)
+            self.nap(cam["settle_ms"] / 1000)
             jpeg = self.camera.jpeg()
             try:
                 r = self.pc.identify(jpeg)
@@ -137,7 +175,8 @@ class Sorter:
                 r = {"ok": False, "error": f"PC not reachable: {e}"}
             if r.get("paused") and not r.get("stop"):
                 self.wait_while_paused()                 # then take the photo again
-                continue
+                if not self.stopping:
+                    continue
             break
         if r.get("stop"):
             self.stopping = True
@@ -163,10 +202,10 @@ class Sorter:
                 if self.beams.broken(bin_no):
                     seen = True
                     break
-                self.sleep(0.01)
-            self.sleep(d["open_ms"] / 1000)
+                self.nap(0.01)
+            self.nap(d["open_ms"] / 1000)
             self.doors.set(bin_no, False)
-            self.sleep(0.25)
+            self.nap(0.25)
             if seen:
                 return
             self.say(f"Bin {bin_no}: break-beam didn't see card {card.n} fall (try {attempt + 1}).")
@@ -175,6 +214,8 @@ class Sorter:
     def record(self, card: Card, bin_no: int) -> None:
         r = card.result or {}
         self.bin_counts[bin_no] = self.bin_counts.get(bin_no, 0) + 1
+        if hasattr(self.pc, "dropped") and r.get("n"):
+            self.pc.dropped(r["n"], bin_no)
         self._log.writerow([card.n, bin_no, r.get("binLabel"), r.get("binWanted"), card.why, r.get("scan"), r.get("name"),
                             r.get("setCode"), r.get("number"), r.get("pinned"), r.get("finishUnsure"), r.get("price"),
                             r.get("error")])
@@ -183,15 +224,26 @@ class Sorter:
     def check_levels(self) -> None:
         full = self.cfg["levels"]["full_mm"]
         said = None
-        while True:
-            dist = self.levels.distances()
-            fulls = [i + 1 for i, v in enumerate(dist) if 0 < v < full]
-            if not fulls:
-                return
-            if fulls != said:
-                self.say(f"Bin {', '.join(map(str, fulls))} full ({dist} mm). Empty it; sorting carries on by itself.")
-                said = fulls
-            self.sleep(3)
+        try:
+            while True:
+                dist = self.levels.distances()
+                self.last_levels = dist
+                fulls = [i + 1 for i, v in enumerate(dist) if 0 < v < full]
+                if not fulls:
+                    return
+                if fulls != said:
+                    self.say(f"Bin {', '.join(map(str, fulls))} full ({dist} mm). Empty it; sorting carries on by itself.")
+                    self.alert = {"kind": "full", "bins": fulls,
+                                  "text": f"Bin {', '.join(map(str, fulls))} full: empty it and sorting carries on by itself"}
+                    said = fulls
+                self.nap(1)
+                st = self.pc.status()
+                if st.get("stop") or not st.get("active"):
+                    self.stopping = True
+                    return
+        finally:
+            if self.alert and self.alert.get("kind") == "full":
+                self.alert = None
 
     def index(self) -> None:
         t = self.cfg["track"]
@@ -204,26 +256,46 @@ class Sorter:
     def wait_for_cards(self) -> None:
         """Track is empty and so is the hopper: wait for more cards (or for Stop on the PC)."""
         self.m.lights(0)
-        self.say("Waiting for cards (load the hopper; Stop on the PC ends the session).")
-        while True:
-            st = self.pc.status()
-            if st.get("stop") or not st.get("active"):
-                raise SessionOver()
-            self.sleep(self.cfg["feed"]["empty_poll_s"])
-            if self.feed():
-                self.count += 1
-                self.slots[0] = Card(self.count)
-                self.say("Cards again: carrying on.")
-                return
+        self.say("Waiting for cards (load the hopper; Stop ends the session).")
+        self.alert = {"kind": "empty", "text": "Hopper empty: add cards and sorting carries on"}
+        try:
+            while True:
+                waited = 0.0
+                while waited < self.cfg["feed"]["empty_poll_s"]:
+                    st = self.pc.status()
+                    if st.get("stop") or not st.get("active"):
+                        raise SessionOver()
+                    if st.get("paused"):
+                        self.wait_while_paused()
+                        if self.stopping:
+                            raise SessionOver()
+                    self.nap(0.5)
+                    waited += 0.5
+                if self.feed():
+                    self.count += 1
+                    self.slots[0] = Card(self.count)
+                    self.say("Cards again: carrying on.")
+                    return
+        finally:
+            if self.alert and self.alert.get("kind") == "empty":
+                self.alert = None
 
     # ---------------------------------------------------------------- main loop
-    def run(self, limit: int | None = None) -> None:
+    def run(self, limit: int | None = None, resume: bool = False) -> None:
+        """resume: carry on after a jam was cleared (the track was emptied by hand; same session)."""
         self.m.enable(True)
+        self.phase = "homing"
+        if resume:
+            self.slots = [None] * (self.end_station + 1)
+            self.stopping = False
         self.home()
-        self.join_session()
+        if not resume:
+            self.join_session()
+        self.phase = "sorting"
         door_station = {b + 1: b for b in range(1, self.in_use)}      # station -> bin, doors for bins 1..in_use-1
         try:
             while True:
+                self.control()
                 card = self.slots[1]
                 if card is not None and card.result is None:
                     self.scan(card)
@@ -247,12 +319,19 @@ class Sorter:
                     self.wait_for_cards()                 # returns with a card on the landing, or ends the session
                 self.index()
         except SessionOver:
-            self.say("Session stopped on the PC.")
+            self.say("Session stopped.")
         finally:
-            self.m.lights(0)
+            self.phase = "idle"
+            try:
+                self.m.lights(0)
+            except Exception:
+                pass
             counts = ", ".join(f"bin {b}: {n}" for b, n in self.bin_counts.items())
             self.say(f"Done: {sum(self.bin_counts.values())} cards ({counts}). Log: {self.log_path}")
-            self._logf.close()
+            self._logf.flush()
+
+    def close(self) -> None:
+        self._logf.close()
 
 
 def bench(cfg: dict, args) -> int:
@@ -329,6 +408,7 @@ def main(argv=None) -> int:
             s.home()
         else:
             s.run(limit=args.limit)
+            s.close()
     except Stop as e:
         print(f"STOPPED: {e}", flush=True)
         return 2

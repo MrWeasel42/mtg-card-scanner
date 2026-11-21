@@ -43,6 +43,7 @@ public partial class IdentifyViewModel : ObservableObject
         PhoneLinkStatus = PhoneLink.Instance.Status;
         PhoneLink.Instance.Handler = HandlePhoneRequestAsync;
         if (_settings.PhoneLink) PhoneLink.Instance.Start();
+        _ = MachineBackupLoopAsync();
         Results.CollectionChanged += (_, _) => { OnPropertyChanged(nameof(HasResults)); ApplyFilter(); };
     }
 

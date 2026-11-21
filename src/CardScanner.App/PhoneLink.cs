@@ -156,7 +156,8 @@ public sealed class PhoneLink
             if (method == "GET" && path == "/api/hello")
             {
                 SetStatus($"Phone link on · {Addresses()} · phone connected ({peer})");
-                await Reply(stream, 200, new { app = "MTG Card Scanner", pc = Environment.MachineName, version = ViewModels.MainViewModel.AppVersion });
+                await Reply(stream, 200, new { app = "MTG Card Scanner", pc = Environment.MachineName, version = ViewModels.MainViewModel.AppVersion,
+                    features = new[] { "scan", "identify", "feedback", "setup", "printings", "search", "card-image" } });
             }
             else if (path.StartsWith("/api/"))
             {
@@ -217,12 +218,17 @@ public sealed class PhoneLink
         return (first[0].ToUpperInvariant(), first.Length > 1 ? first[1].Split('?')[0] : "/", headers, body);
     }
 
+    /// <summary>A reply that isn't JSON (a card image for the machine's review screen).</summary>
+    public sealed record RawReply(byte[] Bytes, string ContentType);
+
     private static async Task Reply(NetworkStream s, int code, object payload)
     {
-        var json = JsonSerializer.SerializeToUtf8Bytes(payload, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var raw = payload as RawReply;
+        var json = raw?.Bytes ?? JsonSerializer.SerializeToUtf8Bytes(payload, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var ctype = raw?.ContentType ?? "application/json; charset=utf-8";
         var text = code switch { 200 => "OK", 400 => "Bad Request", 404 => "Not Found", 409 => "Conflict", 503 => "Service Unavailable", _ => "Error" };
         var hdr = Encoding.ASCII.GetBytes(
-            $"HTTP/1.1 {code} {text}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {json.Length}\r\nConnection: close\r\n\r\n");
+            $"HTTP/1.1 {code} {text}\r\nContent-Type: {ctype}\r\nContent-Length: {json.Length}\r\nConnection: close\r\n\r\n");
         await s.WriteAsync(hdr);
         await s.WriteAsync(json);
         await s.FlushAsync();

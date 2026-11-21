@@ -114,6 +114,25 @@ public sealed class CardCatalog : IDisposable
         return list;
     }
 
+    /// <summary>Card names containing the text (one printing each, newest first), for "search a card" on the machine.</summary>
+    public List<CardInfo> SearchNames(string text, int limit = 12)
+    {
+        var list = new List<CardInfo>();
+        if (string.IsNullOrWhiteSpace(text)) return list;
+        using var cmd = _con.CreateCommand();
+        cmd.CommandText = $"SELECT {Columns} FROM cards WHERE name LIKE $q ORDER BY (name LIKE $p) DESC, length(name), released_at DESC";
+        cmd.Parameters.AddWithValue("$q", "%" + text.Trim() + "%");
+        cmd.Parameters.AddWithValue("$p", text.Trim() + "%");
+        using var r = cmd.ExecuteReader();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (r.Read() && list.Count < limit)
+        {
+            var c = Read(r);
+            if (seen.Add(c.Name)) list.Add(c);
+        }
+        return list;
+    }
+
     private static CardInfo Read(SqliteDataReader r) => new(
         r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4),
         Str(r, 5), Str(r, 6), Str(r, 7), Str(r, 8), Str(r, 9),

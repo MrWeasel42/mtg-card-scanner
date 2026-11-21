@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Card Sorter</title>
+<link rel="stylesheet" href="/ui/app.css">
+</head>
+<body>
+<div id="app">
+  <header id="bar">
+    <div class="brand" data-go="home">▦ Card Sorter</div>
+    <div id="chips"></div>
+    <div id="clock"></div>
+  </header>
+  <div id="alert" hidden></div>
+  <div id="update" hidden></div>
+  <main id="view"></main>
+</div>
+<button id="estop" hidden title="Emergency stop: motors off now">STOP</button>
+<div id="sleep" hidden></div>
+<div id="modal" hidden><div class="sheet" id="sheet"></div></div>
+<div id="kbd" hidden></div>
+<div id="toast" hidden></div>
+<script src="/ui/app.js"></script>
+</body>
+</html>
