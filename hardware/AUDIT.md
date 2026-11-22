@@ -83,6 +83,39 @@ standoffs, and all of plate 1 (screen cradle, 9 servo links, wall mount, exit ro
     are re-routed through real openings; the feeder base now has a stub of the back channel, so the looms go from the
     bay straight into it.
 
+## Round 2: checks from the 3D-printing videos (19 videos, transcripts read)
+
+New automated check, `audit/tips_check.py` (in `run_all.sh`), on every printed part in its print orientation:
+sideways holes of 5 mm or more without a teardrop roof, holes that start in mid-air above a counterbore, rounded
+(not chamfered) first-layer edges, and tall parts on a narrow footprint. The printability check also got two fixes:
+the end ramp is now checked ramp-face-down (it was checked on a 4 mm edge), and a one-slice slicing artefact no
+longer reports a fake 120 mm overhang.
+
+27. **Screen pod cover** was set to print "back face down", but the GoPro standoff stuck 52 mm out of that face, so it
+    would have balanced on the tab's tip. The standoff is now its own part, **pod_standoff** (PETG, flat bottom down,
+    layers along the standoff, no supports, 1.5 mm fillets at the prong roots). It is held by 2 x M3 x 12 from inside
+    the empty cover, through a 2 mm pad on the back wall, into 2 inserts in the standoff. The cover's ear tabs got
+    45 degree gussets underneath with head pockets, so the cover prints with no supports.
+28. **Bin-module front walls** (print flat on their outer face) had 3 mm wall-top bosses for hood inserts at both
+    ends. Only the scan module carries the hood, so on a bin module they did nothing except hold the whole wall 3 mm
+    off the bed. Removed from bin modules (both sides). The hood's two right feet, which went into bin module 1's walls, now go into the scan module's walls at X 349 (the hood still overhangs the joint by 17 mm). Inserts: 74 / 134 in total now (were 78 / 162).
+29. **Motor standoffs:** printed on a side wall, the top wall is a 22 mm bridge (the sag you saw). New orientation:
+    stand it on its open side, so every wall is vertical (no bridges, no supports); the 23 mm motor bore is a teardrop
+    for that orientation. The two you printed work as they are: the sag is on an inside face nothing touches.
+30. **Front end wall:** prints on its outer face, so the 5.5 mm shaft hole started in mid-air over the 16.3 mm bearing
+    seat. The STL now has a 0.2 mm sacrificial skin there (it's only in the print file, not the assembly): the printer
+    bridges it first and lays a flat bearing shoulder on top. Cut it out with a hobby knife before fitting the bearing.
+31. **Tall upright walls** (scan, bin and end back walls, scan front wall: 225 mm on a 25 mm wide foot): print notes now
+    call for an 8 mm brim, glue stick, the long edge front-to-back (along the bed's travel), and slower outer walls on
+    the top half.
+32. **Hub boards on foam tape:** clip the header solder tails flush first (or double the tape) so they sit flat.
+33. **Fit-test pieces:** `stl/test_sections/` has three 1-2 h pieces cut out of the long prints: the feeder base's
+    roller seats and slider pocket, a bin back wall's hinge knuckles and servo bracket, and the end wall's bearing seat
+    with the skin. Print them with the final profile before the 19 h feeder base.
+34. Already in the design, so nothing to change: teardrop seats, chamfers under overhangs, walls at least 2 lines,
+    O-rings on printed rollers, inserts in thick bosses, dark matte PLA for covers, 100% infill for small loaded
+    parts.
+
 ## What the simulation can't prove (check on the prototype)
 
 * Feeding: friction of the O-rings vs the gate pad, and how the stack weight behaves near empty.

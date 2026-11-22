@@ -1,4 +1,4 @@
-import sys, os, math, json
+import os, sys, os, math, json
 import numpy as np, trimesh
 from viz import *
 OUT = os.path.join(HERE, "renders")
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # feeder: section through the middle (Y = 0), seen from the front
     names = [n for n in sc.actors if not n.startswith(("screen_", "pod_", "conv5", "mount_wall"))]
     sc.clip(names, (0, 0.0, 0), (0, 1, 0))
-    for n in ("screen_cradle", "pod_cover", "screen_block", "conv5", "mount_wall_gap"):
+    for n in ("screen_cradle", "pod_cover", "pod_standoff", "screen_block", "conv5", "mount_wall_gap"):
         sc.show(n, False)
     shot(sc, "04_feeder_section", (90, -420, 230), (90, 0, 200), 34)
     shot(sc, "05_gate_closeup", (112, -75, 212), (114, 0, 207), 30)

@@ -1,5 +1,5 @@
 """The pictures for hardware/renders (README + design page), from the audited meshes."""
-import sys, os, math
+import os, sys, os, math
 import numpy as np, trimesh
 from viz import *
 from render_stills import base_scene
@@ -11,7 +11,7 @@ def shot(sc, name, pos, foc, angle=30, up=(0, 0, 1)):
 sc = base_scene(1600, 1000)
 V, F, _ = ribbon_strip(); sc.add("ribbon", trimesh.Trimesh(V, F), kind="wire", color=(0.85, 0.65, 0.2))
 everything = list(sc.actors)
-pod = ("screen_cradle", "pod_cover", "screen_block", "conv5", "mount_wall_gap")
+pod = ("screen_cradle", "pod_cover", "pod_standoff", "screen_block", "conv5", "mount_wall_gap")
 shot(sc, "asm_iso", (L * 0.12, -1300, 880), (L * 0.45, 0, 160), 32)
 shot(sc, "asm_back", (L * 0.85, 1300, 800), (L * 0.45, 0, 150), 32)
 shot(sc, "asm_screen", (60, -560, 420), (200, -40, 260), 40)

@@ -1,6 +1,6 @@
 """Audit 1: every printed part on its own, in the orientation it's printed in.
 Bed fit, islands (start in mid-air: need support), big overhangs, thin walls (< 2 extrusions), enclosed voids."""
-import sys, json, math, os
+import os, sys, json, math, os
 import numpy as np, trimesh
 from shapely.geometry import Polygon, MultiPolygon
 from shapely.ops import unary_union
@@ -18,9 +18,9 @@ ORIENT = {  # how each part sits on the bed (from the print notes)
     "back_panel": PY_DOWN, "back_panel_hub": PY_DOWN, "bay_cover": "auto_y", "belt_drill_jig": UP, "bin": UP,
     "bin_side_back": UP, "bin_side_front": NY_DOWN, "camera_plate": UP, "door": FLIP, "idler_slider": "auto_x", "joint_plate": "auto_y",
     "raw_tower": UP, "single_tower": UP, "double_tower": UP, "electronics_tray": UP, "end_cap": "auto_x",
-    "end_ramp": "auto", "end_side_back": UP, "end_side_front": NY_DOWN, "exit_roller": PY_DOWN, "feed_roller": PY_DOWN,
+    "end_ramp": R("x", 120.0), "end_side_back": UP, "end_side_front": NY_DOWN, "exit_roller": PY_DOWN, "feed_roller": PY_DOWN,
     "feeder_base": UP, "fin": "auto_x", "fin_gauge": UP, "fit_coupon": UP, "gate_plate": PX_DOWN, "hood": UP, "hood_lid": FLIP,
-    "inlet_plate": "auto_y", "motor_standoff": "auto_x", "mount_wall": "auto", "pod_cover": PY_DOWN, "polarizer_cap": UP,
+    "inlet_plate": "auto_y", "motor_standoff": UP, "mount_wall": "auto", "pod_cover": PY_DOWN, "pod_standoff": UP, "polarizer_cap": UP,
     "pressure_bridge": FLIP, "psu_cradle": "auto_x", "scan_floor": FLIP, "scan_side_back": UP, "scan_side_front": UP,
     "screen_cradle": "auto_y", "servo_link": UP, "sheen_cap": PY_DOWN, "stack_weight": UP, "tie_bar": FLIP,
     "track_pulley_drive": NY_DOWN, "track_pulley_idler": PY_DOWN,
@@ -64,8 +64,12 @@ def audit(name):
     secs = m.section_multiplane(plane_origin=[0, 0, 0], plane_normal=[0, 0, 1], heights=list(zs))
     prev = None
     islands, overh, thin = [], [], []
-    for z, s in zip(zs, secs):
-        cur = to_polys(s)
+    polys = [to_polys(s) for s in secs]
+    for i, (z, cur) in enumerate(zip(zs, polys)):
+        # a single slice whose holes got mis-nested (area spikes, then drops straight back) is a slicing artefact
+        nb = [p.area for p in (polys[i - 1] if i else None, polys[i + 1] if i + 1 < len(polys) else None) if p is not None]
+        if nb and cur.area > 3 * max(nb) + 50:
+            continue
         if cur.is_empty:
             prev = cur; continue
         if prev is not None and z > LH:

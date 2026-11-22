@@ -134,7 +134,7 @@ checks.append(dict(label=f"Belt loop ({BINS} bins) = {want:.0f} mm = whole numbe
                    ok=abs(loop - want) < 0.01 and abs(loop - FIN_PITCHES * PITCH) < 0.01, note=f"{loop:.1f} mm = {FIN_PITCHES} x {PITCH:.0f} (61 teeth per fin); 3 bins: factory 1220 loop, 9 bins: welded 2684 loop"))
 # --- a card all the way down the track: from the hopper, under the gate, through the nip, under the camera, over every
 # closed door, onto the end ramp. Raw and sleeved, lying on the floor. Nothing may stand in its way.
-fixed_nodoor = pr(*[k for k in P if not (k.startswith("door_") or k.startswith("servo_link_") or k in ("exit_roller", "exit_roller_top", "feed_roller", "screen_cradle", "pod_cover", "mount_wall_gap", "gate_plate"))])
+fixed_nodoor = pr(*[k for k in P if not (k.startswith("door_") or k.startswith("servo_link_") or k in ("exit_roller", "exit_roller_top", "feed_roller", "screen_cradle", "pod_cover", "pod_standoff", "mount_wall_gap", "gate_plate"))])
 gb = P["gate_plate"].val().BoundingBox()
 checks.append(dict(label="Gate foot (adjustable) lowest point above the floor, as drawn", overlap=0, gap=round(gb.zmin - PATH, 2), need=0.0, ok=gb.zmin - PATH >= -0.1,
                    note="the 3 deg lean tips the foot 0.5 mm toward the exit: set the gap at the foot's exit end; the slope is a lead-in"))
@@ -253,23 +253,23 @@ for d in (CAM_D_MIN, CAM_D_MAX):
 # --- screen
 check("Screen wall mount: flat on the scan front wall, clear of the feeder base", P["mount_wall_gap"], P["feeder_base"], 0.5)
 blk = screen_placed(screen_block())
-pod = P["screen_cradle"].union(P["pod_cover"])
+pod = P["screen_cradle"].union(P["pod_cover"]).union(P["pod_standoff"])
 check("Screen + Pi block vs hood + hopper", blk, P["hood"].union(P["raw_tower"]), 2.0, "in front of the gap, tilted back")
 check("Screen + Pi block vs pod frame + cover", blk, pod, 0.0, "drops in from behind, 0.4 mm play")
 conv = screen_placed(converter_block())
 check("5 V converter vs Pi block (in the pod)", conv, blk, 3.0, "beside the Pi, at its USB-C end")
 check("5 V converter vs pod (only its bosses)", conv, P["screen_cradle"].union(P["pod_cover"]), 0.0)
 check("Pi cooler vs pod back wall (air gap)", screen_placed(box(-35, 35, 9.6, PI_STACK, PI_ON_SCREEN_Z + 6, PI_ON_SCREEN_Z + 50)), P["pod_cover"], 5.0)
-others = pr(*[k for k in P if k not in ("mount_wall_gap", "screen_cradle", "pod_cover")])
+others = pr(*[k for k in P if k not in ("mount_wall_gap", "screen_cradle", "pod_cover", "pod_standoff")])
 check("Screen pod vs everything else (hopper, hood, walls)", pod, others, 3.0)
-check("Pod's GoPro tab vs the wall mount's prongs", P["pod_cover"], P["mount_wall_gap"], 0.0, "2 prongs between 3, M5 thumbscrew")
+check("Pod's GoPro tab vs the wall mount's prongs", P["pod_standoff"], P["mount_wall_gap"], 0.0, "2 prongs between 3, M5 thumbscrew")
 rib, rib_len = camera_ribbon()
 check("Camera ribbon vs hood (up the outside under the rails, through the slot)", rib, P["hood"], 0.1)
 check("Camera ribbon vs hood lid", rib, P["hood_lid"], 1.0)
 check("Hood lid vs hood (light trap clearance)", P["hood_lid"], P["hood"], 0.15, "tongue in the groove, 0.2 mm all round")
 check("Sheen cap vs everything but the hood", P["sheen_cap"], pr(*[k for k in P if k not in ("hood", "sheen_cap")]), 2.0)
 check("Camera ribbon vs pod", rib, pod, 0.3)
-check("Camera ribbon vs everything else (track, fins, hopper)", rib, pr(*[k for k in P if k not in ("hood", "hood_lid", "screen_cradle", "pod_cover")]), 2.0)
+check("Camera ribbon vs everything else (track, fins, hopper)", rib, pr(*[k for k in P if k not in ("hood", "hood_lid", "screen_cradle", "pod_cover", "pod_standoff")]), 2.0)
 for d in (CAM_D_MIN, CAM_D_MAX):
     cp = camera_plate().translate((SCAN_X, 0, PATH + d + 44 - 4)).union(B.hq_camera().translate((SCAN_X, 0, PATH + d + 44)))
     check(f"Ribbon run beside the camera vs camera + plate at {d:.0f} mm", rib.cut(box(SCAN_X - 24, 1e3, -1e3, 1e3, -1e3, 1e3)), cp, 0.5,

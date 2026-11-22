@@ -1,7 +1,7 @@
 """How it works: an explainer video rendered from the real CAD (audit/placed) with the card poses from sim.py.
 Segments: overview, feeding, the gate, the fins, scanning, sorting into a bin, the three card types.
 Writes renders/how_it_works.mp4 (+ one clip per segment)."""
-import sys, os, math, subprocess, json
+import os, sys, os, math, subprocess, json
 import numpy as np, trimesh
 from viz import *
 import sim
@@ -52,7 +52,7 @@ class Film:
         sc.add("fov", fov, kind="glass", color=(1.0, 1.0, 0.7), opacity=0.25); sc.show("fov", False)
         x0 = BIN_X[1] - PITCH / 2
         cone = trimesh.creation.cone(radius=(PATH - 22) * math.tan(math.radians(7.5)), height=PATH - 22)
-        cone.apply_transform(trimesh.transformations.rotation_matrix(math.pi, [1, 0, 0])); cone.apply_translation((x0 + TOF_X, -42.0, PATH - 19))
+        cone.apply_translation((x0 + TOF_X, -42.0, PATH - 19 - (PATH - 22)))   # apex at the sensor, widening DOWN into the bin
         sc.add("tof_cone", cone, kind="glass", color=(0.3, 1.0, 0.4), opacity=0.25); sc.show("tof_cone", False)
         self.ffmpeg = None
         self.frames = 0
@@ -109,7 +109,7 @@ def main():
     F = Film(); sc = F.sc
     F.start(os.path.join(OUT, "how_it_works.mp4"))
     every = list(sc.actors)
-    pod = ("screen_cradle", "pod_cover", "conv5", "mount_wall_gap")
+    pod = ("screen_cradle", "pod_cover", "pod_standoff", "conv5", "mount_wall_gap")
     cam_over = ((L_ALL * 0.12, -1300, 880), (L_ALL * 0.45, 0, 160), 32)
     F.roll(0, 0); [F.door(i, 0) for i in range(BINS - 1)]
 

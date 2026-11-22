@@ -1,6 +1,6 @@
 """VTK off-screen renderer for the sorter: the real CAD meshes (audit/placed), colored by material, with moving
 parts (cards, fins, rollers, doors, links, gate) driven by transforms, cutaway planes and text callouts."""
-import sys, os, json, math
+import os, sys, os, json, math
 import numpy as np, trimesh, vtk
 from vtk.util import numpy_support as nps
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cad"))
@@ -20,7 +20,7 @@ C = {   # material colors (r, g, b), opacity
     "wire": ((0.85, 0.15, 0.15), 1.0), "gold": ((0.85, 0.65, 0.15), 1.0), "stack": ((0.90, 0.88, 0.80), 1.0),
 }
 def kind_of(n):
-    if n in ("hood", "hood_lid", "sheen_cap", "pod_cover", "bay_cover") or n.startswith(("back_panel",)): return "black"
+    if n in ("hood", "hood_lid", "sheen_cap", "pod_cover", "pod_standoff", "bay_cover") or n.startswith(("back_panel",)): return "black"
     if n == "scan_floor": return "green"
     if n.startswith("bin_") and "side" not in n: return "bin"
     if n.startswith(("rail", "shaft_", "idler_stub", "loop_", "psu", "coupler")): return "alu"

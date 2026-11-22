@@ -19,10 +19,10 @@ Let each part cool before you load it.
 | feeder_base | 2 tower screws (hopper floor), 4 bay cover (front, beside the window), 4 feed-motor standoff (back wall: 2 low, 2 in the tab above the floor), 2 post tops (pressure bridge), 2 tray hold-downs (top of the front of each ledge, from inside the bay) |
 | idler_slider (x2) | 1 each, in the hopper-side face |
 | gate_plate | 1 in the top |
-| scan_side_back | 4 inlet plate, 1 wall top (hood foot, X 228), 1 belt-home sensor (underside of the strip) |
-| scan_side_front | 1 wall top (hood foot), 2 screen mount (outer face) |
-| bin_side_back (each) | 4 back panel (outer face round the window), 2 joint plates (outer face, just under the floor line), 2 wall top |
-| bin_side_front (each) | 2 joint plates, 2 wall top |
+| scan_side_back | 4 inlet plate, 2 wall top (hood feet, X 228 and 349), 1 belt-home sensor (underside of the strip) |
+| scan_side_front | 2 wall top (hood feet), 2 screen mount (outer face) |
+| bin_side_back (each) | 4 back panel (outer face round the window), 2 joint plates (outer face, just under the floor line) |
+| bin_side_front (each) | 2 joint plates |
 | tie_bar (each) | one in each end boss |
 | end_side_back | 4 track-motor standoff, 2 ramp flange (underside of the strip), 1 joint plate, 2 end cap (in the end face) |
 | end_side_front | 1 joint plate, 2 end cap (end face) |
@@ -30,6 +30,7 @@ Let each part cool before you load it.
 | camera_plate | 2 in the tabs |
 | screen_cradle | 4 in the ears |
 | pod_cover | 2 for the 5 V converter |
+| pod_standoff | 2 in the face that meets the pod |
 
 ## 1. Frame
 
@@ -94,12 +95,13 @@ Let each part cool before you load it.
 6. Stand the module on the rails against the feeder base and bolt it down: 2 x M5 x 10 front, 2 back (the back ones
    through the gaps in the wire channel).
 
-## 4. Hood, lid and camera (after bin module 1 is on: the hood's right feet go into its walls)
+## 4. Hood, lid and camera
 
 1. Hood LED channels: COB strip into each aluminum channel, channels on the front and back ledges, wires joined
    inside along the back and out through the LED hole. Sheen LED: one piece of the strip (cut at a marked line, up to
    52 mm) in the sheen cap, cap on the back bosses (2 x M3 x 12 in its counterbores).
-2. Hood onto the wall tops: 4 x M3 x 10 (two into the scan walls at X 228, two into bin module 1's at X 363).
+2. Hood onto the scan module's wall tops: 4 x M3 x 10 (X 228 and X 349). Its right end overhangs bin module 1 by
+   17 mm without fixings.
 3. Camera: **4 x M2 x 8** self-tapping into the camera plate, **connector facing LEFT** (toward the hopper). Plate onto
    the lid's ribs (2 x M3 x 10 through the slots), lens 115 mm above the card to start.
 4. Camera ribbon: Pi end first, then out of the pod's back, across the gap just above the conveyor walls, up the
@@ -136,7 +138,8 @@ Each module: back side, tie bar, front side, door, servo, link, sensors, looms, 
    runs to the hub on bin module 2; its own looms go straight to the boards.
 9. Back panel over the window (4 x M3 x 8). Bin module 2 gets the **hub panel**: PCA9685 on its 4 bosses (**M2 x 8**),
    MCP23017, the two TCA9548A (bridge A0 on the first, A1 on the second) and the 3.3 V regulator on the pads (foam tape
-   + a zip tie through each slot pair). Wire the hub before the panel goes on.
+   + a zip tie through each slot pair). Clip the header solder tails under those four boards flush first (or use two
+   layers of foam tape), so they sit flat instead of rocking on the tails. Wire the hub before the panel goes on.
 10. Next module on its rails, then the **joint plates** across the joint, front and back (2 x M3 x 8 each, just under
     the floor line): they line the walls up and carry the front wall's end.
 11. Bin in from the front, between the two fingers under the front wall.
@@ -160,8 +163,10 @@ Each module: back side, tie bar, front side, door, servo, link, sensors, looms, 
 ## 8. Screen pod
 
 1. Pi 5 on the back of the display, display ribbon and power jumpers as in the display's box.
-2. Display into the cradle (Pi's port edge up), 5 V converter on its bosses in the pod cover (2 x M3 x 8), USB-C in.
-3. Pod cover on (4 x M3 x 10). Wall mount flat on the scan module's front wall (2 x M3 x 8 into its inserts), pod onto
+2. GoPro standoff onto the pod cover first, while the cover is empty: 2 x M3 x 12 from inside the cover, through the
+   pad on its back wall, into the standoff's inserts.
+3. Display into the cradle (Pi's port edge up), 5 V converter on its bosses in the pod cover (2 x M3 x 8), USB-C in.
+4. Pod cover on (4 x M3 x 10). Wall mount flat on the scan module's front wall (2 x M3 x 8 into its inserts), pod onto
    it (M5 thumbscrew), tilt about 15° back.
 
 ## 9. First power-up
@@ -185,14 +190,14 @@ From the kit (M2 / M3 / M4 / M5, socket cap) unless noted. Stage A = the 3-bin m
 | M5 x 10 + 2020 T-nut | 18 | 42 | every foot (counterbored): base 4, scan 4, each bin module 4, end 2 |
 | M3 x 20 | 2 | 2 | start-idler tension (post faces) |
 | M3 x 16 | 2 | 2 | tower to base |
-| M3 x 12 | 17 | 29 | tie bars 2 each (3 / 9 bars), PSU cradles 4 (+ 4 M3 nuts), bay fan 4 (+ 4 nuts), gate 1 (+ M3 jam nut), sheen cap 2 |
+| M3 x 12 | 19 | 31 | tie bars 2 each (3 / 9 bars), PSU cradles 4 (+ 4 M3 nuts), bay fan 4 (+ 4 nuts), gate 1 (+ M3 jam nut), sheen cap 2, GoPro standoff 2 |
 | M3 x 10 | 20 | 20 | motor standoffs 8, pressure bridge 2, hood 4, camera plate 2, pod cover 4 |
 | M3 x 8 | 44 | 92 | bay cover 4, tray 2, motors 8, inlet 4, ramp 2, end cap 4, screen mount 2, converter 2, back panels 4 per bin module, joint plates 4 per joint |
 | M3 x 6 | 1 | 1 | belt-home sensor (or an M3 x 8 + washer) |
 | M2 x 8 | 18 | 36 | SKR Pico 4, camera 4, PCA9685 4, per bin module: servo tabs 2 + door lever 1 |
 | M2 x 6 | 22 | 52 | servo horn 1 per bin module, fins (20 / 44) |
 | M3 x 4 grub + M3 nut | 2 | 2 | drive pulleys |
-| M3 heat-set insert (5.7 long) | 78 | 162 | see section 0 |
+| M3 heat-set insert (5.7 long) | 74 | 134 | see section 0 |
 
 No M2.5 screws anywhere any more: the SKR Pico, the camera and the PCA9685 take M2 x 8 self-tapping through their
 2.7 mm holes into 2.1 mm pilots. If your kit has no M2 x 6, cut M2 x 8s down (side cutters, then run a nut off to

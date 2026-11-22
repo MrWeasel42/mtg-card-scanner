@@ -13,6 +13,8 @@ python3 wires.py > out_wires.log 2>&1
 python3 motion.py > out_motion.log 2>&1
 python3 sim.py > out_sim.log 2>&1
 python3 printability.py > out_print.log 2>&1
+python3 tips_check.py > out_tips.log 2>&1
+python3 test_sections.py > out_sections.log 2>&1
 python3 insert_walls.py > out_inserts.log 2>&1
 cd "$HERE/../cad" && python3 fitcheck.py $HERE/fit.json > $HERE/out_fit.log 2>&1
 cd "$HERE"

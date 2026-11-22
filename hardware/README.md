@@ -9,6 +9,7 @@
   track, every door swung through its travel, every cable length (`fit_report.json`).
 - `sheets/`: drawing sheet per part. `renders/`: pictures.
 - [AUDIT.md](AUDIT.md): the rev H design audit (every part, screw, cable, motion and card path checked; what changed). `audit/run_all.sh` re-runs it.
+- [PRINT_SETUP.md](PRINT_SETUP.md): printer tune-up, the fresh OrcaSlicer profiles, the calibration order and the test prints (fit-test pieces in `stl/test_sections/`).
 
 Machine coordinates: X along the card path, Y across (front = -Y), Z up. Card floor at Z = 205 mm (8.1 in).
 Length 1.47 m (58 in) with 9 bins. Build order: the 3-bin raw-card machine first (feeder, scanner, bin modules 1-2,

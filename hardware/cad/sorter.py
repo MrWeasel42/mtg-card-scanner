@@ -538,7 +538,7 @@ def motor_standoff():
     L, T = 30.0, 4.0
     m = box(-21.15, 21.15, 0, L, -21.15, 21.15)
     m = m.cut(box(-18.4, 18.4, T, L - T, -22, 22))            # open top + bottom between the plates
-    m = m.cut(cyl_y(0, 0, 11.5, -1, L + 1))                   # motor boss / shaft / coupler
+    m = m.cut(tear_y(0, 0, 11.5, -1, L + 1))                  # motor boss / shaft / coupler (teardrop: prints open side down)
     for dx in (-15.5, 15.5):
         for dz in (-15.5, 15.5):
             m = m.cut(cyl_y(dx, dz, M3 / 2, -1, L + 1))       # short screws, heads inside
@@ -715,7 +715,7 @@ HOME_X, HOME_Y = SCAN_X0 + 10.0, 39.5   # belt home sensor (TCRT5000 looking up 
 def scan_common(s):
     """Both scan-module walls: hood insert in the wall top at the hood's left feet (its right feet use bin module
     1's), a ledge along the strip's inner edge that the scan floor's ribs rest on, the PSU cradle screws."""
-    f = side_frame(SCAN_X0, SCAN_X1, s, bin_opening=False, tie_hole=False, top_inserts=(HOOD_X0 + 11.0,), bosses=(),
+    f = side_frame(SCAN_X0, SCAN_X1, s, bin_opening=False, tie_hole=False, top_inserts=(HOOD_X0 + 11.0, SCAN_X1 - 6.0), bosses=(),
                    gusset_notches=((HOME_X - 7.0, HOME_X + 33.5),) if s > 0 else ())
     f = f.union(box(SCAN_X0, SCAN_X1, *sorted((s * 33.0, s * STRIP_IN + s * 0.01)), PATH - 12, PATH - 10))
     zc = PSU_SCREW_Z[0] if s < 0 else PSU_SCREW_Z[1]
@@ -771,7 +771,7 @@ def hood():
     # card tunnel through both end walls
     h = h.cut(box(x0 - 1, x1 + 1, -(WALL_OUT + 0.5), WALL_OUT + 0.5, PATH + 9, WALL_TOP + 0.5))   # track + walls pass through
     # pads at the four corners sit on the wall tops; M3 into the wall-top inserts
-    for xa, xb in ((x0 + 3, x0 + 19), (x1 - 19, x1 - 3)):
+    for xa, xb in ((x0 + 3, x0 + 19), (SCAN_X1 - 14.0, SCAN_X1 - 0.5)):   # right pair on the scan walls, short of the joint
         for sg in (-1, 1):
             y0p, y1p = sorted((sg * WALL_IN_UP, sg * 72.5))
             h = h.union(box(xa, xb, y0p, y1p, WALL_TOP, WALL_TOP + 5))
@@ -801,10 +801,10 @@ def hood():
     # LED wires (both channels + the sheen LED) leave through this hole low in the back wall, near the right end,
     # and drop down the back of the scan module into the back wire channel
     h = h.cut(cyl_y(x1 - 14, WALL_TOP + 22, 3.5, y1 - 4, y1 + 1))
-    # feet: 4 x M3 x 10 into the wall-top inserts: the left pair in the scan module's walls (X 228), the right pair
-    # in bin module 1's (X 363; the hood overhangs the joint)
+    # feet: 4 x M3 x 10 into the wall-top inserts, all in the scan module's walls (X 228 and 349). The hood overhangs
+    # the joint onto bin module 1 by 17 mm, but the bin modules carry no wall-top inserts (their front walls print flat)
     for s in (-1, 1):
-        for xc in (x0 + 11, x1 - 9):
+        for xc in (x0 + 11, SCAN_X1 - 6.0):
             h = h.cut(cyl_z(xc, s * TOP_INSERT_Y, M3 / 2, WALL_TOP - 1, WALL_TOP + 6))
     # the top comes off as hood_lid: cut here, add the tongue of the light trap
     h = h.intersect(box(x0 - 15, x1 + 1, y0 - 1, y1 + 8, -1e3, LID_Z))   # (wide enough to keep the outside rails and sheen bosses)
@@ -972,7 +972,7 @@ def bin_module_side(side):
     Front side (-1): door rest ledge, beam receiver, bin-level sensor pocket."""
     x0, x1 = 0.0, PITCH
     notch = [(-0.1, 2 * TIE_X + 0.6)] + ([(SERVO_TOP_X - 22.0, SERVO_TOP_X + 6.5)] if side > 0 else [])   # tie bar; lever, link, horn, servo (it slides in from -X)
-    f = side_frame(x0, x1, side, bay=True, gusset_notches=notch)
+    f = side_frame(x0, x1, side, bay=True, gusset_notches=notch, top_inserts=())   # no hood here: no wall-top bosses (they'd hold the flat-printed front wall 3 mm off the bed)
     s = side
     if s > 0:
         for xa, xb in FRAME_KN:                                   # frame knuckles hang off the strip
@@ -1026,7 +1026,7 @@ BACK_PANEL = (2.0, PITCH - 2.0, CHAN_Z1, PATH - 27.0)   # x0, x1, z0, z1 on the 
 def back_panel(hub=False):
     """Covers the window in a bin module's back wall (4 x M3 x 8 into the wall's inserts): it hides the wiring and
     looks finished. The one on bin module 2 carries the BIN HUB on its inside face, through the window: PCA9685
-    servo board (4 x M2.5 x 6 self-tapping into the bosses), MCP23017 beam inputs, 2 x TCA9548A I2C switches for
+    servo board (4 x M2 x 8 self-tapping into the bosses), MCP23017 beam inputs, 2 x TCA9548A I2C switches for
     the bin-level sensors and the 3.3 V regulator (foam tape on the pads, a zip tie over each through the slots).
     Its bottom edge sits on the back wire channel; the looms come up out of the channel into the window."""
     x0, x1, z0, z1 = BACK_PANEL
@@ -1121,6 +1121,13 @@ def end_ramp():
     for xh in (x0 + 15, x1 - 15):
         fl = fl.cut(cyl_z(xh, 41.0, M3 / 2, PATH - 17, PATH - 12))
     return pl.union(fl)
+
+def print_skin_end_front():
+    """0.2 mm sacrificial layer (STL only, not the assembly model): the front end wall prints on its outer face, so the
+    5.5 mm shaft hole starts in mid-air above the 16.3 mm bearing seat. One layer across it lets the printer bridge
+    first and lay a flat bearing shoulder on top; it's cut out after printing."""
+    ys = -(WALL_OUT - 5.2)
+    return cyl_y(END_SHAFT_X - END_X0, PUL_Z, 2.75 + 0.05, ys, ys + 0.2)
 
 def end_cap():
     """Closes the end of the track above the last bin (catches cards that overshoot) and ties the two end walls
@@ -1384,9 +1391,12 @@ def pod_cover():
     c = box(x0, x1, T, POD_D, z0, z1).cut(box(x0 + w, x1 - w, T - 1, POD_D - w, z0 + w, z1 - w))
     for sx in (-1, 1):                                                       # ears over the frame's ears
         for zc in (-0.4 + 15, H - 0.4 - 15):
-            xe0, xe1 = sorted((sx * (x1), sx * (x1 + 9)))
-            c = c.union(box(xe0, xe1, T, T + 5, zc - 6, zc + 6))
+            # 45 degree gusset under each ear (the cover prints back face down, so the ears are its top 5 mm)
+            ear = (cq.Workplane("XY").polyline([(sx * x1, T), (sx * (x1 + 9), T), (sx * (x1 + 9), T + 5), (sx * x1, T + 14)])
+                   .close().extrude(12).translate((0, 0, zc - 6)))
+            c = c.union(ear)
             c = c.cut(cyl_y(sx * (x1 + 4.5), zc, M3 / 2, T - 1, T + 6))
+            c = c.cut(cyl_y(sx * (x1 + 4.5), zc, 3.4, T + 5, T + 20))       # head pocket down through the gusset
     for xv in range(-32, 33, 8):                                             # fan / board vents
         c = c.cut(box(xv - 2, xv + 2, POD_D - w - 1, POD_D + 1, PI_ON_SCREEN_Z + 6, PI_ON_SCREEN_Z + 50))
     c = c.cut(box(CAM_PORT_X - 11, CAM_PORT_X + 11, POD_D - w - 1, POD_D + 1, RIB_EXIT_Z - 2.5, RIB_EXIT_Z + 2.5))
@@ -1396,9 +1406,29 @@ def pod_cover():
     for dz in (-CONV_EARS / 2, CONV_EARS / 2):                               # 5 V converter bosses (M3 inserts)
         c = c.union(cyl_y(CONV_X, CONV_Z + dz, 4.5, POD_D - w - 6, POD_D - w + 0.1))
         c = c.cut(cyl_y(CONV_X, CONV_Z + dz, M3_INSERT / 2, POD_D - w - 7, POD_D - w - 1))
-    c = c.union(box(-POD_DX - 17, -POD_DX + 17, POD_D - 0.5, POD_D + POD_STANDOFF, SCR_PIV[2] - 9.5, SCR_PIV[2] + 9.5))   # standoff
+    # GoPro standoff is its own part (pod_standoff): 2 x M3 x 12 from inside the pod, through a 2 mm pad on the back
+    # wall, into inserts in the standoff. That keeps the cover's back face flat on the bed (no 50 mm of supports).
+    c = c.union(box(-POD_DX - 17, -POD_DX + 17, POD_D - w - POD_PAD, POD_D - w + 0.1, SCR_PIV[2] - GP_R, SCR_PIV[2] + 9.5))
+    for dx in POD_SCREW_DX:
+        c = c.cut(cyl_y(-POD_DX + dx, SCR_PIV[2], M3 / 2, POD_D - w - POD_PAD - 1, POD_D + 1))
+    return c
+
+POD_PAD = 2.0                    # extra back-wall thickness under the standoff screws
+POD_SCREW_DX = (-10.0, 10.0)     # standoff screws either side of the GoPro tab's centre line
+
+def pod_standoff():
+    """GoPro tab on a 34 mm standoff behind the screen pod (carries the whole pod). Two M3 heat-set inserts in its
+    pod face. Prints standing on its flat bottom (cradle -Z): layers run along the standoff, the strong way, and
+    the tab's prongs stand up as plain walls - no supports."""
+    c = box(-POD_DX - 17, -POD_DX + 17, POD_D, POD_D + POD_STANDOFF, SCR_PIV[2] - GP_R, SCR_PIV[2] + 9.5)
     tab = gopro(2, 12, base_w=30, base_t=0.01).rotate((0, 0, 0), (1, 0, 0), -90).translate((-POD_DX, POD_D + POD_STANDOFF, SCR_PIV[2]))
-    return c.union(tab)
+    c = c.union(tab).cut(box(-60, 60, POD_D - 1, POD_D + 80, -40, SCR_PIV[2] - GP_R))   # flat bottom: the tab's base trimmed to the prongs
+    yf = POD_D + POD_STANDOFF                       # 1.5 mm fillets where the prongs meet the block (no sharp inside corner
+    c = c.edges("|Z").edges(cq.selectors.BoxSelector((-50, yf - 0.05, -50), (80, yf + 0.05, 80))).fillet(1.5)   # under load)
+    for dx in POD_SCREW_DX:
+        c = c.cut(cyl_y(-POD_DX + dx, SCR_PIV[2], M3_INSERT / 2, POD_D - 1, POD_D + 6.0))
+        c = c.cut(cyl_y(-POD_DX + dx, SCR_PIV[2], M3 / 2, POD_D, POD_D + 10.0))
+    return c
 
 def converter_block():
     """The 24 V -> 5 V USB-C converter on its bosses inside the pod (body + ears), cradle frame."""
@@ -1527,16 +1557,16 @@ PRINTED = {
     "fin_gauge":       (fin_gauge, "PETG", "Flat."),
     "track_pulley_idler": (lambda: track_pulley(False), "PETG", "Axis vertical, 0.12 mm layers, 100% infill. 2 x 685ZZ each."),
     "track_pulley_drive": (lambda: track_pulley(True), "PETG", "Hub down, 0.12 mm layers, 100% infill. M3 nut + M3 x 4 grub."),
-    "motor_standoff":  (motor_standoff, "PETG", "On a side wall, 5 walls (printed on plate 1)."),
-    "scan_side_front": (scan_side_front, "PETG", "UPRIGHT (foot down), 225 mm tall. No supports."),
-    "scan_side_back":  (scan_side_back, "PETG", "UPRIGHT (foot down). Tree supports only under the strip over the belt-home sensor."),
+    "motor_standoff":  (motor_standoff, "PETG", "Rev H: stand it on its OPEN side (both plate edges on the bed): every wall is vertical, no bridges, no supports, 5 walls. The 2 printed on plate 1 (on a side wall) work as they are; the sag under their top wall is inside, cosmetic only."),
+    "scan_side_front": (scan_side_front, "PETG", "UPRIGHT (foot down), 225 mm tall. No supports. Tall on a narrow foot: 8 mm brim + glue stick, long edge front-to-back on the bed (the Neptune's bed moves front-to-back), outer walls at 80 mm/s or less for the top half."),
+    "scan_side_back":  (scan_side_back, "PETG", "UPRIGHT (foot down). Tree supports only under the strip over the belt-home sensor. Tall on a narrow foot: 8 mm brim + glue stick, long edge front-to-back on the bed (the Neptune's bed moves front-to-back), outer walls at 80 mm/s or less for the top half."),
     "scan_floor":      (scan_floor, "PLA matte green", "Top face DOWN on the smooth side of the plate."),
     "hood":            (hood, "PLA matte black", "Upright, tongue on top. Tree supports under the tunnel, pads and LED ledges."),
     "hood_lid":        (hood_lid, "PLA matte black", "Roof down, no supports."),
     "sheen_cap":       (sheen_cap, "PLA matte black", "Back face down. 50 mm piece of the COB strip inside."),
     "camera_plate":    (camera_plate, "PETG", "Tabs up. Camera connector faces LEFT (hopper side)."),
     "polarizer_cap":   (polarizer_cap, "PETG", "Open end up, no supports. Slip fit on the 30.00 mm lens; film disc goes in the seat at the bottom."),
-    "bin_side_back":   (lambda: bin_module_side(1), "PETG", "UPRIGHT (foot down), 225 mm tall. Tree supports under the hinge knuckles only."),
+    "bin_side_back":   (lambda: bin_module_side(1), "PETG", "UPRIGHT (foot down), 225 mm tall. Tree supports under the hinge knuckles only. Tall on a narrow foot: 8 mm brim + glue stick, long edge front-to-back on the bed (the Neptune's bed moves front-to-back), outer walls at 80 mm/s or less for the top half."),
     "bin_side_front":  (lambda: bin_module_side(-1), "PETG", "On its outer face (flat, 122 x 105). No supports."),
     "door":            (door, "PETG", "Top face DOWN on the smooth side, tree supports under the barrels and lever."),
     "servo_link":      (servo_link, "PETG", "Flat, 100% infill."),
@@ -1544,8 +1574,8 @@ PRINTED = {
     "back_panel":      (back_panel, "PLA matte black", "Outside face down. Covers a bin module's back window."),
     "back_panel_hub":  (lambda: back_panel(hub=True), "PLA matte black", "Outside face down. Bin module 2's panel: carries the bin hub boards."),
     "bin":             (bin_box, "PLA", "Open side up, 2 walls, 10% infill. ~5 h each."),
-    "end_side_front":  (lambda: end_side(-1), "PETG", "On its outer face (flat). No supports."),
-    "end_side_back":   (lambda: end_side(1), "PETG", "UPRIGHT (foot down). Tree supports under the strip over the ramp flange."),
+    "end_side_front":  (lambda: end_side(-1).union(print_skin_end_front()), "PETG", "On its outer face (flat). No supports. A 0.2 mm skin closes the shaft hole at the bottom of the bearing seat (it gives the printer a bridge to start the hole on): cut it out with a hobby knife before pressing the 625 bearing in."),
+    "end_side_back":   (lambda: end_side(1), "PETG", "UPRIGHT (foot down). Tree supports under the strip over the ramp flange. Tall on a narrow foot: 8 mm brim + glue stick, long edge front-to-back on the bed (the Neptune's bed moves front-to-back), outer walls at 80 mm/s or less for the top half."),
     "end_cap":         (end_cap, "PETG", ""),
     "end_ramp":        (end_ramp, "PETG", "Ramp face DOWN on the smooth side, tree supports under the flange."),
     "electronics_tray":(electronics_tray, "PETG", "Flat, bosses up."),
@@ -1553,7 +1583,8 @@ PRINTED = {
     "psu_cradle":      (psu_cradle, "PETG", "On its side (X face down). Two M3 nuts drop into the slots."),
     "inlet_plate":     (inlet_plate, "PETG", "Flat."),
     "screen_cradle":   (screen_cradle, "PETG", "Face down. 4 M3 inserts in the ears."),
-    "pod_cover":       (pod_cover, "PLA matte black", "Back face down, tree supports for the GoPro standoff."),
+    "pod_cover":       (pod_cover, "PLA matte black", "Back face down, no supports (the GoPro standoff is now a separate part)."),
+    "pod_standoff":    (pod_standoff, "PETG", "Flat bottom down, prongs standing up, no supports, 5 walls. 2 M3 inserts in the pod face; 2 x M3 x 12 from inside the pod."),
     "mount_wall":      (mount_wall, "PETG", "Screen mount across the hopper/scanner gap on the front walls."),
 }
 STAGES = {   # name: (A, B, C)
@@ -1565,7 +1596,7 @@ STAGES = {   # name: (A, B, C)
     "bin_side_back": (2, 6, 0), "bin_side_front": (2, 6, 0), "door": (2, 6, 0), "servo_link": (3, 6, 0), "tie_bar": (3, 6, 0),
     "back_panel": (1, 6, 0), "back_panel_hub": (1, 0, 0), "bin": (3, 6, 0), "end_side_front": (1, 0, 0), "end_side_back": (1, 0, 0),
     "end_cap": (1, 0, 0), "end_ramp": (1, 0, 0), "electronics_tray": (1, 0, 0), "bay_cover": (1, 0, 0), "psu_cradle": (2, 0, 0),
-    "inlet_plate": (1, 0, 0), "idler_slider": (2, 0, 0), "joint_plate": (4, 12, 0), "screen_cradle": (1, 0, 0), "pod_cover": (1, 0, 0), "mount_wall": (1, 0, 0),
+    "inlet_plate": (1, 0, 0), "idler_slider": (2, 0, 0), "joint_plate": (4, 12, 0), "screen_cradle": (1, 0, 0), "pod_cover": (1, 0, 0), "pod_standoff": (1, 0, 0), "mount_wall": (1, 0, 0),
 }
 
 def placed():
@@ -1613,6 +1644,7 @@ def placed():
     # screen pod in front of the hopper/hood gap, tilted back; the camera ribbon leaves its back
     P["screen_cradle"] = screen_placed(screen_cradle())
     P["pod_cover"] = screen_placed(pod_cover())
+    P["pod_standoff"] = screen_placed(pod_standoff())
     P["mount_wall_gap"] = mount_wall().rotate((0, 0, 0), (0, 0, 1), 180).translate((MOUNT_X, -WALL_OUT, PATH - 21))
     xe = END_X0
     P["end_side_front"] = end_side(-1).translate((xe, 0, 0))

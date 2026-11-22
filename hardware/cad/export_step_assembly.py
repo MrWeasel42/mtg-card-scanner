@@ -19,7 +19,7 @@ def add(shape, **kw):
 petg = cq.Color(0.24, 0.29, 0.36); black = cq.Color(0.08, 0.09, 0.1); white = cq.Color(0.9, 0.92, 0.93)
 alu = cq.Color(0.72, 0.75, 0.78); teal = cq.Color(0.18, 0.83, 0.75); dark = cq.Color(0.12, 0.12, 0.13)
 for k, v in P.items():
-    col = black if (k in ("hood", "hood_lid", "scan_floor", "pod_cover", "bay_cover", "sheen_cap") or k.startswith("back_panel")) else (white if k.startswith("bin_") and "side" not in k else petg)
+    col = black if (k in ("hood", "hood_lid", "scan_floor", "pod_cover", "pod_standoff", "bay_cover", "sheen_cap") or k.startswith("back_panel")) else (white if k.startswith("bin_") and "side" not in k else petg)
     add(v, name=k, color=col)
 # bought parts (envelopes, for fit)
 add(box(-5, LENGTH + 5, RAIL_Y - 10, RAIL_Y + 10, 0, 20), name="rail_2020_back", color=alu)

@@ -1,6 +1,6 @@
 """Every screw in the machine: where it goes, which way it points (head -> tip), what it clamps, what it threads
 into. Positions come from the CAD constants, so a design change moves the screws with it."""
-import sys, math, json, os
+import os, sys, math, json, os
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cad"))
 from sorter import *
 
@@ -75,8 +75,8 @@ for zc, side, yo, dy, nm in ((PSU_SCREW_Z[0], "scan_side_front", -WALL_OUT, 1, "
     add(f"PSU cradles ({nm}, M3 nut in the cradle)", (3, 12), [(x, yo, zc) for x in CRADLE_XC], (0, dy, 0), [side],
         ("nut", WALL_OUT - WALL_IN + 0.2 + 0.2, 2.4), present=without("inlet_plate", "iec_inlet"))
 add("screen wall mount", (3, 8), [(MOUNT_X + dx, -WALL_OUT - 5, PATH - 21) for dx in (-44.5, 44.5)], (0, 1, 0), ["mount_wall_gap"],
-    ("insert", "scan_side_front"), present=without("screen_", "pod_cover", "conv5"))
-add("hood feet -> wall tops", (3, 10), [(x, sg * TOP_INSERT_Y, WALL_TOP + 5) for x in (HOOD_X0 + 11, HOOD_X1 - 9) for sg in (-1, 1)],
+    ("insert", "scan_side_front"), present=without("screen_", "pod_cover", "pod_standoff", "conv5"))
+add("hood feet -> wall tops", (3, 10), [(x, sg * TOP_INSERT_Y, WALL_TOP + 5) for x in (HOOD_X0 + 11, SCAN_X1 - 6.0) for sg in (-1, 1)],
     (0, 0, -1), ["hood"], ("insert_any",), present=without("hood_lid", "camera", "v_cam"))
 add("sheen cap", (3, 12), [(SCAN_X + dx, 75 + 5 + 6, SHEEN_Z) for dx in (-SHEEN_SCREW_DX, SHEEN_SCREW_DX)], (0, -1, 0), ["sheen_cap"], ("insert", "hood"))
 zt = PATH + CAM_D + 44 - 4 + CAM_HOLE_DZ + 4
@@ -130,5 +130,10 @@ for sx in (-1, 1):
         a = sxf(sx * (x1 + 4.5), T + 5, zc); b = sxf(sx * (x1 + 4.5), T + 4, zc)
         pts.append(a); dirs.append(tuple(b[k] - a[k] for k in range(3)))
 add("pod cover -> screen cradle ears", (3, 10), pts, dirs[0], ["pod_cover"], ("insert", "screen_cradle"), present=without("screen_block", "conv5"))
+_y = POD_D - 2.5 - POD_PAD                      # inside face of the pad on the pod's back wall (head seat)
+pts = [sxf(-POD_DX + dx, _y, SCR_PIV[2]) for dx in POD_SCREW_DX]
+_b = sxf(-POD_DX + POD_SCREW_DX[0], _y + 1, SCR_PIV[2])
+add("GoPro standoff -> pod cover (from inside the pod)", (3, 12), pts, tuple(_b[k] - pts[0][k] for k in range(3)),
+    ["pod_cover"], ("insert", "pod_standoff"), present=["pod_cover", "pod_standoff"])
 
 JOINTS = J
