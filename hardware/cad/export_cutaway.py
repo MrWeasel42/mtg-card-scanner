@@ -21,6 +21,6 @@ put("lens", cyl_z(SCAN_X, 0, 15, PATH + CAM_D, PATH + CAM_D + 44).union(cyl_z(SC
 put("led_back", box(HOOD_X0 + 4, HOOD_X1 - 4, 75 - 14 + 0.5, 75 - 3 - 0.5, PATH + LED_H, PATH + LED_H + 8), "alu")
 put("led_strip", box(HOOD_X0 + 6, HOOD_X1 - 6, 75 - 14 + 4.5, 75 - 6, PATH + LED_H - 0.2, PATH + LED_H + 0.2), "accent")
 put("card_scan", box(SCAN_X - 44, SCAN_X + 44, -31.5, 31.5, PATH, PATH + 0.6), "card")
-put("ribbon", camera_ribbon()[0].intersect(keep), "card")
+V, F, _ = ribbon_strip(); write_stl(os.path.join(out, "ribbon.stl"), V, F); items.append({"file": "ribbon.stl", "kind": "card"})
 json.dump(items, open(os.path.join(out, "items.json"), "w"))
 print(len(items), "parts")

@@ -18,7 +18,7 @@ First design pass: nothing printed yet. Test-print the gate plate and an exit ro
 * `screen_cradle` (lips round the glass) + `pod_cover` (black) hide the Pi 5. Vents over the Pi's fan.
 * Pi's port edge UP. The camera ribbon only ever bends across its width (never sideways, never folded): out of
   the pod's back, straight back across the gap above the conveyor, a soft bend upward, then up beside the hood's
-  left wall, twisting 90 degrees gently over ~60 mm until it lies flat on the wall under two pairs of L-rails, and
+  left wall, twisting 90 degrees gently over ~64 mm until it lies flat on the wall under a pair of L-rails, and
   over through the slot at camera height straight into the camera. The camera is turned so its connector faces
   left; the hanger ribs are on the front and back so nothing is in the way. Run ~325 mm: 500 mm (20 in) cable.
   ![ribbon route](renders/ribbon_route.png)

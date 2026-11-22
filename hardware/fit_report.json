@@ -698,7 +698,7 @@
  {
   "label": "Camera ribbon vs everything else (track, fins, hopper)",
   "overlap": 0.0,
-  "gap": 28.37,
+  "gap": 15.93,
   "need": 2.0,
   "ok": true,
   "note": ""
@@ -720,12 +720,12 @@
   "note": "up to the connector; the last few cm follow the camera when you set its height"
  },
  {
-  "label": "Camera ribbon run (Pi -> behind screen -> up inside the hood -> camera)",
+  "label": "Camera ribbon run (Pi -> across the gap -> up beside the hood -> straight into the camera)",
   "overlap": 0,
-  "gap": 174.9,
+  "gap": 163.4,
   "need": 40,
   "ok": true,
-  "note": "~325 mm on a 500 mm cable"
+  "note": "~337 mm on a 500 mm cable"
  },
  {
   "label": "Cable: Mains (IEC inlet -> PSU) (92 mm run +15%)",
@@ -744,9 +744,9 @@
   "note": "the converter's own 12 in (305 mm) lead"
  },
  {
-  "label": "Cable: Camera ribbon (325 mm run +15%)",
+  "label": "Cable: Camera ribbon (337 mm run +15%)",
   "overlap": 0,
-  "gap": 126.2,
+  "gap": 112.9,
   "need": 0,
   "ok": true,
   "note": "Pi 5 camera cable, 500 mm (22-pin mini -> 15-pin standard)"

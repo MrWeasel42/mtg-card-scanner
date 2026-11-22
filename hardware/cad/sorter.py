@@ -467,8 +467,9 @@ LID_Z = PATH + HOOD_H - 12.0        # the hood's removable lid starts here
 LID_KEY_X = SCAN_X + 40.0           # lid key on the back side, off-centre: the lid only goes on one way
 RIB_CONN_Z = PATH + CAM_D + 44 + 2.0   # camera connector height (default lens height)
 RIB_X = HOOD_X0 - 8.5               # the ribbon rises here, flat, just outside the hood's left wall (in the gap)
-RIB_RAIL_Z0 = RIB_CONN_Z - 60.0     # L-rails on the outside of the left wall hold the twisted, flat top part
-RIB_RUN_Z = WALL_TOP + 27.0         # height of the run back across the gap (above the conveyor) from the pod
+RIB_RUN_Z = WALL_TOP + 7.0          # height of the run back across the gap (just above the conveyor walls) from the pod
+RIB_TWIST_Z = (RIB_RUN_Z + 16.0, RIB_CONN_Z - 36.0)   # the ribbon rolls 90 deg over this rise (~64 mm, 4 x its width)
+RIB_RAIL_Z0 = RIB_CONN_Z - 34.0     # one pair of L-rails on the outside of the left wall holds the flat top part
 SCREEN_TILT = 15.0                  # screen leans back this many degrees
 
 def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True, bay=False):
@@ -589,7 +590,7 @@ def hood():
     # (connector facing the wall). No sideways turns or folds anywhere.
     h = h.cut(box(x0 - 1, x0 + 4, -12, 12, RIB_CONN_Z - 16, RIB_CONN_Z + 3))
     h = h.union(box(x0 + 3, x0 + 9, -14, 14, RIB_CONN_Z + 3, RIB_CONN_Z + 5))            # light lip over the slot
-    for z in (RIB_RAIL_Z0, RIB_RAIL_Z0 + 22):                                          # rail pairs on the outside face
+    for z in (RIB_RAIL_Z0,):                                                         # rail pair on the outside face
         for sg in (-1, 1):
             e = sg * 8.75
             y0r, y1r = sorted((e, e + sg * 2))
@@ -1046,20 +1047,70 @@ def converter_block():
     b = box(CONV_X - CONV_W / 2, CONV_X + CONV_W / 2, yb - CONV_T, yb, CONV_Z - CONV_L / 2, CONV_Z + CONV_L / 2)
     return b.union(box(CONV_X - 6, CONV_X + 6, yb - 2, yb, CONV_Z - CONV_L / 2 - 7, CONV_Z + CONV_L / 2 + 7))
 
+def _ribbon_points():
+    """Centre-line corners of the camera ribbon and the direction of its width at each one."""
+    x, zt = RIB_X, RIB_CONN_Z
+    X, Y = (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)
+    pts = [(screen_xf(CAM_PORT_X, 12.5, PI_ON_SCREEN_Z + 56), X), (screen_xf(CAM_PORT_X, 12.5, RIB_EXIT_Z), X),
+           (screen_xf(CAM_PORT_X, POD_D + 2, RIB_EXIT_Z), X), ((x, -16.0, RIB_RUN_Z), X),
+           ((x, 0.0, RIB_TWIST_Z[0]), X), ((x, 0.0, RIB_TWIST_Z[1]), Y), ((x, 0.0, zt - 14), Y),
+           ((x + 14, 0.0, zt), Y), ((SCAN_X - 19, 0.0, zt), Y)]
+    return pts
+
+def ribbon_strip(step=1.0, radius=12.0, thick=0.6, width=16.0):
+    """The ribbon as one continuous strip: corners rounded to `radius`, width direction blended smoothly (the twist).
+    Returns (vertices Nx3, triangles Mx3) for an STL; used for the pictures."""
+    import numpy as np
+    P = [np.array(p, float) for p, _ in _ribbon_points()]
+    W = [np.array(w, float) for _, w in _ribbon_points()]
+    # round each corner: replace it with a quadratic Bezier between points `radius` back and ahead
+    cl, wl = [P[0]], [W[0]]
+    for i in range(1, len(P) - 1):
+        a, b, c = P[i - 1], P[i], P[i + 1]
+        r = min(radius, np.linalg.norm(b - a) / 2, np.linalg.norm(c - b) / 2)
+        p0 = b + (a - b) / np.linalg.norm(a - b) * r
+        p2 = b + (c - b) / np.linalg.norm(c - b) * r
+        for t in np.linspace(0, 1, 9):
+            cl.append((1 - t) ** 2 * p0 + 2 * (1 - t) * t * b + t ** 2 * p2); wl.append(W[i])
+    cl.append(P[-1]); wl.append(W[-1])
+    # resample by arc length, blending the width direction where it changes (the twist segment)
+    seg = [np.linalg.norm(cl[i + 1] - cl[i]) for i in range(len(cl) - 1)]
+    s_ = np.concatenate([[0], np.cumsum(seg)]); n = int(s_[-1] / step) + 2
+    ss = np.linspace(0, s_[-1], n)
+    C = np.array([np.interp(ss, s_, [p[k] for p in cl]) for k in range(3)]).T
+    Wv = np.array([np.interp(ss, s_, [w[k] for w in wl]) for k in range(3)]).T
+    T = np.gradient(C, axis=0); T /= np.linalg.norm(T, axis=1)[:, None]
+    Wv = Wv - T * (Wv * T).sum(1)[:, None]; Wv /= np.linalg.norm(Wv, axis=1)[:, None]
+    N = np.cross(T, Wv)
+    corners = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
+    V = np.concatenate([C + Wv * sw * width / 2 + N * sn * thick / 2 for sw, sn in corners], axis=0)
+    tris = []
+    for i in range(n - 1):
+        for k in range(4):
+            a0, a1 = k * n + i, ((k + 1) % 4) * n + i
+            tris += [(a0, a1, a1 + 1), (a0, a1 + 1, a0 + 1)]
+    for e, flip in ((0, False), (n - 1, True)):
+        q = [k * n + e for k in range(4)]
+        tris += [(q[0], q[2], q[1]), (q[0], q[3], q[2])] if not flip else [(q[0], q[1], q[2]), (q[0], q[2], q[3])]
+    return V, np.array(tris), float(s_[-1])
+
+def write_stl(path, V, F):
+    import numpy as np, struct
+    with open(path, "wb") as f:
+        f.write(b"\0" * 80); f.write(struct.pack("<I", len(F)))
+        for a, b, c in F:
+            n = np.cross(V[b] - V[a], V[c] - V[a]); ln = np.linalg.norm(n) or 1.0
+            f.write(struct.pack("<12fH", *(n / ln), *V[a], *V[b], *V[c], 0))
+
 def camera_ribbon():
-    """The camera ribbon's path (picture + length check). Only bends across its width and one long, gentle twist:
-    Pi port -> up inside the pod -> out the pod's back -> straight back across the gap above the conveyor ->
-    soft bend upward -> rises in the gap beside the hood, twisting 90 deg over ~60 mm until it lies flat against the
+    """The camera ribbon's path (fit check + length). Only bends across its width and one long, gentle twist:
+    Pi port -> up inside the pod -> out the pod's back -> straight back across the gap just above the conveyor
+    walls -> soft bend upward -> rises beside the hood, rolling 90 deg over ~64 mm until it lies flat against the
     hood's left wall -> under the L-rails -> rolls over through the slot -> straight into the camera's connector
-    (camera turned so the connector faces left)."""
-    x = RIB_X
-    zt = RIB_CONN_Z
-    pts = [screen_xf(CAM_PORT_X, 12.5, PI_ON_SCREEN_Z + 56), screen_xf(CAM_PORT_X, 12.5, RIB_EXIT_Z),
-           screen_xf(CAM_PORT_X, POD_D + 2, RIB_EXIT_Z)]
-    pts += [(x, -16.0, RIB_RUN_Z), (x, 0.0, RIB_RUN_Z + 16), (x, 0.0, RIB_RUN_Z + 40), (x, 0.0, RIB_RAIL_Z0),
-            (x, 0.0, zt - 14), (x + 14, 0.0, zt), (SCAN_X - 19, 0.0, zt)]
+    (camera turned so the connector faces left). Fit-check solid: straight pieces; picture: ribbon_strip()."""
+    pts = [p for p, _ in _ribbon_points()]
     X, Y, XY = cq.Vector(1, 0, 0), cq.Vector(0, 1, 0), cq.Vector(1, 1, 0)
-    widths = [X, X, X, X, X, XY, Y, Y, Y, Y]                               # ribbon width direction, segment by segment
+    widths = [X, X, X, X, XY, Y, Y, Y]
     shp, total = None, 0.0
     for (a, b), wd in zip(zip(pts, pts[1:]), widths):
         d = cq.Vector(b) - cq.Vector(a); L = d.Length; total += L; d = d.normalized()

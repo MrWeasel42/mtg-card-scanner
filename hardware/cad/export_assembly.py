@@ -50,7 +50,7 @@ for i, h in enumerate((60, 25, 90)):
 put("display", screen_placed(box(-SCREEN_W / 2, SCREEN_W / 2, -SCREEN_T, 0, 0, SCREEN_H)), "screen")
 put("pi5", screen_placed(box(-42.5, 42.5, 0, 1.6 + 8, PI_ON_SCREEN_Z, PI_ON_SCREEN_Z + 56)), "servo")
 put("pi5_cooler", screen_placed(box(-35, 35, 9.6, PI_STACK, PI_ON_SCREEN_Z + 6, PI_ON_SCREEN_Z + 50)), "alu")
-put("ribbon", camera_ribbon()[0], "card")
+V, F, _ = ribbon_strip(); write_stl(os.path.join(out, "ribbon.stl"), V, F); items.append({"file": "ribbon.stl", "kind": "card"})
 
 # PSU on its side under the scanner
 put("psu", box(PSU_X0, PSU_X0 + PSU_L, -PSU_H / 2, PSU_H / 2, RAIL_Z + 5, RAIL_Z + 5 + PSU_W), "alu")
