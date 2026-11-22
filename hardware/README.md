@@ -9,20 +9,19 @@
 Machine coordinates: X along the card path, Y across (front = -Y), Z up. Card floor at Z = 205 mm.
 First design pass: nothing printed yet. Test-print the gate plate and an exit roller first to check fits.
 
-## Screen + Pi mount
+## Screen pod
 
 ![screen](renders/asm_screen.png)
 
-* The Pi 5 stays screwed to the back of the Touch Display 2 (its display ribbon is short), and the pair drops into
-  `screen_cradle` from behind: lips round the glass, open back so the Pi's cooler has free air. A crossbar above the
-  Pi carries the GoPro tab that clips onto `mount_front` on the hood (M5 thumbscrew), tilted back 15°.
-* Mount it **landscape with the Pi's port edge (USB-C, HDMI, camera ports) UP**. The camera ribbon (305 mm / 12 in)
-  leaves the CAM/DISP 0 port straight up, lies flat on the back of the screen under the crossbar, curves over to the
-  hood and goes in through the slot in the hood's front wall, level with the camera. Bends only, no twist. The run is
-  about 200 mm (8 in), so about 10 cm (4 in) is spare: let it hang in a loose loop behind the screen.
-* Turn the camera on its plate so its ribbon connector faces the front (the screen side).
-* The ribbon can't jog sideways, so the Pi's camera port has to line up with the camera: `CAM_PORT_X` in
-  `cad/sorter.py` shifts the screen left/right to match. Measure the port's offset from the screen's centre line.
-* After mounting, set the picture the right way up: `bash ~/mtg-card-scanner/machine/screen-rotate.sh 90` (or 270).
+* The touchscreen sits in front of the gap between the hopper tower and the hood, on `mount_wall` (bolted across
+  the front walls), tilted back 15°. M5 thumbscrew through the GoPro-style prongs.
+* It's a closed **pod**: `screen_cradle` (lips round the glass) + `pod_cover` (black) hide the Pi 5, the 24 V → 5 V
+  USB-C converter and every cable. Vents over the Pi's fan and beside the converter.
+* Pi's port edge UP. The camera ribbon goes up inside the pod, into `ribbon_duct`, up the gap (rolling 90° gently
+  on the way, round bends only) and into the hood's **left** wall, level with the camera. Turn the camera so its
+  connector faces left. Run ~340 mm: use a **500 mm (20 in) Pi 5 camera cable**; the spare folds flat in the pod.
+* The converter lives in the pod; only its 24 V pair (extend it with 18 AWG, solder + heat-shrink) runs down
+  `wire_tube` into the electronics bay through the grommet hole in the bay cover.
+* Picture the right way up: `bash ~/mtg-card-scanner/machine/screen-rotate.sh 90` (or 270).
 
-![screen side](renders/asm_screen_side.png)
+![inside](renders/asm_screen_open.png)

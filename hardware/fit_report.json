@@ -536,12 +536,12 @@
   "note": ""
  },
  {
-  "label": "Screen + Pi block vs hood",
+  "label": "Screen + Pi block vs hood + hopper",
   "overlap": 0.0,
-  "gap": 43.32,
+  "gap": 34.69,
   "need": 2.0,
   "ok": true,
-  "note": "screen on the hood front, tilted back, Pi on its back"
+  "note": "in front of the gap, tilted back"
  },
  {
   "label": "Screen + Pi block vs pod frame + cover",
@@ -576,23 +576,23 @@
   "note": ""
  },
  {
-  "label": "Screen pod vs everything else",
+  "label": "Screen pod vs everything else (hopper, hood, walls)",
   "overlap": 0.0,
-  "gap": 101.33,
+  "gap": 12.5,
   "need": 3.0,
   "ok": true,
   "note": ""
  },
  {
-  "label": "Screen mount vs hood (only the pads)",
+  "label": "Pod's GoPro tab vs the wall mount's prongs",
   "overlap": 0.0,
-  "gap": 0.0,
+  "gap": 0.15,
   "need": 0.0,
   "ok": true,
-  "note": ""
+  "note": "2 prongs between 3, M5 thumbscrew"
  },
  {
-  "label": "Ribbon duct vs hood (butts on the front wall)",
+  "label": "Ribbon duct vs hood (butts on the left wall)",
   "overlap": 0.0,
   "gap": 0.3,
   "need": 0.0,
@@ -600,17 +600,33 @@
   "note": ""
  },
  {
-  "label": "Ribbon duct vs mount + screen",
+  "label": "Ribbon duct vs hopper tower + feeder",
   "overlap": 0.0,
-  "gap": 7.0,
+  "gap": 52.75,
+  "need": 3.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Ribbon duct vs everything else",
+  "overlap": 0.0,
+  "gap": 2.6,
+  "need": 2.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Wire tube vs everything but the pod + bay cover",
+  "overlap": 0.0,
+  "gap": 8.65,
   "need": 1.0,
   "ok": true,
   "note": ""
  },
  {
-  "label": "Wire tube vs track / walls",
+  "label": "Wire tube vs bay cover (butts on it)",
   "overlap": 0.0,
-  "gap": 4.25,
+  "gap": 0.3,
   "need": 0.0,
   "ok": true,
   "note": ""
@@ -618,7 +634,7 @@
  {
   "label": "Camera ribbon vs ribbon duct (runs inside)",
   "overlap": 0.0,
-  "gap": 2.6,
+  "gap": 4.0,
   "need": 0.5,
   "ok": true,
   "note": ""
@@ -632,12 +648,12 @@
   "note": ""
  },
  {
-  "label": "Camera ribbon run (Pi -> pod -> duct -> hood -> camera) vs 305 mm",
+  "label": "Camera ribbon run (Pi -> pod -> duct up the gap -> hood -> camera) vs 500 mm cable",
   "overlap": 0,
-  "gap": 118.7,
-  "need": 30,
+  "gap": 154.3,
+  "need": 40,
   "ok": true,
-  "note": "~186 mm; flat, bends only; spare folds flat inside the pod"
+  "note": "~346 mm; flat, bends only; spare folds flat inside the pod"
  },
  {
   "label": "Back wire channel fill, full 9-bin build",
