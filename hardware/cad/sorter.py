@@ -29,12 +29,17 @@ BELT_TEETH_HIGH = PUL_Z + PUL_R - 1.0  # underside of the top run (tooth tips), 
 FIN_REACH_Y = 27.0                 # fin fingers reach in to |Y| = 27 (raw card edge 31.5, or 29.25 when it sits off-centre)
 GROOVE_Y0, GROOVE_D = 26.5, 1.2    # fin lanes: groove from |Y| 26.5 out to the floor edge, 1.2 mm deep
 RAIL_IN, RAIL_W, RAIL_H = 33.75, 2.0, 2.5   # side guides: 67.5 mm apart (sleeved card 66 + 0.75 a side), 2.5 tall
+FLOOR_W = 33.5                     # doors, scan floor and end ramp stop at |Y| 33.5, just inside the guide rails' webs
 TAPER_X0, TAPER_X1, TAPER_IN0 = 136.0, 230.0, 36.5   # lead-in: 73 mm wide at the exit-roller nip, 67.5 mm by X 230 (1.7 deg a side)
 TOWER_LEAN_X = 3.0                 # the L-shaped hopper also leans 3 degrees toward the exit wall
-FIN_PITCHES = 10                   # 3-bin build: factory closed loop 1220 mm = 10 x 122 mm, one fin every 122 mm
+BINS = int(os.environ.get("SORTER_BINS", "9"))   # the machine is the 9-bin one; SORTER_BINS=3 draws the first test build
+                                   # (feeder, scanner, bin modules 1-2, end module; the end module moves out when 3-8 go in)
+FIN_PITCHES = 2 * BINS + 4         # belt loop in fin pitches: 3 bins = 10 x 122 = 1220 mm (factory loop),
+                                   # 9 bins = 22 x 122 = 2684 mm (welded loop). One fin every 122 mm (61 teeth).
 CARD_L, CARD_W = 88.0, 63.0
 SCAN_X = 128.0 + PITCH + CARD_L / 2   # card centre when photographed (294): fin face lands at 128, one pitch on
-BIN_X = [SCAN_X + PITCH * (k + 1) for k in range(3)]   # bin centres (416, 538, 660): bin 1, bin 2, end-of-line bin
+BIN_X = [SCAN_X + PITCH * (k + 1) for k in range(BINS)]   # bin centres (416, 538, ... 1392): the last is the end-of-line bin
+HUB_MODULE = 1                     # the bin hub (back panel with the servo board etc.) is on bin module 2
 # Hole sizes tuned on the PETG fit coupon (Neptune 4 Pro, 0.4 nozzle, flow 0.95). Measured: a printed hole comes
 # out about 0.07 + 0.78/d mm under size (16 mm: -0.12, 5 mm: -0.23, 4 mm: -0.27, 2 mm: -0.46).
 M5 = 5.6; M3 = 3.6; M3_INSERT = 4.7   # clearance (prints 3.3) / heat-set insert (prints 4.45: 4.32 lead drops in, 5.04 knurl melts)
@@ -45,9 +50,16 @@ FIN_START_X = 131.0   # start idlers (stub shafts in the posts on the feeder bas
 END_SHAFT_X = FIN_START_X + (FIN_PITCHES * PITCH - 2 * math.pi * PUL_R) / 2   # drive shaft in the end module (711)
 NEMA = 42.3; NEMA_HOLES = 31.0; NEMA_BOSS = 22.5
 
-# tower (raw cards)
-TOWER_IN_X, TOWER_IN_Y = 89.5, 64.5
-TOWER_X0 = 20.0                   # inside face of the back wall
+# towers: raw, single-sleeved and double-sleeved. All share the exit wall (inside face at X 109.5, where the gate is),
+# the base screws and the tower-ID magnets, so any of them drops onto the same feeder base.
+TOWER_EXIT_X = 109.5
+TOWERS = {"raw": (89.5, 64.5), "single": (92.5, 67.5), "double": (93.5, 68.5)}   # inside X x Y
+TOWER_IN_X, TOWER_IN_Y = TOWERS["raw"]
+TOWER_X0 = TOWER_EXIT_X - TOWER_IN_X  # inside face of the entry side (open) for the raw tower: 20
+TOWER_SKIRT_X0 = 2.0              # every tower's base skirt starts here
+TOWER_SCREW = [(9.0, -45.0), (9.0, 45.0)]   # 2 x M3 thumb screws into heat-set inserts in the feeder base
+HALL = [(9.0, -30.0), (9.0, 30.0)]          # tower-ID: A3144 hall sensors in the base, 6 x 3 mm magnets in the skirt
+TOWER_MAGNETS = {"raw": (0,), "single": (1,), "double": (0, 1)}   # which HALL positions get a magnet
 TOWER_H = 185.0
 GATE = 0.45                       # raw-card gate opening, set with the adjuster
 TOWER_LEAN = 3.0                  # degrees the hopper leans back (+Y)
@@ -55,7 +67,7 @@ PSU_L, PSU_W, PSU_H = 129.0, 97.0, 30.0   # Mean Well LRS-100-24 (L x W x H); te
 PSU_X0 = 180.0                    # PSU case starts here; its terminals face -X with 25 mm for the wires
 CAM_D = 115.0                     # lens front to card (4.5 in; Eric's test: sharp from ~4 in, card fills the frame).
                                   # Adjustable 100-135 mm. The lens's barrel distortion is taken out in software (lens calibration).
-CHAN_Z0, CHAN_Z1 = 28.0, 50.0     # back wire channel: 10 x 18 mm inside (fits the full 9-bin loom at <40% fill)
+CHAN_Z0, CHAN_Z1 = 28.0, 56.0     # back wire channel: 10 x 24 mm inside (the whole 9-bin loom at ~32% fill)
 CHAN_F0, CHAN_F1 = 150.0, 172.0   # front channel runs higher, above the bin bays
 END_BIN_D = 113.0; END_BIN_Y = -18.5   # end bin: Y +38 .. -75
 BIN_Y = -37.0                     # bins sit forward: inner back wall at Y -1, right under the open door's low edge
@@ -117,7 +129,10 @@ def guide_rail(x0, x1, side, chamfer=True, xoff=0.0):
                 [(x1 - 4.0, ri(x1 - 4.0)), (x1, ri(x1) + 1.0)]
     outer = [(x, ri(x) + RAIL_W) for x, _ in reversed(inner)]
     pts = [(x, side * y) for x, y in inner] + [(x, side * y) for x, y in outer]
-    r = cq.Workplane("XY").polyline(pts).close().extrude(RAIL_H - 0.15).translate((0, 0, PATH + 0.15))
+    # solid down to 1.5 mm under the floor line: the part over the floor-edge gap (inside |Y| 35) hangs off the strip
+    # as a web, so the rail is one piece with the wall (it used to float 0.15 mm above the strip). Doors and floors
+    # stop at |Y| 33.5, 0.25 mm inside it.
+    r = cq.Workplane("XY").polyline(pts).close().extrude(RAIL_H + 1.5).translate((0, 0, PATH - 1.5))
     return r
 
 def fin_groove(x0, x1, y_out):
@@ -130,6 +145,8 @@ def fin_groove(x0, x1, y_out):
     return g
 
 # ============================================================================ FEEDER (head unit)
+X1_BASE = 150.0
+
 def feeder_base():
     """Head unit: hopper floor, feed roller, exit roller, both motors, start of the edge belts.
     Footprint 150 x 130 mm (5.9 x 5.1 in), 185 mm (7.3 in) tall, prints upright without supports
@@ -203,47 +220,53 @@ def feeder_base():
     # fin lanes where the fins come down round the start idlers, and the start of the tapered side guides
     b = b.cut(fin_groove(FIN_START_X - 7, X1 + 1, 40.0))
     for sg in (-1, 1):
-        b = b.union(guide_rail(TAPER_X0, X1, sg, chamfer=False))
-        # the rails sit over the fin lanes here: fill the lane under them so they're joined to the floor
-        # (fin fingers stop at |Y| 32.75, inside the rail; the fin bridge passes over the top)
-        b = b.union(guide_rail(TAPER_X0, X1, sg, chamfer=False).translate((0, 0, -(GROOVE_D + 0.15))))
+        b = b.union(guide_rail(TAPER_X0, X1, sg, chamfer=False))   # solid down into the lane (fins stop at |Y| 32.75)
     # card-clear sensor (TCRT5000 reflective IR) under a slot in the floor at X 127, |Y| 22: the track only
     # steps once the card's tail has left it, so a fin can't come down on a card
     b = b.cut(box(122.5, 131.5, -24.0, -20.0, PATH - 5, PATH + 1))
     b = b.cut(box(121.8, 132.2, -25.0, -19.0, PATH - 12, PATH - 3.9))
     b = b.union(box(119.8, 134.2, -27.0, -17.0, PATH - 13, PATH - 4).cut(box(121.8, 132.2, -25.0, -19.0, PATH - 14, PATH - 3.9)))
     # (this pocket hangs under the floor: the only spot on the base that needs printed support)
-    # tower dovetail rails on top (tower slides on from the back, +Y)
-    for x in (TOWER_X0 - 9, TOWER_X0 + TOWER_IN_X - 3):     # exit-side rail sits under the tower wall (fins sweep past it)
-        b = b.union(box(x, x + 6, -40, 40, PATH, PATH + 3))
-    # heat-set inserts for the tower thumb screws and the pressure-roller arm
-    for (x, y) in ((TOWER_X0 - 6, -45), (TOWER_X0 - 6, 45), (EXIT_X, -21), (EXIT_X, 21)):
+    # The hopper floor is flat and clear from the entry side to the exit roller: nothing stands on it in the card's
+    # way (v2 had a locating bar under the exit wall that the bottom card ran into). Any tower sits flat on its skirt,
+    # held and located by 2 M3 thumb screws in heat-set inserts. Each insert gets a boss tied to the left wall at
+    # 45 degrees underneath, so it prints without support.
+    for (x, y) in TOWER_SCREW:
+        g = (cq.Workplane("XZ").polyline([(0.0, PATH - 4.0), (x + 5.0, PATH - 4.0), (x + 5.0, PATH - 9.0), (0.0, PATH - 9.0 - (x + 5.0))])
+             .close().extrude(-10.0).translate((0, y - 5.0, 0)))
+        b = b.union(g)
         b = b.cut(cyl_z(x, y, M3_INSERT / 2, PATH - 8, PATH + 1))
-    # magnet pockets for the tower-ID magnets read by the hall sensors (two positions)
-    for y in (-30, 30):
-        b = b.cut(cyl_z(TOWER_X0 - 6, y, 3.1, PATH - 3.2, PATH + 1))
+    # tower-ID hall sensors (A3144, flat, branded face up) in 6.2 mm pockets 3.2 deep; leads go down a 3 mm hole into
+    # the bay. The tower's magnets sit right above them in its skirt.
+    for (x, y) in HALL:
+        b = b.cut(cyl_z(x, y, 3.1, PATH - 3.2, PATH + 1)).cut(cyl_z(x, y, 1.5, PATH - 6, PATH))
     return b
 
-def raw_tower():
-    """L-shaped open hopper for raw cards: back wall (+Y) and exit wall (+X) only, inside 89.5 x 64.5 mm,
-    about 550 cards. Leans 3 degrees back and 3 degrees toward the exit, so the stack rests in that corner,
-    square against the gate; front and entry sides are open for loading. The bottom card still lies flat on the
-    floor; the base skirt keeps the bottom few cards in on the open sides."""
+def tower(kind="raw"):
+    """L-shaped open hopper: back wall (+Y) and exit wall (+X) only. Raw: inside 89.5 x 64.5 mm (~550 cards);
+    single-sleeved 92.5 x 67.5; double-sleeved 93.5 x 68.5. The exit wall's inside face is always at X 109.5 (the
+    gate), so the stack lines up with the feed roller and the guides whatever is fitted. Leans 3 degrees back and
+    3 degrees toward the exit, so the stack rests in that corner, square against the gate; front and entry sides are
+    open for loading. The bottom card lies flat on the floor; the skirt keeps the bottom few cards in on the open
+    sides. Skirt: sits flat on the floor, 2 x M3 thumb screws, and the tower-ID magnets (6 x 3 mm, pressed in from
+    underneath, SOUTH pole down: the A3144 only switches on a south pole) in the positions that say which tower it is."""
+    in_x, in_y = TOWERS[kind]
+    x0 = TOWER_EXIT_X - in_x
     t = 3.5
-    xo0, xo1 = TOWER_X0 - t, TOWER_X0 + TOWER_IN_X + t
-    yo0, yo1 = -TOWER_IN_Y / 2 - t, TOWER_IN_Y / 2 + t
-    xi1, yi1 = TOWER_X0 + TOWER_IN_X, TOWER_IN_Y / 2
-    back = box(TOWER_X0 + 6, xo1, yi1, yo1, PATH - 6, PATH + TOWER_H)          # back wall
-    exitw = box(xi1, xo1, yo0 + 6, yo1, PATH - 6, PATH + TOWER_H)              # exit wall (carries the gate)
+    xo0, xo1 = x0 - t, TOWER_EXIT_X + t
+    yo0, yo1 = -in_y / 2 - t, in_y / 2 + t
+    xi1, yi1 = TOWER_EXIT_X, in_y / 2
+    back = box(x0 + 6, xo1, yi1, yo1, PATH - 6, PATH + TOWER_H)          # back wall
+    exitw = box(xi1, xo1, yo0 + 6, yo1, PATH - 6, PATH + TOWER_H)        # exit wall (carries the gate)
     for sg in (-1, 1):   # 1 mm relief on the outside, low down beside the gate track: the fins sweep past here
         exitw = exitw.cut(box(xi1 + 2.5, xo1 + 1, *sorted((sg * 22.0, sg * 50.0)), PATH - 7, PATH + 40))
     walls = back.union(exitw)
     # stiffening stays OUTSIDE the card space: a top rim and a rib along each free edge, on the outer faces
-    walls = walls.union(box(TOWER_X0 + 6, xo1 + 3, yo1, yo1 + 3, PATH + TOWER_H - 8, PATH + TOWER_H))       # back rim
-    walls = walls.union(box(xo1, xo1 + 3, yo0 + 6, yo1 + 3, PATH + TOWER_H - 8, PATH + TOWER_H))           # exit rim
-    walls = walls.union(box(TOWER_X0 + 6, TOWER_X0 + 10, yo1, yo1 + 4, PATH + 12, PATH + TOWER_H))         # back wall free edge
-    walls = walls.union(box(xo1, xo1 + 4, yo0 + 6, yo0 + 10, PATH + 42, PATH + TOWER_H))                   # exit wall free edge
-    # gate track on the exit face (+X) + boss for the M3 adjust screw
+    walls = walls.union(box(x0 + 6, xo1 + 3, yo1, yo1 + 3, PATH + TOWER_H - 8, PATH + TOWER_H))         # back rim
+    walls = walls.union(box(xo1, xo1 + 3, yo0 + 6, yo1 + 3, PATH + TOWER_H - 8, PATH + TOWER_H))       # exit rim
+    walls = walls.union(box(x0 + 6, x0 + 10, yo1, yo1 + 4, PATH + 12, PATH + TOWER_H))                 # back wall free edge
+    walls = walls.union(box(xo1, xo1 + 4, yo0 + 6, yo0 + 10, PATH + 42, PATH + TOWER_H))               # exit wall free edge
+    # gate track on the exit face (+X) + boss for the M3 adjust screw (same on every tower: gate_plate fits all)
     gx = xo1
     walls = walls.union(box(gx, gx + 6, -20, 20, PATH + 6, PATH + 40))
     walls = walls.cut(box(gx + 1, gx + 6.1, -14, 14, PATH + 5, PATH + 41))
@@ -252,17 +275,25 @@ def raw_tower():
     # lean: back about the X axis through the floor line, then toward the exit about the Y axis through the exit wall foot
     walls = walls.rotate((0, 0, PATH), (1, 0, PATH), -TOWER_LEAN)
     walls = walls.rotate((xi1, 0, PATH), (xi1, 1, PATH), TOWER_LEAN_X)
-    # flat bottom: walls stop 3 mm above the floor, the exit wall 6 mm (that's where cards leave)
+    # walls stop 3 mm above the floor (on the skirt); the exit wall leaves 6 mm across the card width (the gate sets it)
     walls = walls.cut(box(xo0 - 20, xo1 + 20, -80, 80, PATH - 20, PATH + 3))
-    walls = walls.cut(box(xi1 - 1, xo1 + 1, -TOWER_IN_Y / 2, TOWER_IN_Y / 2 + 4, PATH - 1, PATH + 6))
-    # base skirt (frame on the base rails); 9 mm high on the open sides keeps the bottom cards in
-    skirt = box(xo0 - 9, xo1 + 1, -45, 45, PATH + 3, PATH + 9)     # stops at the exit wall so the fins clear it
-    skirt = skirt.cut(box(TOWER_X0, xo1 + 1, -TOWER_IN_Y / 2, TOWER_IN_Y / 2 + 4, PATH + 2, PATH + 10))
-    for y in (-40, 40):
-        skirt = skirt.cut(cyl_z(TOWER_X0 - 6, y, M3 / 2, PATH, PATH + 12))
-    for y in (-30, 30):
-        skirt = skirt.cut(cyl_z(TOWER_X0 - 6, y, 3.1, PATH + 3, PATH + 6.3))
+    walls = walls.cut(box(xi1 - 1, xo1 + 1, -in_y / 2, in_y / 2, PATH - 1, PATH + 6))
+    # skirt: flat on the floor, round the open sides and under the walls; stops at the exit wall so the fins clear it
+    skirt = box(TOWER_SKIRT_X0, xo1 + 1, -50, 50, PATH + 0.2, PATH + 9)
+    skirt = skirt.cut(box(x0, xo1 + 2, -in_y / 2, in_y / 2 + 1.0, PATH, PATH + 10))   # +1 at the back: the stack leans that way
+    for (x, y) in TOWER_SCREW:
+        skirt = skirt.cut(cyl_z(x, y, M3 / 2, PATH, PATH + 12))
+    for i in TOWER_MAGNETS[kind]:
+        x, y = HALL[i]
+        skirt = skirt.cut(cyl_z(x, y, 3.15, PATH, PATH + 3.2 + 0.2))      # 6 x 3 magnet, press fit, flush underneath
+    # the kind, embossed on the skirt top so the three towers can't be mixed up
+    lbl = {"raw": "RAW", "single": "1 SLV", "double": "2 SLV"}[kind]
+    skirt = skirt.union(cq.Workplane("XY").text(lbl, 6.0, 0.6, halign="center", valign="center", kind="bold")
+                        .rotate((0, 0, 0), (0, 0, 1), 90).translate(((TOWER_SKIRT_X0 + x0) / 2, 0.0, PATH + 9)))
     return walls.union(skirt)
+
+def raw_tower():
+    return tower("raw")
 
 def gate_plate():
     """Slides in the tower's exit track; silicone pad glued under its foot. M3 screw from the top sets the gap."""
@@ -294,21 +325,34 @@ def feed_roller():   # OD with tyres ~24 mm: three 16 x 3.5 mm O-rings (same as 
 def exit_roller():   # OD with tyres ~24 mm: two 16 x 3.5 mm O-rings (print 2: driven + pressure)
     return o_ring_roller(10.0, 30.0, 2)
 
-def pressure_arm():
-    """Gravity-loaded arm that holds the pressure roller on the exit roller. Pivots on an M3 screw."""
-    a = box(0, 60, -3, 3, 0, 10)
-    a = a.union(box(0, 10, -24, 24, 0, 10))
-    for y in (-21, 21):
-        a = a.cut(cyl_x(y, 5, M3 / 2, -1, 11))
-    a = a.union(box(50, 60, -22, 22, 0, 6)).cut(box(52, 58, -18, 18, -1, 7))
-    a = a.cut(cyl_y(55, 3, 2.6, -23, 23))          # 5 mm axle for the pressure roller
-    return a
+PR_Z = PATH + 13.0      # pressure roller axle when it rests on the exit roller (both D23.6 with their O-rings)
+
+def pressure_bridge():
+    """Holds the top (pressure) roller over the exit roller. A beam across the tops of the feeder base's two posts
+    (2 x M3 x 10 into the inserts already there) with two hangers that come down beside the roller, inside the fins'
+    reach (|Y| 16-20; fins never come inside |Y| 27). The roller's 5 mm axle (40 mm of the 5 mm shaft, roller grub-
+    screwed to it, a collar outside each hanger) floats in vertical slots: it rests on the exit roller by its own
+    weight and lifts for the card. For more grip, loop a small O-ring from each axle end down to the hook under the
+    slot. Prints beam down, no supports."""
+    x0b, x1b = EXIT_X - 6.0, X1_BASE
+    b = box(x0b, x1b, -59.0, 59.0, WALL_TOP, WALL_TOP + 5)
+    for sg in (-1, 1):
+        b = b.cut(cyl_z(X1_BASE - 6, sg * 54.0, M3 / 2, WALL_TOP - 1, WALL_TOP + 6))
+        y0, y1 = sorted((sg * 16.0, sg * 20.0))
+        h = box(EXIT_X - 7.0, EXIT_X + 7.0, y0, y1, PR_Z - 6.0, WALL_TOP + 0.01)
+        h = h.cut(box(EXIT_X - 2.7, EXIT_X + 2.7, y0 - 1, y1 + 1, PR_Z - 1.3, PR_Z + 4.0)).cut(cyl_y(EXIT_X, PR_Z - 1.3, 2.7, y0 - 1, y1 + 1)) \
+             .cut(cyl_y(EXIT_X, PR_Z + 4.0, 2.7, y0 - 1, y1 + 1))
+        h = h.union(box(EXIT_X - 2, EXIT_X + 2, *sorted((sg * 20.0, sg * 23.0)), PR_Z - 6.0, PR_Z - 3.0))   # O-ring hook
+        # web from the hanger out along the beam (stiff against the card pushing on the roller)
+        h = h.union(box(EXIT_X - 7.0, EXIT_X + 7.0, *sorted((sg * 16.0, sg * 26.0)), WALL_TOP - 8.0, WALL_TOP + 0.01))
+        b = b.union(h)
+    return b
 
 def stack_weight():
     """Rides on top of the stack so the last few cards still feed. Pocket for 4 x M8 washers."""
     w = box(0, 86, -30.5, 30.5, 0, 12)
     w = w.cut(box(8, 78, -22, 22, 3, 13))
-    w = w.union(box(38, 48, -6, 6, 12, 40))       # handle
+    w = w.union(box(38, 48, -6, 6, 3, 40))        # handle (stands on the pocket floor)
     return w
 
 def fin():
@@ -496,11 +540,13 @@ def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True, ba
     f = rail_slots(f, x0, x1, ys=(s * RAIL_Y,))
     # wire channel on the outside face (servo, sensor and LED looms), open at both ends so it runs through
     # every module; snap-on cover = channel_cover
-    cz0, cz1 = (CHAN_Z0, CHAN_Z1) if s > 0 else (CHAN_F0, CHAN_F1)
-    yc0, yc1 = sorted((s * WALL_OUT, s * (WALL_OUT + 12)))
-    f = f.union(box(x0, x1, yc0, yc1, cz0, cz1))
-    yi0, yi1 = sorted((s * (WALL_OUT + 0.01), s * (WALL_OUT + 10)))
-    f = f.cut(box(x0 - 1, x1 + 1, yi0, yi1, cz0 + 2, cz1 - 2))
+    # (back side only: the front is clean; front looms cross to the back along the tie bars, inside the machine)
+    if s > 0:
+        cz0, cz1 = CHAN_Z0, CHAN_Z1
+        yc0, yc1 = sorted((s * WALL_OUT, s * (WALL_OUT + 12)))
+        f = f.union(box(x0, x1, yc0, yc1, cz0, cz1))
+        yi0, yi1 = sorted((s * (WALL_OUT + 0.01), s * (WALL_OUT + 10)))
+        f = f.cut(box(x0 - 1, x1 + 1, yi0, yi1, cz0 + 2, cz1 - 2))
     # lightening window + panel clips (final shell clips onto these bosses)
     if bin_opening:
         f = f.cut(box(x0 + 12, x1 - 12, yw0 - 1, yw1 + 1, RAIL_Z + 20, PATH - 40))
@@ -517,18 +563,17 @@ def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True, ba
         f = f.cut(box(x0 + POST_T, x1 - POST_T, -(RAIL_Y + 11), -(WALL_IN - 1), -1, BAY_TOP))
         for xa in (x0, x1 - POST_T):
             f = f.union(box(xa, xa + POST_T, -(WALL_OUT + 17), -WALL_IN, 0, BAY_TOP))
-            f = f.union(box(xa, xa + POST_T, -(WALL_OUT + 17), -WALL_IN, BAY_TOP - 1, CHAN_F0))
+            f = f.union(box(xa, xa + POST_T, -(WALL_OUT + 5), -WALL_IN, BAY_TOP - 1, PATH - 40))
         f = f.cut(box(x0 - 1, x1 + 1, -(RAIL_Y + 11), -(WALL_OUT + 0.01), -1, RAIL_Z + 7).cut(
                   box(x0 - 2, x1 + 2, -(WALL_OUT + 17), -WALL_IN, -1, 0)))   # no front rail foot here
         for xa in (x0, x1 - POST_T):   # posts sit on the desk on small pads (rubber feet)
             f = f.union(box(xa, xa + POST_T, -(WALL_OUT + 17), -WALL_IN, 0, 3))
         # bin-level sensor: VL53L1X carrier slides into a pocket under the strip, looking straight down at
-        # Y -42 (into the stack), wires out through the wall to the front channel
+        # Y -42 (into the stack); its wires come out of the open inner end of the pocket
         tb = box(x0 + TOF_X - 11, x0 + TOF_X + 11, -WALL_IN, -35.5, PATH - 19, PATH - 12)
         tb = tb.cut(box(x0 + TOF_X - 9.2, x0 + TOF_X + 9.2, -48.6, -35.4, PATH - 17.2, PATH - 14.8))
         tb = tb.cut(cyl_z(x0 + TOF_X, -42.0, 3.5, PATH - 20, PATH - 17))
         f = f.union(tb)
-        f = f.cut(box(x0 + TOF_X - 3, x0 + TOF_X + 3, -(WALL_OUT + 1), -(WALL_IN - 1), PATH - 17.2, PATH - 14.8))
     if bay and s > 0:
         # foot reaching in to the second back rail under the doors
         f = f.union(box(x0, x1, RAIL2_Y - 10, WALL_IN, RAIL_Z, RAIL_Z + 6))
@@ -538,18 +583,15 @@ def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True, ba
 HOME_X, HOME_Y = SCAN_X0 + 10.0, 39.5   # belt home sensor (TCRT5000 looking up at the fins, back side)
 
 def scan_side_front():
-    """Front wall of the scan module. A hole at the feeder end lets the front channel's looms (bin-level sensors,
-    beam receivers) into the space under the scanner, and from there through the feeder base's pass-through
-    into the electronics bay."""
-    f = side_frame(SCAN_X0, SCAN_X1, -1, bin_opening=False)
-    return f.cut(box(SCAN_X0 + 4, SCAN_X0 + 22, -(WALL_OUT + 1), -(WALL_IN - 1), CHAN_F0 + 3, CHAN_F1 - 3))
+    """Front wall of the scan module (plain: nothing is wired along the front)."""
+    return side_frame(SCAN_X0, SCAN_X1, -1, bin_opening=False)
 
 def scan_side_back():
     """Back wall of the scan module, with the power/cable window that the inlet plate covers."""
     f = side_frame(SCAN_X0, SCAN_X1, 1, bin_opening=False)
-    f = f.cut(box(SCAN_X0 + 40, SCAN_X0 + 140, WALL_IN - 1, WALL_OUT + 1, RAIL_Z + 38, RAIL_Z + 88))
+    f = f.cut(box(SCAN_X0 + 40, SCAN_X0 + 140, WALL_IN - 1, WALL_OUT + 1, RAIL_Z + 48, RAIL_Z + 98))
     for x in (SCAN_X0 + 36, SCAN_X0 + 144):
-        for z in (RAIL_Z + 33, RAIL_Z + 93):
+        for z in (RAIL_Z + 43, RAIL_Z + 103):
             f = f.cut(cyl_y(x, z, M3_INSERT / 2, WALL_OUT - 6, WALL_OUT + 1))
     # belt home sensor: a spare TCRT5000 module under the strip looks up through a window at the fin bridges
     # going past on the bottom run (3 mm above the window; with no fin it sees the black belt 7 mm up).
@@ -564,11 +606,11 @@ def scan_side_back():
 def scan_floor():
     """Solid matte-green floor under the camera (green stands out best against black, white and borderless card edges), between the strips (Y -35..35). Slots let the fins pass."""
     x0, x1 = SCAN_X0, SCAN_X1
-    fl = box(x0 + 0.5, x1 - 5.5, -STRIP_IN + 0.2, STRIP_IN - 0.2, PATH - 3, PATH)   # tie-bar plate covers the last 5 mm
+    fl = box(x0 + 0.5, x1 - 5.5, -FLOOR_W, FLOOR_W, PATH - 3, PATH)   # tie-bar plate covers the last 5 mm
     fl = fl.cut(fin_groove(x0 - 1, x1 + 1, STRIP_IN))
     fl = fl.union(box(x0 + 0.5, x1 - 0.5, -STRIP_IN + 0.2, STRIP_IN - 0.2, PATH - 10, PATH - 7))  # ribs
     for xc in (x0 + 20, x1 - 20):
-        fl = fl.union(box(xc - 2, xc + 2, -STRIP_IN + 0.2, STRIP_IN - 0.2, PATH - 10, PATH))
+        fl = fl.union(box(xc - 2, xc + 2, -FLOOR_W, FLOOR_W, PATH - 10, PATH))
     return fl.cut(fin_groove(x0 - 1, x1 + 1, STRIP_IN))
 
 def hood():
@@ -603,8 +645,8 @@ def hood():
     h = h.union(box(x0 + 3, x1 - 3, y0 + 3, y0 + 14, zled - 2, zled))
     h = h.union(box(x0 + 3, x1 - 3, y1 - 14, y1 - 3, zled - 2, zled))
     # sheen LED port (low angle, back wall): a 2 cm piece of the COB strip in sheen_cap shines in through it
-    h = h.cut(cyl_y(SCAN_X, SHEEN_Z, 6, y1 - 4, y1 + 1))
-    for dx in (-17, 17):                                                   # sheen_cap screws (M3 inserts)
+    h = h.cut(box(SCAN_X - 22, SCAN_X + 22, y1 - 4, y1 + 1, SHEEN_Z - 4, SHEEN_Z + 4))   # port: a slot the strip shines through
+    for dx in (-SHEEN_SCREW_DX, SHEEN_SCREW_DX):                           # sheen_cap screws (M3 inserts)
         h = h.union(cyl_y(SCAN_X + dx, SHEEN_Z, 4.5, y1 - 0.5, y1 + 5))
         h = h.cut(cyl_y(SCAN_X + dx, SHEEN_Z, M3_INSERT / 2, y1 - 0.4, y1 + 6))
     # LED wires (both channels + the sheen LED) leave through this hole low in the back wall, near the right end,
@@ -616,7 +658,7 @@ def hood():
             if SCAN_X0 + 8 <= xc <= SCAN_X1 - 8 or True:
                 h = h.cut(cyl_z(xc, s * (WALL_IN_UP + WALL_OUT) / 2, M3 / 2, WALL_TOP - 1, WALL_TOP + 6))
     # the top comes off as hood_lid: cut here, add the tongue of the light trap
-    h = h.intersect(box(x0 - 1, x1 + 1, y0 - 1, y1 + 1, -1e3, LID_Z))
+    h = h.intersect(box(x0 - 15, x1 + 1, y0 - 1, y1 + 8, -1e3, LID_Z))   # (wide enough to keep the outside rails and sheen bosses)
     tongue = box(x0 + 1.6, x1 - 1.6, y0 + 1.6, y1 - 1.6, LID_Z - 0.01, LID_Z + 6).cut(box(x0 + 3, x1 - 3, y0 + 3, y1 - 3, LID_Z - 1, LID_Z + 7))
     tongue = tongue.cut(box(LID_KEY_X - 10.4, LID_KEY_X + 10.4, y1 - 4, y1 + 1, LID_Z - 1, LID_Z + 7))   # key notch
     return h.union(tongue)
@@ -647,13 +689,16 @@ def hood_lid():
             l = l.cut(cyl_y(SCAN_X, zz, 1.7, ya - 1, yb + 1))
     return l
 
+SHEEN_SCREW_DX = 31.0
+
 def sheen_cap():
-    """Light-tight cap over the sheen LED port on the outside of the hood's back wall: holds a 20 mm piece of the
-    24 V COB strip facing in. 2 x M3 x 8 into the hood's inserts; wires out of the bottom to the LED exit."""
-    c = box(-24, 24, 0, 9, -10, 10)
-    c = c.cut(box(-12, 12, -1, 6, -5, 5))                                  # strip pocket (20 x 8 strip + room)
+    """Light-tight cap over the sheen LED port on the outside of the hood's back wall. Holds one cut piece of the same
+    24 V COB strip as the hood lights (no extra part to buy: cut it at the strip's marked cut line, up to 52 mm long)
+    facing in through the port. 2 x M3 x 8 into the hood's inserts; wires out of the bottom to the LED exit."""
+    c = box(-SHEEN_SCREW_DX - 7, SHEEN_SCREW_DX + 7, 0, 9, -10, 10)
+    c = c.cut(box(-26.5, 26.5, -1, 6, -5.5, 5.5))                          # strip pocket (52 x 10 strip + room)
     c = c.cut(box(-3, 3, -1, 4, -11, -4))                                  # wire exit
-    for dx in (-17, 17):
+    for dx in (-SHEEN_SCREW_DX, SHEEN_SCREW_DX):
         c = c.cut(cyl_y(dx, 0, M3 / 2, -1, 10))
     return c
 
@@ -673,74 +718,183 @@ def camera_plate():
             p = p.cut(cyl_z(dx, dy, 1.35, -1, 5))
     return p
 
+LENS_D = 30.0   # front of the 6 mm lens (datasheet ~30 mm): Eric to measure; the cap is made from this
+
 def polarizer_cap():
-    """Push-on cap for the 6 mm lens with a slot for a 32 mm disc of polarizer film; rotate to cross-polarize."""
-    c = cq.Workplane("XY").circle(17).circle(14.4).extrude(10)
-    c = c.union(cq.Workplane("XY").circle(17).circle(11).extrude(1.6))
-    c = c.cut(cq.Workplane("XY").circle(16.2).extrude(0.6).translate((0, 0, 1.6)))
-    c = c.union(box(15, 22, -2, 2, 0, 10))   # index tab for setting the angle
+    """Push-on cap for the front of the 6 mm lens: holds a 32 mm disc of the polarizer film; turn it to cross-polarize
+    (darkest glare). 0.3 mm grip, 3 slits so it springs on; index tab to mark the best angle."""
+    ri = LENS_D / 2 + 0.3
+    c = cq.Workplane("XY").circle(ri + 2.0).circle(ri).extrude(10)
+    c = c.union(cq.Workplane("XY").circle(ri + 2.0).circle(ri - 4.0).extrude(1.6))
+    c = c.cut(cq.Workplane("XY").circle(16.2).extrude(0.6).translate((0, 0, 1.6)))     # film disc seat (32 mm)
+    for k in range(3):
+        c = c.cut(box(-0.6, 0.6, ri - 1, ri + 3, 4.0, 11).rotate((0, 0, 0), (0, 0, 1), 120 * k + 60))
+    c = c.union(box(ri + 1.5, ri + 7, -2, 2, 0, 10))   # index tab
     return c
 
 # ============================================================================ BIN MODULES
+# ---- trapdoors. Hinge axis along X just outside the door's back edge, under the back guide rail. The frame's three
+# knuckles hang off the strip; the door's two long barrels sit in notches in the strip between them. One 2 mm x 100 mm
+# pin runs through all of them (fit the door before the next module is bolted on: the pin goes in from the module end).
+HINGE_Y, HINGE_Z = 34.0, PATH - 5.0
+KN_R = 2.8
+FRAME_KN = [(12.0, 16.0), (59.0, 63.0), (108.0, 112.0)]   # module x: frame knuckles (pin 12 -> 112 = 100 mm)
+DOOR_BAR = [(16.5, 58.5), (63.5, 107.5)]                  # module x: door barrels
+DOOR_X0 = 5.5                                             # door from module x 5.5 to 116.5
+DOOR_OPEN = 60.0
+# servo (EMAX ES08MA II) inside the module under the back strip, output shaft along -X, horn in the same plane as the
+# door lever. Lever and horn are the same length at the same angle, and the link is parallel to the hinge->shaft line:
+# a parallelogram, so the door turns exactly as far as the horn (60 deg) and the servo never pushes against a toggle.
+LEVER_X = (84.5, 88.5)        # lever plate on the second barrel
+LEVER_R, LEVER_A0 = 12.0, 240.0   # lever length; angle (deg, in the YZ plane from +Y) with the door closed
+SERVO_S = (HINGE_Y + 3.0, HINGE_Z - 22.0)   # servo shaft (Y, Z)
+SERVO_TOP_X = 96.0            # servo's top face (the horn side); body runs to X 120
+LINK_X = (89.0, 91.5)
+
+def _lever_end(a_deg, origin=(HINGE_Y, HINGE_Z)):
+    a = math.radians(a_deg)
+    return (origin[0] + LEVER_R * math.cos(a), origin[1] + LEVER_R * math.sin(a))
+
+def _stadium_yz(p, q, r, x0, x1):
+    """A flat bar in the YZ plane from p to q with round ends of radius r, x0..x1 thick."""
+    L = math.dist(p, q); ang = math.degrees(math.atan2(q[1] - p[1], q[0] - p[0]))
+    bar = box(x0, x1, 0, L, -r, r).rotate((0, 0, 0), (1, 0, 0), ang).translate((0, p[0], p[1]))
+    return bar.union(cyl_x(p[0], p[1], r, x0, x1)).union(cyl_x(q[0], q[1], r, x0, x1))
+
 def door():
-    """Trapdoor leaf: (PITCH - 11) x 69.6 x 2.4 mm (111 long). Hinged at the back edge (Y = +35) on a 2 mm pin; the lever
-    under the back strip is pushed by the servo link. Smooth top (print top face up on the textured sheet? no:
-    print top face DOWN on the smooth side of the plate for the slickest surface)."""
-    L, W, T = PITCH - 11.0, 69.6, 2.4       # leaves 5.5 mm each end of the module for the tie-bar floor bridges
-    d = box(0, L, -W / 2, W / 2, -T, 0)
-    d = d.cut(fin_groove(-1, L + 1, W / 2 + 1).translate((0, 0, -PATH)))   # fin lanes along both long edges
-    for xk in (1, L / 2 - 8, L - 16):       # hinge knuckles (between the frame knuckles)
-        d = d.union(box(xk, xk + 10, W / 2 - 3, W / 2 + 2.0, -6, 0))
-        d = d.cut(cyl_x(W / 2 - 0.5, -3.0, 1.1, xk - 1, xk + 11))
-    d = d.union(box(L / 2 - 4, L / 2 + 4, W / 2, W / 2 + 14, -12, -8))   # lever arm
-    d = d.union(box(L / 2 - 4, L / 2 + 4, W / 2 - 2, W / 2 + 2, -12, 0))
-    d = d.cut(cyl_x(W / 2 + 11, -10, 0.9, L / 2 - 5, L / 2 + 5))   # link pin hole
+    """Trapdoor leaf in MODULE coordinates (closed): 111 x 67 x 2.4 mm, top flush with the floor. Two hinge barrels
+    along the back edge (2.2 mm pin holes), notches where the frame knuckles go, the servo lever on the second barrel
+    and a slot the bin's break-beam shines through when the door is open (the card sliding down crosses it).
+    Print top face DOWN on the smooth side of the plate."""
+    x0, x1, T = DOOR_X0, PITCH - DOOR_X0, 2.4
+    d = box(x0, x1, -FLOOR_W, FLOOR_W, PATH - T, PATH)
+    d = d.cut(fin_groove(x0 - 1, x1 + 1, FLOOR_W + 1))
+    d = d.cut(box(x0 - 1, x0 + 1.0, HINGE_Y - 1.0, FLOOR_W + 1, PATH - 1.0, PATH + 1))   # tiny chamfer feel at the back corners
+    for xa, xb in FRAME_KN:                                                 # room for the frame knuckles
+        d = d.cut(box(xa - 0.5, xb + 0.5, HINGE_Y - KN_R - 0.6, FLOOR_W + 1, PATH - 10, PATH + 1))
+    for xa, xb in DOOR_BAR:
+        bar = cyl_x(HINGE_Y, HINGE_Z, KN_R, xa, xb).union(box(xa, xb, HINGE_Y - KN_R, FLOOR_W, HINGE_Z, PATH - 2.0))
+        d = d.union(bar)
+    le = _lever_end(LEVER_A0)
+    d = d.union(_stadium_yz((HINGE_Y, HINGE_Z), le, 3.0, *LEVER_X))
+    for xa, xb in DOOR_BAR:
+        d = d.cut(cyl_x(HINGE_Y, HINGE_Z, 1.1, xa - 1, xb + 1))           # 2.2 hole: the door turns on the pin
+    d = d.cut(cyl_x(le[0], le[1], PILOT_M2 / 2, LEVER_X[0] - 1, LEVER_X[1] + 1))   # M2 x 8 from the link side
+    # break-beam slot: where the beam (X 61, Z PATH-22) crosses the open door
+    d = d.cut(box(PITCH / 2 - 3.0, PITCH / 2 + 3.0, 7.5, 16.5, PATH - 4, PATH + 1))
     return d
 
+def door_open(d=None, ang=DOOR_OPEN):
+    d = door() if d is None else d
+    return d.rotate((0, HINGE_Y, HINGE_Z), (1, HINGE_Y, HINGE_Z), ang)
+
 def servo_link():
-    """Connects the servo horn to the door lever. Hole spacing 22 mm."""
-    l = box(0, 26, -3, 3, 0, 3)
-    for x in (2, 24):
-        l = l.cut(cyl_z(x, 0, 0.9, -1, 4))
+    """Servo horn -> door lever, 22.2 mm between holes. Horn end: M2 x 8 self-taps into the horn's 12 mm hole (open
+    it to 1.6 mm); door end: M2 x 8 through the link into the lever. Both screws snug, not tight: the link turns."""
+    L = math.hypot(3.0, 22.0)
+    l = box(0, L, -3, 3, 0, 2.5).union(cyl_z(0, 0, 3, 0, 2.5)).union(cyl_z(L, 0, 3, 0, 2.5))
+    for x in (0, L):
+        l = l.cut(cyl_z(x, 0, 1.3, -1, 4))
     return l
 
+def link_placed(ang=0.0):
+    """The link in module coordinates at door angle ang (0 closed)."""
+    le = _lever_end(LEVER_A0 + ang)
+    ht = (le[0] + SERVO_S[0] - HINGE_Y, le[1] + SERVO_S[1] - HINGE_Z)
+    return _stadium_yz(le, ht, 3.0, *LINK_X).cut(cyl_x(le[0], le[1], 1.3, 0, 200)).cut(cyl_x(ht[0], ht[1], 1.3, 0, 200))
+
+def servo_placed(ang=0.0):
+    """ES08MA II envelope + its horn (single arm, 12 mm hole) in module coordinates."""
+    xt, (ys, zs) = SERVO_TOP_X, SERVO_S
+    zc = zs - 5.75
+    body = box(xt, xt + 24.0, ys - 5.75, ys + 5.75, zc - 11.5, zc + 11.5)
+    tabs = box(xt + 3.5, xt + 6.0, ys - 5.75, ys + 5.75, zc - 16.25, zc + 16.25)
+    hub = cyl_x(ys, zs, 3.5, xt - 4.0, xt)
+    ht = _lever_end(LEVER_A0 + ang, origin=SERVO_S)
+    horn = _stadium_yz((ys, zs), ht, 3.0, xt - 4.0, xt - 2.0)
+    return body.union(tabs).union(hub).union(horn)
+
 def bin_module_side(side):
-    """Side frame for one 122 mm bin module. Back side (+1) carries the hinge, servo and LED emitter;
-    front side (-1) carries the door rest ledge and the receiver."""
+    """Side frame for one 122 mm bin module. Back side (+1): hinge knuckles, the servo bracket inside, the beam
+    emitter, and 4 inserts for the back panel over the window (on one module the panel carries the bin hub).
+    Front side (-1): door rest ledge, beam receiver, bin-level sensor pocket."""
     x0, x1 = 0.0, PITCH
     f = side_frame(x0, x1, side, bay=True)
     s = side
     if s > 0:
-        # hinge knuckle row under the strip edge, pin at Y = +34.5, Z = PATH - 3
-        for xk in (1, PITCH / 2 + 5, PITCH - 6):
-            f = f.union(box(xk, xk + 5, 33, 38, PATH - 7, PATH - 0.2))
-        f = f.cut(cyl_x(34.5, PATH - 3.0, 1.05, -1, PITCH + 1))
-        # servo pocket on the outside of the wall: ES08MA II body 32.5 x 12 x 27 (with tabs)
-        sx = PITCH / 2
-        f = f.union(box(sx - 20, sx + 20, WALL_OUT, WALL_OUT + 4, PATH - 50, PATH - 14))
-        f = f.cut(box(sx - 11.75, sx + 11.75, WALL_IN - 1, WALL_OUT + 5, PATH - 44, PATH - 32))
-        for dx in (-14, 14):
-            f = f.cut(cyl_y(sx + dx, PATH - 38, 0.9, WALL_OUT - 2, WALL_OUT + 5))
-        # slot for the door lever to swing through
-        f = f.cut(box(sx - 6, sx + 6, STRIP_IN - 1, WALL_IN + 1, PATH - 30, PATH - 6))
+        for xa, xb in FRAME_KN:                                   # frame knuckles hang off the strip
+            f = f.union(cyl_x(HINGE_Y, HINGE_Z, KN_R, xa, xb)).union(box(xa, xb, HINGE_Y, STRIP_IN + 1, HINGE_Z - KN_R, PATH - 2))
+        for xa, xb in DOOR_BAR:                                   # notches in the strip for the door barrels
+            f = f.cut(box(xa - 0.5, xb + 0.5, STRIP_IN - 0.1, HINGE_Y + KN_R + 0.6, HINGE_Z - KN_R - 0.6, PATH - 1.8))
+        f = f.cut(box(LEVER_X[0] - 1, LEVER_X[1] + 1, STRIP_IN - 0.1, 44.0, PATH - 12.1, PATH - 1.8))   # lever swings up in here
+        f = f.cut(cyl_x(HINGE_Y, HINGE_Z, 1.05, FRAME_KN[0][0] - 1, FRAME_KN[-1][1] + 1))             # 2.1 pin hole
+        # servo bracket: a plate across the module (normal to X) that the servo's tabs screw to (2 x M2 x 8)
+        ys, zs = SERVO_S; zc = zs - 5.75; xp = SERVO_TOP_X + 6.0
+        br = box(xp, xp + 3.0, 29.5, WALL_IN + 0.01, zc - 20.0, PATH - 11.99)
+        br = br.cut(box(xp - 1, xp + 4, ys - 5.95, ys + 5.95, zc - 11.7, zc + 11.7))
+        for dz in (-13.9, 13.9):
+            br = br.cut(cyl_x(ys, zc + dz, PILOT_M2 / 2, xp - 1, xp + 4))
+        f = f.union(br)
+        # back panel inserts round the window
+        for xh in (6.5, PITCH - 6.5):
+            for zh in (RAIL_Z + 42.0, PATH - 44.0):
+                f = f.cut(cyl_y(xh, zh, M3_INSERT / 2, WALL_OUT - 6, WALL_OUT + 1))
     else:
-        f = f.union(box(x0 + 2, x1 - 2, -STRIP_IN - 2, -STRIP_IN + 0.01, PATH - 4.4, PATH - 2.4))  # door rest ledge
-    # break-beam housing (20 x 10 x 8) in a pocket on the outer face, 4 mm window through to the bin mouth
+        f = f.union(box(x0 + 2, x1 - 2, -STRIP_IN - 0.5, -FLOOR_W + 1.5, PATH - 4.4, PATH - 2.4))  # door rest ledge
+    # break-beam housing (20 x 10 x 8) in a pocket on the outer face, 4 mm window through to the bin mouth; its leads
+    # come inside through the slot beside it
     yp0, yp1 = sorted((s * (WALL_OUT - 7), s * (WALL_OUT + 5)))   # 1 mm skin left at the bin side
     f = f.cut(box(PITCH / 2 - 10.2, PITCH / 2 + 10.2, yp0, yp1, PATH - 27.2, PATH - 16.8))
     f = f.cut(cyl_y(PITCH / 2, PATH - 22, 2.0, -WALL_OUT - 1, WALL_OUT + 1))
+    f = f.cut(box(PITCH / 2 + 4.0, PITCH / 2 + 9.0, *sorted((s * (WALL_IN - 1), s * (WALL_OUT - 6))), PATH - 27.2, PATH - 23.5))
     return f
 
 def tie_bar():
     """Ties the front and back walls together at the start of each module (x 0..4), under the floor, and
     bridges the floor across the joint (top plate flush with the doors, x -5..5) so a card's leading edge can't
-    dip into a gap. M3 screws come in through both walls into heat-set inserts in the bar ends."""
+    dip into a gap. M3 screws come in through both walls into heat-set inserts in the bar ends. The front looms
+    (bin-level sensor, beam receiver) cross to the back along its -X face: zip ties through the 3 slot pairs."""
     t = box(0, 4, -(WALL_IN - 0.2), WALL_IN - 0.2, PATH - 22, PATH - 13)
-    t = t.union(box(0, 4, -32.8, 32.8, PATH - 13, PATH - 2.4)).union(box(-5, 5, -32.8, 32.8, PATH - 2.4, PATH))
+    t = t.union(box(0, 4, -32.8, 32.8, PATH - 13, PATH - 2.4)).union(box(-5, 5, -FLOOR_W, FLOOR_W, PATH - 2.4, PATH))
     t = t.cut(fin_groove(-6, 6, 34.0))
     for s in (-1, 1):
         t = t.cut(cyl_y(2, PATH - 17.5, M3_INSERT / 2, *sorted((s * (WALL_IN - 7), s * WALL_IN))))
+    for y in (-30.0, 0.0, 30.0):
+        for z in (PATH - 20.5, PATH - 14.5):
+            t = t.cut(box(-1, 5, y - 2.0, y + 2.0, z - 0.8, z + 0.8))
     return t
+
+BACK_PANEL = (2.0, PITCH - 2.0, CHAN_Z1, PATH - 36.0)   # x0, x1, z0, z1 on the outside of a bin module's back wall
+
+def back_panel(hub=False):
+    """Covers the window in a bin module's back wall (4 x M3 x 8 into the wall's inserts): it hides the wiring and
+    looks finished. The one on bin module 2 carries the BIN HUB on its inside face, through the window: PCA9685
+    servo board (4 x M2.5 x 6 self-tapping into the bosses), MCP23017 beam inputs, 2 x TCA9548A I2C switches for
+    the bin-level sensors and the 3.3 V regulator (foam tape on the pads, a zip tie over each through the slots).
+    Its bottom edge sits on the back wire channel; the looms come up out of the channel into the window."""
+    x0, x1, z0, z1 = BACK_PANEL
+    p = box(x0, x1, WALL_OUT, WALL_OUT + 3.0, z0, z1)
+    for xh in (6.5, PITCH - 6.5):
+        for zh in (RAIL_Z + 42.0, PATH - 44.0):
+            p = p.cut(cyl_y(xh, zh, M3 / 2, WALL_OUT - 1, WALL_OUT + 4))
+    for zv in range(int(z0) + 14, int(z1) - 10, 8):                       # a few vents (the regulator gets warm)
+        p = p.cut(box(x1 - 14, x1 - 6, WALL_OUT - 1, WALL_OUT + 4, zv, zv + 3))
+    if hub:
+        for (bx, bz, bw, bh) in HUB_BOARDS.values():
+            pad = box(bx, bx + bw, WALL_IN + 0.6, WALL_OUT + 0.01, bz, bz + bh)   # pads come in through the window
+            p = p.union(pad)
+            for zt in (bz + 3.0, bz + bh - 3.0):                          # zip-tie slots
+                p = p.cut(box(bx - 4.0, bx - 1.0, WALL_IN, WALL_OUT + 4, zt - 1.0, zt + 1.0)).cut(
+                          box(bx + bw + 1.0, bx + bw + 4.0, WALL_IN, WALL_OUT + 4, zt - 1.0, zt + 1.0))
+        bx, bz, bw, bh = HUB_BOARDS["pca9685"]
+        for dx in (3.3, 3.3 + 55.9):
+            for dz in (3.15, 3.15 + 19.1):
+                p = p.union(cyl_y(bx + dx, bz + dz, 3.0, WALL_IN - 4.0, WALL_IN + 0.7)).cut(cyl_y(bx + dx, bz + dz, PILOT_M25 / 2, WALL_IN - 5, WALL_IN + 0.5))
+    return p
+
+# hub boards on the back panel (x, z, width, height), all inside the window (x 12..110, z 40..165)
+HUB_BOARDS = {"pca9685": (16.0, 128.0, 62.5, 25.4), "mcp23017": (16.0, 96.0, 55.0, 21.0),
+              "tca9548a_1": (16.0, 64.0, 32.0, 21.0), "tca9548a_2": (52.0, 64.0, 32.0, 21.0), "reg_3v3": (88.0, 64.0, 14.0, 12.0)}
 
 def bin_box(height=135.0, depth=76.0):
     """Removable bin: outside 98 x 76 mm, inside 94 x 72 mm (3.7 x 2.8 in), 135 mm (5.3 in) tall: ~400 raw cards.
@@ -758,7 +912,8 @@ def bin_box(height=135.0, depth=76.0):
             b = b.cut(box(-W / 2 + 3, -W / 2 + 10, -D / 2 - 0.1, -D / 2 + 0.6, z - 0.6, z + 0.6))
     return b
 
-END_L = END_SHAFT_X - (BIN_X[1] + PITCH / 2) + 18.5   # end module length (130.5): shaft 18.5 from its end
+END_X0 = BIN_X[-2] + PITCH / 2                        # end module starts here
+END_L = END_SHAFT_X - END_X0 + 18.5   # end module length (130.5): shaft 18.5 from its end
 
 def end_side(side):
     """End module side: END_L long so the end-of-line bin sits fully under it and the drive shaft has room;
@@ -766,7 +921,7 @@ def end_side(side):
     x0, x1 = 0.0, END_L
     f = side_frame(x0, x1, side, bin_opening=False, rails=False, bay=(side < 0))
     s = side
-    xs = END_SHAFT_X - (BIN_X[1] + PITCH / 2)            # drive shaft position in this module (112)
+    xs = END_SHAFT_X - END_X0                            # drive shaft position in this module (112)
     f = f.cut(cyl_y(xs, PUL_Z, 2.75, -WALL_OUT - 1, WALL_OUT + 1))
     yb0, yb1 = sorted((s * (WALL_OUT - 5.2), s * (WALL_OUT + 0.1)))
     f = f.cut(cyl_y(xs, PUL_Z, SEAT_625 / 2, yb0, yb1))           # 625 bearing seat (outer face)
@@ -787,11 +942,11 @@ def end_ramp():
     along the top screws up into the back strip (2 x M3 into heat-set inserts); two ribs underneath stiffen it.
     Module coordinates (x 0..PITCH)."""
     x0, x1 = 6.5, PITCH - 5.0
-    W, T = 69.6, 3.0
+    W, T = 2 * FLOOR_W, 3.0
     pl = box(x0, x1, -W / 2, W / 2, PATH - T, PATH)
     for xr in (x0 + 20, x1 - 20):
         pl = pl.union(box(xr - 1.5, xr + 1.5, -W / 2 + 6, W / 2, PATH - T - 6, PATH - T))
-    pl = pl.rotate((0, 34.5, PATH - 3), (1, 34.5, PATH - 3), 60)
+    pl = pl.rotate((0, HINGE_Y, HINGE_Z), (1, HINGE_Y, HINGE_Z), DOOR_OPEN)
     pl = pl.cut(box(-1, PITCH + 1, -60, 60, PATH - 4.0, PATH + 10))       # top trimmed flat, 4 mm under the floor line
     fl = box(x0, x1, 30.0, WALL_IN - 0.5, PATH - 16, PATH - 12.2)           # flange under the back strip
     for xh in (x0 + 15, x1 - 15):
@@ -1146,51 +1301,66 @@ def shell_parts(length=660.0):
     return parts
 
 # ============================================================================ catalogue
+# name: (builder, material, note), and how many to print in each stage:
+#   A = first test machine: 3 bins, raw cards (feeder, scanner, bin modules 1-2, end module)
+#   B = the other 6 bins (bin modules 3-8 go in between module 2 and the end module; 2684 mm belts replace the 1220s)
+#   C = the sleeved towers
 PRINTED = {
-    # name: (builder, qty, material, note)
-    "feeder_base":     (feeder_base, 1, "PETG", "Upright, 15% gyroid, 4 walls. ~19 h."),
-    "raw_tower":       (raw_tower, 1, "PETG", "Upright, 3 walls. L-shaped: back + exit walls, leans 3 deg back and 3 deg toward the exit."),
-    "gate_plate":      (gate_plate, 1, "PETG", "Foot down. Glue a 1.5 mm silicone pad strip under the foot."),
-    "feed_roller":     (feed_roller, 1, "PETG", "Flat on its end, 100% infill. Three 16 ID x 3.5 mm O-rings (23 OD), same as the exit rollers."),
-    "exit_roller":     (exit_roller, 2, "PETG", "Flat on its end, 100% infill. Two 16 ID x 3.5 mm O-rings (23 OD) each."),
-    "pressure_arm":    (pressure_arm, 1, "PETG", "Flat."),
-    "stack_weight":    (stack_weight, 1, "PLA", "Fill the pocket with about 50 g (2 oz) of coins or nuts."),
-    "fin":             (fin, 24, "PETG", "12 + 12 mirrored (10 per side + spares). On its side, 0.12 mm layers. Glue a 3 x 3 mm silicone square in the face pocket."),
-    "belt_drill_jig":  (belt_drill_jig, 1, "PETG", "Ridges up. 2 mm drill through the guide holes."),
-    "fin_gauge":       (fin_gauge, 1, "PETG", "Flat."),
-    "track_pulley_idler": (lambda: track_pulley(False), 2, "PETG", "Axis vertical, 0.12 mm layers, 100% infill. 2 x 685ZZ each. Test-fit the belt first."),
-    "track_pulley_drive": (lambda: track_pulley(True), 2, "PETG", "Hub down on the plate, 0.12 mm layers, 100% infill. Hub faces the track (inward). M3 nut + M3 x 4 grub."),
-    "sensor_clip":     (sensor_clip, 4, "PETG", "Holds an Adafruit break-beam half (20 x 10 x 8 housing)."),
-    "fit_coupon":      (fit_coupon, 1, "PETG", "PRINT FIRST. Flat. Test inserts, bearings, shaft, pin and nut against the * sizes; tell Claude which fit."),
-    "motor_standoff":  (motor_standoff, 2, "PETG", "Standing on a side wall, 5 walls. One for the feed motor, one for the track motor. M3 x 8 to the motor, M3 x 10 to the wall."),
-    "scan_side_front": (scan_side_front, 1, "PETG", "On its outer face."),
-    "scan_side_back":  (lambda: scan_side_back(), 1, "PETG", "On its outer face."),
-    "scan_floor":      (scan_floor, 1, "PLA matte green", "Top face DOWN on the smooth side of the plate: flat, slick, dull."),
-    "hood":            (hood, 1, "PLA matte black", "Upright, tongue on top. Tree supports under the tunnel, pads and LED ledges."),
-    "hood_lid":        (hood_lid, 1, "PLA matte black", "Roof down, no supports. Camera plate clamps to its ribs."),
-    "sheen_cap":       (sheen_cap, 1, "PLA matte black", "Back face down. 20 mm of COB strip inside; 2 x M3 x 8 to the hood."),
-    "camera_plate":    (camera_plate, 1, "PETG", "Tabs up. 2 M3 inserts in the tabs; clamps to the hood ribs with 2 x M3 x 10. Turn the camera so its ribbon connector faces LEFT (the hopper side)."),
-    "polarizer_cap":   (polarizer_cap, 1, "PETG", ""),
-    "bin_side_back":   (lambda: bin_module_side(1), 2, "PETG", "On its outer face; one per bin module."),
-    "bin_side_front":  (lambda: bin_module_side(-1), 2, "PETG", "On its outer face; one per bin module."),
-    "door":            (door, 2, "PETG", "Top face down on the smooth plate side (slick surface)."),
-    "servo_link":      (servo_link, 2, "PETG", ""),
-    "tie_bar":         (tie_bar, 4, "PETG", "Floor plate face DOWN on the smooth side of the plate (slick top)."),
-    "bin":             (bin_box, 3, "PLA", "Open side up, 2 walls, 10% infill. Big front window + a fill mark every 100 cards. ~5 h each."),
-    "end_side_front":  (lambda: end_side(-1), 1, "PETG", ""),
-    "end_side_back":   (lambda: end_side(1), 1, "PETG", ""),
-    "end_cap":         (end_cap, 1, "PETG", ""),
-    "end_ramp":        (end_ramp, 1, "PETG", "Ramp face DOWN on the smooth side of the plate (slick), tree supports under the flange."),
-    "electronics_tray":(electronics_tray, 1, "PETG", "Flat."),
-    "bay_cover":       (bay_cover, 1, "PLA matte black", "Flat, outside face down."),
-    "psu_cradle":      (psu_cradle, 2, "PETG", "On its back."),
-    "inlet_plate":     (inlet_plate, 1, "PETG", "Flat. Cutout 47.5 x 27.5 mm for a snap-in C14 inlet; check yours."),
-    "channel_cover":   (channel_cover, 6, "PLA", "On its back. Clips over the wire channels."),
-    "screen_cradle":   (screen_cradle, 1, "PETG", "Face down. Display (Pi on its back) drops in from behind, Pi's port edge UP. 4 M3 inserts in the ears."),
-    "pod_cover":       (pod_cover, 1, "PLA matte black", "Back face down, tree supports for the GoPro standoff. 2 M3 inserts for the 5 V converter; 4 x M3 x 10 to the frame."),
-    "mount_wall":      (mount_wall, 1, "PETG", "Screen mount: bolts across the hopper/scanner gap on the front walls; the screen pod clips on (M5 thumbscrew)."),
-    "mount_roof":      (mount_roof, 1, "PETG", "Optional: screen on top of the hood."),
-    "gopro_arm":       (gopro_arm, 2, "PETG", "100% infill. Or use store-bought GoPro extension arms."),
+    "fit_coupon":      (fit_coupon, "PETG", "PRINT FIRST (done). Hole sizes are tuned to it."),
+    "feeder_base":     (feeder_base, "PETG", "v3. Upright, 15% gyroid, 4 walls, 5 top layers, ~19 h. Tree supports only under the card-clear sensor pocket."),
+    "raw_tower":       (raw_tower, "PETG", "Upright, 3 walls. Magnet in position 1 (front), south pole down."),
+    "single_tower":    (lambda: tower("single"), "PETG", "Single-sleeved cards (inside 92.5 x 67.5). Magnet in position 2 (back)."),
+    "double_tower":    (lambda: tower("double"), "PETG", "Double-sleeved cards (inside 93.5 x 68.5). Magnets in both positions."),
+    "gate_plate":      (gate_plate, "PETG", "Foot down. Glue a 1.5 mm silicone pad strip under the foot. Fits all three towers."),
+    "feed_roller":     (feed_roller, "PETG", "On its end, 100% infill. Three 16 ID x 3.5 O-rings."),
+    "exit_roller":     (exit_roller, "PETG", "On its end, 100% infill. Two 16 ID x 3.5 O-rings each (one is the pressure roller)."),
+    "pressure_bridge": (pressure_bridge, "PETG", "Beam down, no supports. 2 x M3 x 10 into the post-top inserts."),
+    "stack_weight":    (stack_weight, "PLA", "Fill the pocket with about 50 g (2 oz) of coins or nuts."),
+    "fin":             (fin, "PETG", "Half of them mirrored. On its side, 0.12 mm layers. 3 x 3 mm silicone square in the face pocket."),
+    "belt_drill_jig":  (belt_drill_jig, "PETG", "Ridges up."),
+    "fin_gauge":       (fin_gauge, "PETG", "Flat."),
+    "track_pulley_idler": (lambda: track_pulley(False), "PETG", "Axis vertical, 0.12 mm layers, 100% infill. 2 x 685ZZ each."),
+    "track_pulley_drive": (lambda: track_pulley(True), "PETG", "Hub down, 0.12 mm layers, 100% infill. M3 nut + M3 x 4 grub."),
+    "motor_standoff":  (motor_standoff, "PETG", "On a side wall, 5 walls (printed on plate 1)."),
+    "scan_side_front": (scan_side_front, "PETG", "On its outer face."),
+    "scan_side_back":  (scan_side_back, "PETG", "On its outer face."),
+    "scan_floor":      (scan_floor, "PLA matte green", "Top face DOWN on the smooth side of the plate."),
+    "hood":            (hood, "PLA matte black", "Upright, tongue on top. Tree supports under the tunnel, pads and LED ledges."),
+    "hood_lid":        (hood_lid, "PLA matte black", "Roof down, no supports."),
+    "sheen_cap":       (sheen_cap, "PLA matte black", "Back face down. 50 mm piece of the COB strip inside."),
+    "camera_plate":    (camera_plate, "PETG", "Tabs up. Camera connector faces LEFT (hopper side)."),
+    "polarizer_cap":   (polarizer_cap, "PETG", "Waiting on the lens measurement."),
+    "bin_side_back":   (lambda: bin_module_side(1), "PETG", "On its outer face, tree supports under the hinge knuckles and servo bracket."),
+    "bin_side_front":  (lambda: bin_module_side(-1), "PETG", "On its outer face."),
+    "door":            (door, "PETG", "Top face DOWN on the smooth side, tree supports under the barrels and lever."),
+    "servo_link":      (servo_link, "PETG", "Flat, 100% infill."),
+    "tie_bar":         (tie_bar, "PETG", "Floor plate face DOWN on the smooth side."),
+    "back_panel":      (back_panel, "PLA matte black", "Outside face down. Covers a bin module's back window."),
+    "back_panel_hub":  (lambda: back_panel(hub=True), "PLA matte black", "Outside face down. Bin module 2's panel: carries the bin hub boards."),
+    "bin":             (bin_box, "PLA", "Open side up, 2 walls, 10% infill. ~5 h each."),
+    "end_side_front":  (lambda: end_side(-1), "PETG", ""),
+    "end_side_back":   (lambda: end_side(1), "PETG", ""),
+    "end_cap":         (end_cap, "PETG", ""),
+    "end_ramp":        (end_ramp, "PETG", "Ramp face DOWN on the smooth side, tree supports under the flange."),
+    "electronics_tray":(electronics_tray, "PETG", "Flat."),
+    "bay_cover":       (bay_cover, "PLA matte black", "Flat, outside face down."),
+    "psu_cradle":      (psu_cradle, "PETG", "On its back."),
+    "inlet_plate":     (inlet_plate, "PETG", "Flat."),
+    "channel_cover":   (channel_cover, "PLA matte black", "On its back. Clips over the back wire channel."),
+    "screen_cradle":   (screen_cradle, "PETG", "Face down. 4 M3 inserts in the ears."),
+    "pod_cover":       (pod_cover, "PLA matte black", "Back face down, tree supports for the GoPro standoff."),
+    "mount_wall":      (mount_wall, "PETG", "Screen mount across the hopper/scanner gap on the front walls."),
+}
+STAGES = {   # name: (A, B, C)
+    "fit_coupon": (1, 0, 0), "feeder_base": (1, 0, 0), "raw_tower": (1, 0, 0), "single_tower": (0, 0, 1), "double_tower": (0, 0, 1),
+    "gate_plate": (1, 0, 0), "feed_roller": (1, 0, 0), "exit_roller": (2, 0, 0), "pressure_bridge": (1, 0, 0), "stack_weight": (1, 0, 0),
+    "fin": (24, 24, 0), "belt_drill_jig": (1, 0, 0), "fin_gauge": (1, 0, 0), "track_pulley_idler": (2, 0, 0), "track_pulley_drive": (2, 0, 0),
+    "motor_standoff": (2, 0, 0), "scan_side_front": (1, 0, 0), "scan_side_back": (1, 0, 0), "scan_floor": (1, 0, 0), "hood": (1, 0, 0),
+    "hood_lid": (1, 0, 0), "sheen_cap": (1, 0, 0), "camera_plate": (1, 0, 0), "polarizer_cap": (1, 0, 0),
+    "bin_side_back": (2, 6, 0), "bin_side_front": (2, 6, 0), "door": (2, 6, 0), "servo_link": (3, 6, 0), "tie_bar": (3, 6, 0),
+    "back_panel": (1, 6, 0), "back_panel_hub": (1, 0, 0), "bin": (3, 6, 0), "end_side_front": (1, 0, 0), "end_side_back": (1, 0, 0),
+    "end_cap": (1, 0, 0), "end_ramp": (1, 0, 0), "electronics_tray": (1, 0, 0), "bay_cover": (1, 0, 0), "psu_cradle": (2, 0, 0),
+    "inlet_plate": (1, 0, 0), "channel_cover": (5, 6, 0), "screen_cradle": (1, 0, 0), "pod_cover": (1, 0, 0), "mount_wall": (1, 0, 0),
 }
 
 def placed():
@@ -1198,50 +1368,55 @@ def placed():
     P = {}
     P["feeder_base"] = feeder_base()
     P["raw_tower"] = raw_tower()
-    P["gate_plate"] = (gate_plate().translate((TOWER_X0 + TOWER_IN_X + 3.5 + 1, 0, PATH + 0.45))
-                       .rotate((0, 0, PATH), (1, 0, PATH), -TOWER_LEAN)
-                       .rotate((TOWER_X0 + TOWER_IN_X, 0, PATH), (TOWER_X0 + TOWER_IN_X, 1, PATH), TOWER_LEAN_X))
+    g = (gate_plate().translate((TOWER_X0 + TOWER_IN_X + 3.5 + 1, 0, PATH + 0.45))
+         .rotate((0, 0, PATH), (1, 0, PATH), -TOWER_LEAN)
+         .rotate((TOWER_X0 + TOWER_IN_X, 0, PATH), (TOWER_X0 + TOWER_IN_X, 1, PATH), TOWER_LEAN_X))
+    P["gate_plate"] = g.translate((0, 0, PATH + GATE - g.val().BoundingBox().zmin))   # set: 0.45 mm at its lowest point
     P["feed_roller"] = feed_roller().translate((FEED_X, 0, FEED_Z))
     P["exit_roller"] = exit_roller().translate((EXIT_X, 0, EXIT_Z))
-    P["exit_roller_top"] = exit_roller().translate((EXIT_X, 0, PATH + 9.6))
+    P["exit_roller_top"] = exit_roller().translate((EXIT_X, 0, PR_Z))
+    P["pressure_bridge"] = pressure_bridge()
     P["scan_side_front"] = scan_side_front()
     P["scan_side_back"] = scan_side_back()
     P["scan_floor"] = scan_floor()
     P["hood"] = hood()
     P["hood_lid"] = hood_lid()
     P["sheen_cap"] = sheen_cap().translate((SCAN_X, 75.0 + 5, SHEEN_Z))
-    for i, xb in enumerate(BIN_X[:2]):
+    for i, xb in enumerate(BIN_X[:-1]):
         x0 = xb - PITCH / 2
         P[f"bin_side_back_{i}"] = bin_module_side(1).translate((x0, 0, 0))
         P[f"bin_side_front_{i}"] = bin_module_side(-1).translate((x0, 0, 0))
-        P[f"door_{i}"] = door().translate((x0 + 5.5, 0, PATH))
+        P[f"door_{i}"] = door().translate((x0, 0, 0))
+        P[f"servo_link_{i}"] = link_placed().translate((x0, 0, 0))
+        P[f"back_panel_{i}"] = back_panel(hub=(i == HUB_MODULE)).translate((x0, 0, 0))
     for i, xb in enumerate(BIN_X):
         P[f"bin_{i}"] = bin_box().translate((xb, BIN_Y, 0.0))
     P["electronics_tray"] = electronics_tray().translate((8.5, 0, RAIL_Z + 17.2))
     P["bay_cover"] = bay_cover().translate((7, -63, RAIL_Z + 6))
     for xc in (PSU_X0 + 8, PSU_X0 + PSU_L - 26):
         P[f"psu_cradle_{int(xc)}"] = psu_cradle().translate((xc, 0, 0))
-    P["inlet_plate"] = inlet_plate().translate((SCAN_X0 + 32, WALL_OUT, RAIL_Z + 29))
-    # screen + Pi block on the front of the hood, tilted back; the camera ribbon goes straight in above it
+    P["inlet_plate"] = inlet_plate().translate((SCAN_X0 + 32, WALL_OUT, RAIL_Z + 39))
+    # screen pod in front of the hopper/hood gap, tilted back; the camera ribbon leaves its back
     P["screen_cradle"] = screen_placed(screen_cradle())
     P["pod_cover"] = screen_placed(pod_cover())
     P["mount_wall_gap"] = mount_wall().rotate((0, 0, 0), (0, 0, 1), 180).translate((175, -WALL_OUT - 9, PATH - 21))
-    xe = BIN_X[1] + PITCH / 2
+    xe = END_X0
     P["end_side_front"] = end_side(-1).translate((xe, 0, 0))
     P["end_side_back"] = end_side(1).translate((xe, 0, 0))
     P["end_cap"] = end_cap().translate((xe + END_L, 0, 0))
     P["end_ramp"] = end_ramp().translate((xe, 0, 0))
-    for k, xj in enumerate((BIN_X[0] - PITCH / 2, BIN_X[1] - PITCH / 2, BIN_X[1] + PITCH / 2)):
-        P[f"tie_bar_{k}"] = tie_bar().translate((xj, 0, 0))
+    for k, xb in enumerate(BIN_X):
+        P[f"tie_bar_{k}"] = tie_bar().translate((xb - PITCH / 2, 0, 0))   # start of every bin module + the end module
     return P
 
-LENGTH = BIN_X[1] + PITCH / 2 + END_L + 4.0
+LENGTH = END_X0 + END_L + 4.0
 
 if __name__ == "__main__":
     here = os.path.dirname(os.path.abspath(__file__))
     out_stl = os.path.join(here, "..", "stl"); out_step = os.path.join(here, "..", "step")
     os.makedirs(out_stl, exist_ok=True); os.makedirs(out_step, exist_ok=True)
-    for name, (fn, qty, mat, note) in PRINTED.items():
+    for name, (fn, mat, note) in PRINTED.items():
+        qty = sum(STAGES[name])
         s = fn()
         cq.exporters.export(s, os.path.join(out_stl, f"{name}.stl"), tolerance=0.05, angularTolerance=0.1)
         cq.exporters.export(s, os.path.join(out_step, f"{name}.step"))

@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 MACHINE=$(pwd)
 echo "== Packages (camera, Python bits, kiosk browser)"
 sudo apt-get update -qq
-sudo apt-get install -y python3-picamera2 python3-pil python3-yaml python3-pip git cage chromium wlr-randr fonts-noto-color-emoji
+sudo apt-get install -y python3-picamera2 python3-opencv python3-pil python3-yaml python3-pip git cage chromium wlr-randr fonts-noto-color-emoji
 pip install -q --break-system-packages -r sorter/requirements.txt
 
 echo "== Services"
@@ -23,6 +23,9 @@ if ! grep -q "vc4-kms-dsi-ili9881-7inch" $CFG; then
   echo "# Raspberry Pi Touch Display 2, landscape (use rotation=270 if it's upside down)" | sudo tee -a $CFG >/dev/null
   echo "dtoverlay=vc4-kms-dsi-ili9881-7inch,rotation=90" | sudo tee -a $CFG >/dev/null
 fi
+echo "== I2C (bin hub, 50 kHz for the long bus) and the UART to the motor board"
+grep -q "^dtparam=i2c_arm=on" $CFG || echo "dtparam=i2c_arm=on,i2c_arm_baudrate=50000" | sudo tee -a $CFG >/dev/null
+grep -q "^dtparam=uart0=on" $CFG || echo "dtparam=uart0=on" | sudo tee -a $CFG >/dev/null
 echo 'SUBSYSTEM=="backlight", RUN+="/bin/chmod 666 /sys/class/backlight/%k/brightness /sys/class/backlight/%k/bl_power"' \
   | sudo tee /etc/udev/rules.d/90-sorter-backlight.rules >/dev/null
 

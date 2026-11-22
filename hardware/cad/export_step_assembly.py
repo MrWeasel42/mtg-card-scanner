@@ -1,4 +1,4 @@
-"""One STEP file of the whole 3-bin prototype: every printed part placed, plus the main bought parts
+"""One STEP file of the whole 9-bin machine: every printed part placed, plus the main bought parts
 (as simple envelopes), each as a named, coloured body. Opens in Onshape, Fusion, FreeCAD."""
 import sys
 import cadquery as cq
@@ -11,7 +11,7 @@ _all = cq.Compound.makeCompound([v.val() for v in P.values()])
 _bb = _all.BoundingBox()
 DX, DY, DZ = (_bb.xmin + _bb.xmax) / 2, (_bb.ymin + _bb.ymax) / 2, (_bb.zmin + _bb.zmax) / 2
 print("origin moved by", round(DX, 1), round(DY, 1), round(DZ, 1))
-A = cq.Assembly(name="card_sorter_3bin")
+A = cq.Assembly(name=f"card_sorter_{BINS}bin")
 # origin at the centre of the machine (middle of its length, width and height) so CAD views orbit nicely;
 # in this file the desk is at Z = -DZ and the card floor at Z = PATH - DZ
 def add(shape, **kw):
@@ -19,12 +19,12 @@ def add(shape, **kw):
 petg = cq.Color(0.24, 0.29, 0.36); black = cq.Color(0.08, 0.09, 0.1); white = cq.Color(0.9, 0.92, 0.93)
 alu = cq.Color(0.72, 0.75, 0.78); teal = cq.Color(0.18, 0.83, 0.75); dark = cq.Color(0.12, 0.12, 0.13)
 for k, v in P.items():
-    col = black if k in ("hood", "scan_floor") else (white if k.startswith("bin_") and "side" not in k else petg)
+    col = black if (k in ("hood", "hood_lid", "scan_floor", "pod_cover", "bay_cover", "sheen_cap") or k.startswith("back_panel")) else (white if k.startswith("bin_") and "side" not in k else petg)
     add(v, name=k, color=col)
 # bought parts (envelopes, for fit)
 add(box(-5, LENGTH + 5, RAIL_Y - 10, RAIL_Y + 10, 0, 20), name="rail_2020_back", color=alu)
 add(box(-5, SCAN_X1, -RAIL_Y - 10, -RAIL_Y + 10, 0, 20), name="rail_2020_front", color=alu)
-add(box(BIN_X[0] - PITCH / 2, BIN_X[1] + PITCH / 2, RAIL2_Y - 10, RAIL2_Y + 10, 0, 20), name="rail_2020_back_inner", color=alu)
+add(box(BIN_X[0] - PITCH / 2, END_X0, RAIL2_Y - 10, RAIL2_Y + 10, 0, 20), name="rail_2020_back_inner", color=alu)
 add(B.nema17().translate((FEED_X, 90, FEED_Z)), name="motor_feed_NEMA17", color=dark)
 add(B.nema17().translate((END_SHAFT_X, WALL_OUT + 30, PUL_Z)), name="motor_track_NEMA17", color=dark)
 add(motor_standoff().translate((FEED_X, 60, FEED_Z)), name="motor_standoff_feed", color=petg)
@@ -33,7 +33,7 @@ add(B.lrs100().translate((PSU_X0, 0, RAIL_Z + 5)), name="PSU_LRS-100-24_with_wir
 add(B.hq_camera().translate((SCAN_X, 0, PATH + CAM_D + 44)), name="Pi_HQ_camera_6mm_lens", color=dark)
 green = cq.Color(0.1, 0.45, 0.25); screen = cq.Color(0.05, 0.05, 0.08)
 add(screen_placed(box(-42.5, 42.5, 0, PI_STACK, PI_ON_SCREEN_Z, PI_ON_SCREEN_Z + 56)), name="Raspberry_Pi_5_with_cooler_on_screen", color=green)
-add(camera_ribbon()[0], name="camera_ribbon_305mm", color=cq.Color(0.85, 0.5, 0.1))
+add(camera_ribbon()[0], name="camera_ribbon_500mm", color=cq.Color(0.85, 0.5, 0.1))
 
 add(B.skr_pico().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, RAIL_Z + 17.2 + 3 + 8)), name="SKR_Pico", color=green)
 add(screen_placed(box(-SCREEN_W / 2, SCREEN_W / 2, -SCREEN_T, 0, 0, SCREEN_H)), name="Touch_Display_2", color=screen)
@@ -48,11 +48,11 @@ for s in (-1, 1):
         pul = cyl_y(0, 0, PUL_R - 0.25, -5.5, 5.5).union(cyl_y(0, 0, 12, -6.5, -5.5)).union(cyl_y(0, 0, 12, 5.5, 6.5))
         add(pul.translate((x, s * yc, PUL_Z)), name=f"pulley_{'drive' if drv else 'idler'}_{nm}", color=alu)
     fn = fin() if s > 0 else fin().mirror("XZ")
-    for i in range(5):
+    for i in range(int((END_SHAFT_X - FIN_START_X - 20) // PITCH) + 1):
         add(fn.translate((FIN_START_X + 8 + i * PITCH, s * yc, BELT_BACK_LOW)), name=f"fin_{nm}_{i + 1}", color=teal)
 add(cyl_y(END_SHAFT_X, PUL_Z, 2.5, -WALL_OUT, WALL_OUT + 30), name="track_drive_shaft_5mm", color=alu)
-for i, xb in enumerate(BIN_X[:2]):
-    add(B.servo().rotate((0, 0, 0), (0, 0, 1), 180).translate((xb, WALL_OUT + 4 + 24, PATH - 38)), name=f"servo_bin{i + 1}", color=cq.Color(0.17, 0.37, 0.68))
+for i, xb in enumerate(BIN_X[:-1]):
+    add(servo_placed().translate((xb - PITCH / 2, 0, 0)), name=f"servo_bin{i + 1}", color=cq.Color(0.17, 0.37, 0.68))
 # origin at the centre of the whole machine (bought parts included) so CAD views orbit around the middle;
 # in this file the desk is at Z = -cz (about -236 mm)
 bb = A.toCompound().BoundingBox()

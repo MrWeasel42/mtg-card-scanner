@@ -10,7 +10,7 @@
  {
   "label": "Feed motor vs hopper tower",
   "overlap": 0.0,
-  "gap": 23.94,
+  "gap": 18.21,
   "need": 2.0,
   "ok": true,
   "note": ""
@@ -40,6 +40,134 @@
   "note": ""
  },
  {
+  "label": "Pressure bridge vs hopper tower (all three)",
+  "overlap": 0.0,
+  "gap": 4.62,
+  "need": 2.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Pressure roller vs its bridge (floats in the slots)",
+  "overlap": 0.0,
+  "gap": 1.0,
+  "need": 0.5,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "raw tower vs feeder base (sits on its skirt)",
+  "overlap": 0.0,
+  "gap": 0.2,
+  "need": 0.1,
+  "ok": true,
+  "note": "skirt flat on the floor, 2 M3 thumb screws"
+ },
+ {
+  "label": "raw tower: bottom card lies flat, free to slide out",
+  "overlap": 0.0,
+  "gap": 0.05,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "raw tower magnet 1 vs card space",
+  "overlap": 0.0,
+  "gap": 8.0,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "raw tower magnet 1 to hall sensor (A3144 switches at ~5 mm with a 6x3 N35)",
+  "overlap": 0,
+  "gap": 1.8,
+  "need": 0,
+  "ok": true,
+  "note": "sensor flat in its pocket, magnet flush in the skirt"
+ },
+ {
+  "label": "single tower vs feeder base (sits on its skirt)",
+  "overlap": 0.0,
+  "gap": 0.2,
+  "need": 0.1,
+  "ok": true,
+  "note": "skirt flat on the floor, 2 M3 thumb screws"
+ },
+ {
+  "label": "single tower: bottom card lies flat, free to slide out",
+  "overlap": 0.0,
+  "gap": 0.05,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "single tower magnet 2 vs card space",
+  "overlap": 0.0,
+  "gap": 5.0,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "single tower magnet 2 to hall sensor (A3144 switches at ~5 mm with a 6x3 N35)",
+  "overlap": 0,
+  "gap": 1.8,
+  "need": 0,
+  "ok": true,
+  "note": "sensor flat in its pocket, magnet flush in the skirt"
+ },
+ {
+  "label": "double tower vs feeder base (sits on its skirt)",
+  "overlap": 0.0,
+  "gap": 0.2,
+  "need": 0.1,
+  "ok": true,
+  "note": "skirt flat on the floor, 2 M3 thumb screws"
+ },
+ {
+  "label": "double tower: bottom card lies flat, free to slide out",
+  "overlap": 0.0,
+  "gap": 0.05,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "double tower magnet 1 vs card space",
+  "overlap": 0.0,
+  "gap": 4.0,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "double tower magnet 1 to hall sensor (A3144 switches at ~5 mm with a 6x3 N35)",
+  "overlap": 0,
+  "gap": 1.8,
+  "need": 0,
+  "ok": true,
+  "note": "sensor flat in its pocket, magnet flush in the skirt"
+ },
+ {
+  "label": "double tower magnet 2 vs card space",
+  "overlap": 0.0,
+  "gap": 4.0,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "double tower magnet 2 to hall sensor (A3144 switches at ~5 mm with a 6x3 N35)",
+  "overlap": 0,
+  "gap": 1.8,
+  "need": 0,
+  "ok": true,
+  "note": "sensor flat in its pocket, magnet flush in the skirt"
+ },
+ {
   "label": "Track motor vs end module, end cap, end bin",
   "overlap": 0.0,
   "gap": 8.24,
@@ -64,7 +192,7 @@
   "note": ""
  },
  {
-  "label": "Start idler (front) vs feeder base posts, tower, gate, pressure roller",
+  "label": "Start idler (front) vs feeder base posts, tower, gate, pressure roller + bridge",
   "overlap": 0.0,
   "gap": 0.3,
   "need": 0.3,
@@ -88,7 +216,7 @@
   "note": "hub faces the track; was hitting the 625 seat"
  },
  {
-  "label": "Start idler (back) vs feeder base posts, tower, gate, pressure roller",
+  "label": "Start idler (back) vs feeder base posts, tower, gate, pressure roller + bridge",
   "overlap": 0.0,
   "gap": 0.3,
   "need": 0.3,
@@ -224,12 +352,52 @@
   "note": "the card's tail leaves the nip at X 136; fins touch down at X 131"
  },
  {
-  "label": "Belt loop = factory 1220 mm closed loop = whole number of fin pitches",
+  "label": "Belt loop (9 bins) = 2684 mm = whole number of fin pitches",
   "overlap": 0,
-  "gap": 1220.0,
-  "need": 1220,
+  "gap": 2684.0,
+  "need": 2684.0,
   "ok": true,
-  "note": "1220.0 mm = 10 x 122 (61 teeth per fin)"
+  "note": "2684.0 mm = 22 x 122 (61 teeth per fin); 3 bins: factory 1220 loop, 9 bins: welded 2684 loop"
+ },
+ {
+  "label": "Gate foot (adjustable) lowest point above the floor, as drawn",
+  "overlap": 0,
+  "gap": 0.45,
+  "need": 0.0,
+  "ok": true,
+  "note": "the 3 deg lean tips the foot 0.5 mm toward the exit: set the gap at the foot's exit end; the slope is a lead-in"
+ },
+ {
+  "label": "Card path, raw card (63 wide), hopper -> end of the track vs every fixed part",
+  "overlap": 0.0,
+  "gap": 0.05,
+  "need": 0.0,
+  "ok": true,
+  "note": "floor, gate gap, guides, hood tunnel, tie bars; v2 base had a bar here"
+ },
+ {
+  "label": "Card path, raw card (63 wide), vs closed doors",
+  "overlap": 0.0,
+  "gap": 0.05,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Card path, sleeved card (66 wide), hopper -> end of the track vs every fixed part",
+  "overlap": 0.0,
+  "gap": 0.05,
+  "need": 0.0,
+  "ok": true,
+  "note": "floor, gate gap, guides, hood tunnel, tie bars; v2 base had a bar here"
+ },
+ {
+  "label": "Card path, sleeved card (66 wide), vs closed doors",
+  "overlap": 0.0,
+  "gap": 0.05,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
  },
  {
   "label": "Feed-shaft pulley (122 mm loop) vs base",
@@ -320,33 +488,33 @@
   "note": ""
  },
  {
-  "label": "6 V servo step-down (left inner wall) vs PCA9685 servo board (back inner wall)",
+  "label": "6 V servo step-down (left inner wall) vs Hall sensor leads (under the floor)",
   "overlap": 0.0,
-  "gap": 14.52,
+  "gap": 32.28,
   "need": 1.0,
   "ok": true,
   "note": ""
  },
  {
-  "label": "PCA9685 servo board (back inner wall) vs feeder base",
+  "label": "Hall sensor leads (under the floor) vs feeder base",
   "overlap": 0.0,
-  "gap": 0.2,
+  "gap": 0.0,
   "need": 0.0,
   "ok": true,
   "note": "taped / tied against the wall it sits on"
  },
  {
-  "label": "PCA9685 servo board (back inner wall) vs SKR Pico + plugs, tray",
+  "label": "Hall sensor leads (under the floor) vs SKR Pico + plugs, tray",
   "overlap": 0.0,
-  "gap": 24.28,
+  "gap": 111.84,
   "need": 1.0,
   "ok": true,
   "note": ""
  },
  {
-  "label": "PCA9685 servo board (back inner wall) vs roller shafts/pulleys",
+  "label": "Hall sensor leads (under the floor) vs roller shafts/pulleys",
   "overlap": 0.0,
-  "gap": 75.22,
+  "gap": 71.5,
   "need": 3.0,
   "ok": true,
   "note": ""
@@ -400,12 +568,12 @@
   "note": "snug fit is intended"
  },
  {
-  "label": "Bin 1 servo body vs its wall",
+  "label": "Bin 1 servo vs its module (tabs on the bracket)",
   "overlap": 0.0,
-  "gap": 20.3,
-  "need": 0.2,
+  "gap": 0.2,
+  "need": 0.15,
   "ok": true,
-  "note": ""
+  "note": "0.2 mm round the body in the bracket"
  },
  {
   "label": "Bin 1 beam emitter in its pocket",
@@ -416,20 +584,108 @@
   "note": ""
  },
  {
-  "label": "Bin 1 door opened 60 deg vs bin top",
+  "label": "Bin 1 door at 0 deg vs its module (walls, knuckles, tie bars, bin)",
   "overlap": 0.0,
-  "gap": 7.28,
-  "need": 3.0,
+  "gap": 0.0,
+  "need": 0.0,
   "ok": true,
-  "note": "doors open 60 deg; cards slide off from ~35 deg"
+  "note": "closed: rests on the front ledge"
  },
  {
-  "label": "Bin 1 door (with lever) opened 60 deg vs tie bars + walls",
+  "label": "Bin 1 door at 0 deg vs its servo",
   "overlap": 0.0,
-  "gap": 0.5,
-  "need": 0.4,
+  "gap": 8.36,
+  "need": 1.0,
   "ok": true,
-  "note": "0.5 mm end gap to the joint bridges"
+  "note": ""
+ },
+ {
+  "label": "Bin 1 servo link at 0 deg vs module + servo body",
+  "overlap": 0.0,
+  "gap": 2.74,
+  "need": 0.3,
+  "ok": true,
+  "note": "horn end and lever end are screwed to it"
+ },
+ {
+  "label": "Bin 1 door at 20 deg vs its module (walls, knuckles, tie bars, bin)",
+  "overlap": 0.0,
+  "gap": 0.35,
+  "need": 0.3,
+  "ok": true,
+  "note": "closed: rests on the front ledge"
+ },
+ {
+  "label": "Bin 1 door at 20 deg vs its servo",
+  "overlap": 0.0,
+  "gap": 6.01,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 1 servo link at 20 deg vs module + servo body",
+  "overlap": 0.0,
+  "gap": 2.6,
+  "need": 0.3,
+  "ok": true,
+  "note": "horn end and lever end are screwed to it"
+ },
+ {
+  "label": "Bin 1 door at 40 deg vs its module (walls, knuckles, tie bars, bin)",
+  "overlap": 0.0,
+  "gap": 0.35,
+  "need": 0.3,
+  "ok": true,
+  "note": "closed: rests on the front ledge"
+ },
+ {
+  "label": "Bin 1 door at 40 deg vs its servo",
+  "overlap": 0.0,
+  "gap": 5.11,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 1 servo link at 40 deg vs module + servo body",
+  "overlap": 0.0,
+  "gap": 1.82,
+  "need": 0.3,
+  "ok": true,
+  "note": "horn end and lever end are screwed to it"
+ },
+ {
+  "label": "Bin 1 door at 60 deg vs its module (walls, knuckles, tie bars, bin)",
+  "overlap": 0.0,
+  "gap": 0.35,
+  "need": 0.3,
+  "ok": true,
+  "note": "closed: rests on the front ledge"
+ },
+ {
+  "label": "Bin 1 door at 60 deg vs its servo",
+  "overlap": 0.0,
+  "gap": 5.97,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 1 servo link at 60 deg vs module + servo body",
+  "overlap": 0.0,
+  "gap": 0.39,
+  "need": 0.3,
+  "ok": true,
+  "note": "horn end and lever end are screwed to it"
+ },
+ {
+  "label": "Bin 1 door open 60 deg vs bin top",
+  "overlap": 0.0,
+  "gap": 7.84,
+  "need": 3.0,
+  "ok": true,
+  "note": "cards slide off from ~35 deg"
  },
  {
   "label": "Bin 1 vs its module (posts, back wall, sensor mount)",
@@ -440,12 +696,28 @@
   "note": "slides out the front between the 2.5 mm posts"
  },
  {
-  "label": "Bin 2 servo body vs its wall",
+  "label": "Bin 1 break-beam line, door closed (must be clear)",
   "overlap": 0.0,
-  "gap": 20.3,
-  "need": 0.2,
+  "gap": 0.71,
+  "need": 0.3,
   "ok": true,
   "note": ""
+ },
+ {
+  "label": "Bin 1 break-beam line through the open door's slot",
+  "overlap": 0.0,
+  "gap": 1.5,
+  "need": 0.2,
+  "ok": true,
+  "note": "the card sliding down crosses it"
+ },
+ {
+  "label": "Bin 2 servo vs its module (tabs on the bracket)",
+  "overlap": 0.0,
+  "gap": 0.2,
+  "need": 0.15,
+  "ok": true,
+  "note": "0.2 mm round the body in the bracket"
  },
  {
   "label": "Bin 2 beam emitter in its pocket",
@@ -456,20 +728,108 @@
   "note": ""
  },
  {
-  "label": "Bin 2 door opened 60 deg vs bin top",
+  "label": "Bin 2 door at 0 deg vs its module (walls, knuckles, tie bars, bin)",
   "overlap": 0.0,
-  "gap": 7.28,
-  "need": 3.0,
+  "gap": 0.0,
+  "need": 0.0,
   "ok": true,
-  "note": "doors open 60 deg; cards slide off from ~35 deg"
+  "note": "closed: rests on the front ledge"
  },
  {
-  "label": "Bin 2 door (with lever) opened 60 deg vs tie bars + walls",
+  "label": "Bin 2 door at 0 deg vs its servo",
   "overlap": 0.0,
-  "gap": 0.5,
-  "need": 0.4,
+  "gap": 8.36,
+  "need": 1.0,
   "ok": true,
-  "note": "0.5 mm end gap to the joint bridges"
+  "note": ""
+ },
+ {
+  "label": "Bin 2 servo link at 0 deg vs module + servo body",
+  "overlap": 0.0,
+  "gap": 2.74,
+  "need": 0.3,
+  "ok": true,
+  "note": "horn end and lever end are screwed to it"
+ },
+ {
+  "label": "Bin 2 door at 20 deg vs its module (walls, knuckles, tie bars, bin)",
+  "overlap": 0.0,
+  "gap": 0.35,
+  "need": 0.3,
+  "ok": true,
+  "note": "closed: rests on the front ledge"
+ },
+ {
+  "label": "Bin 2 door at 20 deg vs its servo",
+  "overlap": 0.0,
+  "gap": 6.01,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 2 servo link at 20 deg vs module + servo body",
+  "overlap": 0.0,
+  "gap": 2.6,
+  "need": 0.3,
+  "ok": true,
+  "note": "horn end and lever end are screwed to it"
+ },
+ {
+  "label": "Bin 2 door at 40 deg vs its module (walls, knuckles, tie bars, bin)",
+  "overlap": 0.0,
+  "gap": 0.35,
+  "need": 0.3,
+  "ok": true,
+  "note": "closed: rests on the front ledge"
+ },
+ {
+  "label": "Bin 2 door at 40 deg vs its servo",
+  "overlap": 0.0,
+  "gap": 5.11,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 2 servo link at 40 deg vs module + servo body",
+  "overlap": 0.0,
+  "gap": 1.82,
+  "need": 0.3,
+  "ok": true,
+  "note": "horn end and lever end are screwed to it"
+ },
+ {
+  "label": "Bin 2 door at 60 deg vs its module (walls, knuckles, tie bars, bin)",
+  "overlap": 0.0,
+  "gap": 0.35,
+  "need": 0.3,
+  "ok": true,
+  "note": "closed: rests on the front ledge"
+ },
+ {
+  "label": "Bin 2 door at 60 deg vs its servo",
+  "overlap": 0.0,
+  "gap": 5.97,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 2 servo link at 60 deg vs module + servo body",
+  "overlap": 0.0,
+  "gap": 0.39,
+  "need": 0.3,
+  "ok": true,
+  "note": "horn end and lever end are screwed to it"
+ },
+ {
+  "label": "Bin 2 door open 60 deg vs bin top",
+  "overlap": 0.0,
+  "gap": 7.84,
+  "need": 3.0,
+  "ok": true,
+  "note": "cards slide off from ~35 deg"
  },
  {
   "label": "Bin 2 vs its module (posts, back wall, sensor mount)",
@@ -478,6 +838,182 @@
   "need": 0.8,
   "ok": true,
   "note": "slides out the front between the 2.5 mm posts"
+ },
+ {
+  "label": "Bin 2 break-beam line, door closed (must be clear)",
+  "overlap": 0.0,
+  "gap": 0.71,
+  "need": 0.3,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 2 break-beam line through the open door's slot",
+  "overlap": 0.0,
+  "gap": 1.5,
+  "need": 0.2,
+  "ok": true,
+  "note": "the card sliding down crosses it"
+ },
+ {
+  "label": "Bin 8 servo vs its module (tabs on the bracket)",
+  "overlap": 0.0,
+  "gap": 0.2,
+  "need": 0.15,
+  "ok": true,
+  "note": "0.2 mm round the body in the bracket"
+ },
+ {
+  "label": "Bin 8 beam emitter in its pocket",
+  "overlap": 0.0,
+  "gap": 0.0,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 8 door at 0 deg vs its module (walls, knuckles, tie bars, bin)",
+  "overlap": 0.0,
+  "gap": 0.0,
+  "need": 0.0,
+  "ok": true,
+  "note": "closed: rests on the front ledge"
+ },
+ {
+  "label": "Bin 8 door at 0 deg vs its servo",
+  "overlap": 0.0,
+  "gap": 8.36,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 8 servo link at 0 deg vs module + servo body",
+  "overlap": 0.0,
+  "gap": 2.74,
+  "need": 0.3,
+  "ok": true,
+  "note": "horn end and lever end are screwed to it"
+ },
+ {
+  "label": "Bin 8 door at 20 deg vs its module (walls, knuckles, tie bars, bin)",
+  "overlap": 0.0,
+  "gap": 0.35,
+  "need": 0.3,
+  "ok": true,
+  "note": "closed: rests on the front ledge"
+ },
+ {
+  "label": "Bin 8 door at 20 deg vs its servo",
+  "overlap": 0.0,
+  "gap": 6.01,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 8 servo link at 20 deg vs module + servo body",
+  "overlap": 0.0,
+  "gap": 2.6,
+  "need": 0.3,
+  "ok": true,
+  "note": "horn end and lever end are screwed to it"
+ },
+ {
+  "label": "Bin 8 door at 40 deg vs its module (walls, knuckles, tie bars, bin)",
+  "overlap": 0.0,
+  "gap": 0.35,
+  "need": 0.3,
+  "ok": true,
+  "note": "closed: rests on the front ledge"
+ },
+ {
+  "label": "Bin 8 door at 40 deg vs its servo",
+  "overlap": 0.0,
+  "gap": 5.11,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 8 servo link at 40 deg vs module + servo body",
+  "overlap": 0.0,
+  "gap": 1.82,
+  "need": 0.3,
+  "ok": true,
+  "note": "horn end and lever end are screwed to it"
+ },
+ {
+  "label": "Bin 8 door at 60 deg vs its module (walls, knuckles, tie bars, bin)",
+  "overlap": 0.0,
+  "gap": 0.35,
+  "need": 0.3,
+  "ok": true,
+  "note": "closed: rests on the front ledge"
+ },
+ {
+  "label": "Bin 8 door at 60 deg vs its servo",
+  "overlap": 0.0,
+  "gap": 5.97,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 8 servo link at 60 deg vs module + servo body",
+  "overlap": 0.0,
+  "gap": 0.39,
+  "need": 0.3,
+  "ok": true,
+  "note": "horn end and lever end are screwed to it"
+ },
+ {
+  "label": "Bin 8 door open 60 deg vs bin top",
+  "overlap": 0.0,
+  "gap": 7.84,
+  "need": 3.0,
+  "ok": true,
+  "note": "cards slide off from ~35 deg"
+ },
+ {
+  "label": "Bin 8 vs its module (posts, back wall, sensor mount)",
+  "overlap": 0.0,
+  "gap": 5.0,
+  "need": 0.8,
+  "ok": true,
+  "note": "slides out the front between the 2.5 mm posts"
+ },
+ {
+  "label": "Bin 8 break-beam line, door closed (must be clear)",
+  "overlap": 0.0,
+  "gap": 0.71,
+  "need": 0.3,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin 8 break-beam line through the open door's slot",
+  "overlap": 0.0,
+  "gap": 1.5,
+  "need": 0.2,
+  "ok": true,
+  "note": "the card sliding down crosses it"
+ },
+ {
+  "label": "Bin hub boards vs the hub module (window, servo, bracket, bin)",
+  "overlap": 0.0,
+  "gap": 4.0,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bin hub boards vs the open door",
+  "overlap": 0.0,
+  "gap": 23.82,
+  "need": 3.0,
+  "ok": true,
+  "note": ""
  },
  {
   "label": "End bin vs end module walls, posts, end cap, ramp",
@@ -498,10 +1034,10 @@
  {
   "label": "End ramp low edge above the end bin (same as an open door)",
   "overlap": 0,
-  "gap": 7.0,
+  "gap": 7.5,
   "need": 3.0,
   "ok": true,
-  "note": "low edge at Y -2.7; bin back wall at Y -1"
+  "note": "low edge at Y -4.1; bin back wall at Y -1"
  },
  {
   "label": "Second back rail (Y +24) vs bins",
@@ -514,34 +1050,34 @@
  {
   "label": "Open bin in front of the door's low edge (card landing room)",
   "overlap": 0,
-  "gap": 72.8,
+  "gap": 70.0,
   "need": 63.0,
   "ok": true,
-  "note": "was 34 mm with the bins centred; a card is 63 mm wide"
+  "note": "door's low edge at Y -3.0, Z 143; a card is 63 mm wide"
  },
  {
-  "label": "Bin 1 level sensor view (15 deg cone) vs everything incl. open door",
+  "label": "Bin 1 level sensor view (15 deg cone) vs its module incl. open door",
   "overlap": 0.0,
   "gap": 1.0,
   "need": 0.5,
   "ok": true,
-  "note": "set the VL53L1X to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum"
+  "note": "VL53L1X set to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum"
  },
  {
-  "label": "Bin 2 level sensor view (15 deg cone) vs everything incl. open door",
+  "label": "Bin 2 level sensor view (15 deg cone) vs its module incl. open door",
   "overlap": 0.0,
   "gap": 1.0,
   "need": 0.5,
   "ok": true,
-  "note": "set the VL53L1X to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum"
+  "note": "VL53L1X set to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum"
  },
  {
-  "label": "Bin 3 level sensor view (15 deg cone) vs everything incl. open door",
+  "label": "Bin 9 level sensor view (15 deg cone) vs its module incl. open door",
   "overlap": 0.0,
   "gap": 1.0,
   "need": 0.5,
   "ok": true,
-  "note": "set the VL53L1X to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum"
+  "note": "VL53L1X set to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum"
  },
  {
   "label": "Camera plate + tabs at lens height 100 mm vs hood lid (ribs)",
@@ -594,7 +1130,7 @@
  {
   "label": "Screen wall mount (between hopper and hood) vs front wire channel",
   "overlap": 0.0,
-  "gap": 2.0,
+  "gap": 9.1,
   "need": 0.5,
   "ok": true,
   "note": ""
@@ -642,7 +1178,7 @@
  {
   "label": "Screen pod vs everything else (hopper, hood, walls)",
   "overlap": 0.0,
-  "gap": 12.5,
+  "gap": 14.91,
   "need": 3.0,
   "ok": true,
   "note": ""
@@ -658,7 +1194,7 @@
  {
   "label": "Camera ribbon vs hood (up the outside under the rails, through the slot)",
   "overlap": 0.0,
-  "gap": 0.5,
+  "gap": 0.2,
   "need": 0.1,
   "ok": true,
   "note": ""
@@ -728,9 +1264,9 @@
   "note": "~337 mm on a 500 mm cable"
  },
  {
-  "label": "Cable: Mains (IEC inlet -> PSU) (92 mm run +15%)",
+  "label": "Cable: Mains (IEC inlet -> PSU) (95 mm run +15%)",
   "overlap": 0,
-  "gap": 44.0,
+  "gap": 40.7,
   "need": 0,
   "ok": true,
   "note": "the inlet's own pre-wired 18 AWG leads"
@@ -765,23 +1301,15 @@
   "gap": 96.0,
   "need": 0,
   "ok": true,
-  "note": "female-female jumpers, 40 cm (in one black braided sleeve with the rest of the loom)"
+  "note": "female-female jumpers, 40 cm (in one black braided sleeve with the I2C pair)"
  },
  {
-  "label": "Cable: I2C + 3.3 V (servo board, bin sensors) (302 mm run +15%)",
+  "label": "Cable: I2C to the bay junction (SDA, SCL, GND) (310 mm run +15%)",
   "overlap": 0,
-  "gap": 52.4,
+  "gap": 43.1,
   "need": 0,
   "ok": true,
   "note": "female-female jumpers, 40 cm"
- },
- {
-  "label": "Cable: Bin-sensor XSHUT x3 + beam signals x2 (204 mm run +15%)",
-  "overlap": 0,
-  "gap": 164.9,
-  "need": 0,
-  "ok": true,
-  "note": "female-female jumpers, 40 cm, joined in the bay"
  },
  {
   "label": "Cable: Feed motor (297 mm run +15%)",
@@ -792,9 +1320,9 @@
   "note": "the motor's own 1 m cable (coil the spare)"
  },
  {
-  "label": "Cable: Track motor (977 mm run +15%)",
+  "label": "Cable: Track motor (1706 mm run +15%)",
   "overlap": 0,
-  "gap": 876.1,
+  "gap": 38.4,
   "need": 0,
   "ok": true,
   "note": "its 1 m cable + a 1 m 4-pin stepper extension (BUY)"
@@ -808,68 +1336,300 @@
   "note": "female-female jumpers, 30 cm"
  },
  {
-  "label": "Cable: Belt-home sensor (TCRT5000) (357 mm run +15%)",
+  "label": "Cable: Belt-home sensor (TCRT5000) (354 mm run +15%)",
   "overlap": 0,
-  "gap": 89.1,
+  "gap": 93.2,
   "need": 0,
   "ok": true,
-  "note": "female-female jumpers, 50 cm (BUY)"
+  "note": "female-female jumpers, 50 cm"
  },
  {
-  "label": "Cable: Door servo, bin 1 (517 mm run +15%)",
+  "label": "Cable: Tower-ID hall sensor 1 (A3144) (164 mm run +15%)",
   "overlap": 0,
-  "gap": 155.5,
+  "gap": 111.5,
   "need": 0,
   "ok": true,
-  "note": "servo's 25 cm lead + 50 cm servo extension (BUY)"
+  "note": "female-female jumpers, 30 cm (the A3144 legs plug straight in; heat-shrink each leg)"
  },
  {
-  "label": "Cable: Beam emitter, bin 1 (533 mm run +15%)",
+  "label": "Cable: Tower-ID hall sensor 2 (A3144) (169 mm run +15%)",
   "overlap": 0,
-  "gap": 137.2,
+  "gap": 105.3,
   "need": 0,
   "ok": true,
-  "note": "its 25 cm leads + 50 cm servo extension (Dupont crimped on the leads)"
+  "note": "female-female jumpers, 30 cm (the A3144 legs plug straight in; heat-shrink each leg)"
  },
  {
-  "label": "Cable: Beam receiver, bin 1 (448 mm run +15%)",
-  "overlap": 0,
-  "gap": 234.3,
-  "need": 0,
-  "ok": true,
-  "note": "its 25 cm leads + 50 cm servo extension (Dupont crimped on the leads)"
- },
- {
-  "label": "Cable: Door servo, bin 2 (639 mm run +15%)",
-  "overlap": 0,
-  "gap": 515.2,
-  "need": 0,
-  "ok": true,
-  "note": "servo's 25 cm lead + 1 m servo extension (BUY)"
- },
- {
-  "label": "Cable: Beam emitter, bin 2 (655 mm run +15%)",
-  "overlap": 0,
-  "gap": 496.9,
-  "need": 0,
-  "ok": true,
-  "note": "its 25 cm leads + 1 m servo extension (Dupont crimped on the leads)"
- },
- {
-  "label": "Cable: Beam receiver, bin 2 (570 mm run +15%)",
-  "overlap": 0,
-  "gap": 94.0,
-  "need": 0,
-  "ok": true,
-  "note": "its 25 cm leads + 50 cm servo extension (Dupont crimped on the leads)"
- },
- {
-  "label": "Cable: Bay fan (optional, 30 mm) (67 mm run +15%)",
+  "label": "Cable: Bay fan (30 mm) (67 mm run +15%)",
   "overlap": 0,
   "gap": 73.0,
   "need": 0,
   "ok": true,
   "note": "fan's own leads"
+ },
+ {
+  "label": "Cable: Door servo, bin 1 (322 mm run +15%)",
+  "overlap": 0,
+  "gap": 179.5,
+  "need": 0,
+  "ok": true,
+  "note": "servo's 25 cm lead + 30 cm servo extension"
+ },
+ {
+  "label": "Cable: Beam emitter, bin 1 (314 mm run +15%)",
+  "overlap": 0,
+  "gap": 188.4,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 30 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Beam receiver, bin 1 (552 mm run +15%)",
+  "overlap": 0,
+  "gap": 114.9,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 50 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Bin-level sensor (VL53L1X), bin 1 (506 mm run +15%)",
+  "overlap": 0,
+  "gap": 418.3,
+  "need": 0,
+  "ok": true,
+  "note": "4 Dupont jumpers, 2 x 50 cm chained (headers soldered on the carrier: VIN, GND, SDA, SCL)"
+ },
+ {
+  "label": "Cable: Door servo, bin 2 (290 mm run +15%)",
+  "overlap": 0,
+  "gap": 216.3,
+  "need": 0,
+  "ok": true,
+  "note": "servo's 25 cm lead + 30 cm servo extension"
+ },
+ {
+  "label": "Cable: Beam emitter, bin 2 (282 mm run +15%)",
+  "overlap": 0,
+  "gap": 225.2,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 30 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Beam receiver, bin 2 (430 mm run +15%)",
+  "overlap": 0,
+  "gap": 55.2,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 30 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Bin-level sensor (VL53L1X), bin 2 (384 mm run +15%)",
+  "overlap": 0,
+  "gap": 58.6,
+  "need": 0,
+  "ok": true,
+  "note": "4 Dupont jumpers, 1 x 50 cm chained (headers soldered on the carrier: VIN, GND, SDA, SCL)"
+ },
+ {
+  "label": "Cable: Door servo, bin 3 (412 mm run +15%)",
+  "overlap": 0,
+  "gap": 76.0,
+  "need": 0,
+  "ok": true,
+  "note": "servo's 25 cm lead + 30 cm servo extension"
+ },
+ {
+  "label": "Cable: Beam emitter, bin 3 (404 mm run +15%)",
+  "overlap": 0,
+  "gap": 84.9,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 30 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Beam receiver, bin 3 (460 mm run +15%)",
+  "overlap": 0,
+  "gap": 20.7,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 30 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Bin-level sensor (VL53L1X), bin 3 (414 mm run +15%)",
+  "overlap": 0,
+  "gap": 24.1,
+  "need": 0,
+  "ok": true,
+  "note": "4 Dupont jumpers, 1 x 50 cm chained (headers soldered on the carrier: VIN, GND, SDA, SCL)"
+ },
+ {
+  "label": "Cable: Door servo, bin 4 (534 mm run +15%)",
+  "overlap": 0,
+  "gap": 135.7,
+  "need": 0,
+  "ok": true,
+  "note": "servo's 25 cm lead + 50 cm servo extension"
+ },
+ {
+  "label": "Cable: Beam emitter, bin 4 (526 mm run +15%)",
+  "overlap": 0,
+  "gap": 144.6,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 50 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Beam receiver, bin 4 (582 mm run +15%)",
+  "overlap": 0,
+  "gap": 80.4,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 50 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Bin-level sensor (VL53L1X), bin 4 (536 mm run +15%)",
+  "overlap": 0,
+  "gap": 383.8,
+  "need": 0,
+  "ok": true,
+  "note": "4 Dupont jumpers, 2 x 50 cm chained (headers soldered on the carrier: VIN, GND, SDA, SCL)"
+ },
+ {
+  "label": "Cable: Door servo, bin 5 (656 mm run +15%)",
+  "overlap": 0,
+  "gap": 495.4,
+  "need": 0,
+  "ok": true,
+  "note": "servo's 25 cm lead + 100 cm servo extension"
+ },
+ {
+  "label": "Cable: Beam emitter, bin 5 (648 mm run +15%)",
+  "overlap": 0,
+  "gap": 4.3,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 50 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Beam receiver, bin 5 (704 mm run +15%)",
+  "overlap": 0,
+  "gap": 440.1,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 100 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Bin-level sensor (VL53L1X), bin 5 (658 mm run +15%)",
+  "overlap": 0,
+  "gap": 243.5,
+  "need": 0,
+  "ok": true,
+  "note": "4 Dupont jumpers, 2 x 50 cm chained (headers soldered on the carrier: VIN, GND, SDA, SCL)"
+ },
+ {
+  "label": "Cable: Door servo, bin 6 (778 mm run +15%)",
+  "overlap": 0,
+  "gap": 355.1,
+  "need": 0,
+  "ok": true,
+  "note": "servo's 25 cm lead + 100 cm servo extension"
+ },
+ {
+  "label": "Cable: Beam emitter, bin 6 (770 mm run +15%)",
+  "overlap": 0,
+  "gap": 364.0,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 100 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Beam receiver, bin 6 (826 mm run +15%)",
+  "overlap": 0,
+  "gap": 299.8,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 100 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Bin-level sensor (VL53L1X), bin 6 (780 mm run +15%)",
+  "overlap": 0,
+  "gap": 103.2,
+  "need": 0,
+  "ok": true,
+  "note": "4 Dupont jumpers, 2 x 50 cm chained (headers soldered on the carrier: VIN, GND, SDA, SCL)"
+ },
+ {
+  "label": "Cable: Door servo, bin 7 (900 mm run +15%)",
+  "overlap": 0,
+  "gap": 214.8,
+  "need": 0,
+  "ok": true,
+  "note": "servo's 25 cm lead + 100 cm servo extension"
+ },
+ {
+  "label": "Cable: Beam emitter, bin 7 (892 mm run +15%)",
+  "overlap": 0,
+  "gap": 223.7,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 100 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Beam receiver, bin 7 (948 mm run +15%)",
+  "overlap": 0,
+  "gap": 159.5,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 100 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Bin-level sensor (VL53L1X), bin 7 (902 mm run +15%)",
+  "overlap": 0,
+  "gap": 462.9,
+  "need": 0,
+  "ok": true,
+  "note": "4 Dupont jumpers, 3 x 50 cm chained (headers soldered on the carrier: VIN, GND, SDA, SCL)"
+ },
+ {
+  "label": "Cable: Door servo, bin 8 (1022 mm run +15%)",
+  "overlap": 0,
+  "gap": 74.5,
+  "need": 0,
+  "ok": true,
+  "note": "servo's 25 cm lead + 100 cm servo extension"
+ },
+ {
+  "label": "Cable: Beam emitter, bin 8 (1014 mm run +15%)",
+  "overlap": 0,
+  "gap": 83.4,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 100 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Beam receiver, bin 8 (1070 mm run +15%)",
+  "overlap": 0,
+  "gap": 19.2,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 100 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Bin-level sensor (VL53L1X), bin 8 (1024 mm run +15%)",
+  "overlap": 0,
+  "gap": 322.6,
+  "need": 0,
+  "ok": true,
+  "note": "4 Dupont jumpers, 3 x 50 cm chained (headers soldered on the carrier: VIN, GND, SDA, SCL)"
+ },
+ {
+  "label": "Cable: Bin-level sensor (VL53L1X), bin 9 (1135 mm run +15%)",
+  "overlap": 0,
+  "gap": 195.2,
+  "need": 0,
+  "ok": true,
+  "note": "4 Dupont jumpers, 3 x 50 cm chained (headers soldered on the carrier: VIN, GND, SDA, SCL)"
  },
  {
   "label": "Back wire channel fill, full 9-bin build",

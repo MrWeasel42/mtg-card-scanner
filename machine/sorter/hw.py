@@ -93,42 +93,83 @@ class Doors:
         self._pulse(d["channel"], d["open_us"] if open_ else d["closed_us"])
 
 
+class Mcp23017:
+    """MCP23017 on the bin hub: GPA0-7 = beam receivers of bins 1-8 (inputs, pull-ups on)."""
+
+    def __init__(self, bus, addr: int = 0x20):
+        self.bus, self.addr = bus, addr
+        self.bus.write_byte_data(addr, 0x00, 0xFF)   # IODIRA: all inputs
+        self.bus.write_byte_data(addr, 0x0C, 0xFF)   # GPPUA: pull-ups on
+
+    def port_a(self) -> int:
+        return self.bus.read_byte_data(self.addr, 0x12)
+
+
 class Beams:
-    def __init__(self, cfg: dict):
-        from gpiozero import DigitalInputDevice
+    """Break-beam receivers, one per door, on the hub's MCP23017 (pin = bin number - 1 unless set in the config)."""
+
+    def __init__(self, cfg: dict, bus=None):
+        from smbus2 import SMBus
+        self.bus = bus or SMBus(1)
         self.broken_low = bool(cfg["doors"]["beam_broken_when_low"])
-        self.pins = {d["bin"]: DigitalInputDevice(d["beam_gpio"], pull_up=True) for d in cfg["doors"]["servos"]}
+        self.mcp = Mcp23017(self.bus, int(cfg["hub"].get("mcp23017", 0x20)))
+        self.pins = {d["bin"]: int(d.get("beam_pin", d["bin"] - 1)) for d in cfg["doors"]["servos"]}
 
     def broken(self, bin_no: int) -> bool:
-        v = self.pins[bin_no].value
+        v = (self.mcp.port_a() >> self.pins[bin_no]) & 1
         return (v == 0) if self.broken_low else (v == 1)
 
 
 # ------------------------------------------------------------------------------------------------ bin levels
 class Levels:
-    """Three VL53L1X on one I2C bus: hold all in reset with XSHUT, wake one at a time and give each its own address."""
+    """One VL53L1X per bin, each alone on a channel of the hub's TCA9548A I2C switches, so they all keep address
+    0x29 (no XSHUT wires). Bin 1-8: switch 1 (0x71) channels 0-7; bin 9: switch 2 (0x72) channel 0."""
 
-    def __init__(self, cfg: dict):
-        from gpiozero import DigitalOutputDevice
+    def __init__(self, cfg: dict, bins: int | None = None):
         import VL53L1X
-        self.xshut = [DigitalOutputDevice(p, initial_value=False) for p in cfg["levels"]["xshut_gpio"]]
-        time.sleep(0.05)
+        from smbus2 import SMBus
+        self.bus = SMBus(1)
+        self.muxes = [int(a) for a in cfg["hub"].get("tca9548a", [0x71, 0x72])]
+        n = int(bins or cfg["bins"]["in_use"])
+        self.chan = [(self.muxes[i // 8], i % 8) for i in range(n)]
         self.tofs = []
-        for i, x in enumerate(self.xshut):
-            x.on()
-            time.sleep(0.05)
+        for mux, ch in self.chan:
+            self._select(mux, ch)
             t = VL53L1X.VL53L1X(i2c_bus=1, i2c_address=0x29)
-            t.open()
-            t.change_address(0x30 + i)
-            t.close()
-            t = VL53L1X.VL53L1X(i2c_bus=1, i2c_address=0x30 + i)
             t.open()
             t.set_user_roi(VL53L1X.VL53L1xUserRoi(6, 9, 9, 6))   # 4 x 4 SPADs in the middle: about 15 deg
             t.start_ranging(1)                                     # short range mode
             self.tofs.append(t)
+        self._select(None, None)
+
+    def _select(self, mux, ch) -> None:
+        for m in self.muxes:
+            try:
+                self.bus.write_byte(m, (1 << ch) if m == mux else 0)
+            except OSError:
+                if m == mux:
+                    raise
 
     def distances(self) -> list[int]:
-        return [int(t.get_distance()) for t in self.tofs]
+        out = []
+        for (mux, ch), t in zip(self.chan, self.tofs):
+            self._select(mux, ch)
+            out.append(int(t.get_distance()))
+        self._select(None, None)
+        return out
+
+
+# ------------------------------------------------------------------------------------------------ tower ID
+TOWER_KINDS = {(True, False): "raw", (False, True): "single", (True, True): "double", (False, False): None}
+
+
+def tower_kind(klipper) -> str | None:
+    """Which hopper tower is on the feeder: two hall sensors under the skirt read its magnets
+    (raw = front magnet, single-sleeved = back, double-sleeved = both, none = no tower)."""
+    try:
+        return TOWER_KINDS[(klipper._button("tower_a"), klipper._button("tower_b"))]
+    except Exception:
+        return "unknown"
 
 
 # ------------------------------------------------------------------------------------------------ camera
@@ -142,6 +183,14 @@ class Camera:
         self.fixed = {"AeEnable": False, "ExposureTime": int(c["exposure_us"]), "AnalogueGain": float(c["gain"]), "AwbEnable": True}
         self.cam.set_controls(self.fixed)
         self.is_auto = False
+        import os
+        lp = os.path.expanduser(c.get("lens_file", "~/sorter_data/lens.json"))
+        self.lens = None
+        if c.get("undistort", True) and os.path.exists(lp):
+            try:
+                self.lens = Lens(lp)
+            except Exception:
+                self.lens = None
         self.cam.start()
         time.sleep(1.0)
 
@@ -156,7 +205,54 @@ class Camera:
     def jpeg(self) -> bytes:
         buf = io.BytesIO()
         self.cam.capture_file(buf, format="jpeg")
-        return buf.getvalue()
+        data = buf.getvalue()
+        return self.lens.undistort(data) if self.lens else data
+
+
+class Lens:
+    """Takes the 6 mm lens's barrel distortion out of every photo, from a one-off calibration (touchscreen Tools -> Lens photo x8, then Finish:
+    photos of the printed checkerboard, see machine/README.md). Stored in ~/sorter_data/lens.json."""
+
+    def __init__(self, path: str):
+        import cv2, numpy as np
+        d = json.load(open(path))
+        self.cv2, self.np = cv2, np
+        self.K, self.D, self.size = np.array(d["K"]), np.array(d["D"]), tuple(d["size"])
+        self.maps = None
+
+    def undistort(self, jpeg: bytes) -> bytes:
+        cv2, np = self.cv2, self.np
+        img = cv2.imdecode(np.frombuffer(jpeg, np.uint8), cv2.IMREAD_COLOR)
+        h, w = img.shape[:2]
+        if self.maps is None or self.maps[2] != (w, h):
+            sx, sy = w / self.size[0], h / self.size[1]
+            K = self.K.copy(); K[0] *= sx; K[1] *= sy
+            m1, m2 = cv2.initUndistortRectifyMap(K, self.D, None, K, (w, h), cv2.CV_16SC2)
+            self.maps = (m1, m2, (w, h))
+        out = cv2.remap(img, self.maps[0], self.maps[1], cv2.INTER_LINEAR)
+        ok, enc = cv2.imencode(".jpg", out, [cv2.IMWRITE_JPEG_QUALITY, 92])
+        return enc.tobytes() if ok else jpeg
+
+
+def calibrate_lens(jpegs: list[bytes], path: str, board=(9, 6), square_mm: float = 10.0) -> dict:
+    """Checkerboard calibration (9 x 6 inner corners, 10 mm squares: machine/calibration_board.pdf). Needs 8+ photos
+    with the board in different spots and tilts under the camera. Returns the RMS error in pixels."""
+    import cv2, numpy as np
+    objp = np.zeros((board[0] * board[1], 3), np.float32)
+    objp[:, :2] = np.mgrid[0:board[0], 0:board[1]].T.reshape(-1, 2) * square_mm
+    obj, img, size = [], [], None
+    for j in jpegs:
+        g = cv2.imdecode(np.frombuffer(j, np.uint8), cv2.IMREAD_GRAYSCALE)
+        size = g.shape[::-1]
+        ok, c = cv2.findChessboardCorners(g, board, cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_NORMALIZE_IMAGE)
+        if ok:
+            c = cv2.cornerSubPix(g, c, (11, 11), (-1, -1), (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001))
+            obj.append(objp); img.append(c)
+    if len(obj) < 6:
+        raise ValueError(f"found the board in only {len(obj)} photos (need 6+): more light, hold it flat, fill more of the view")
+    rms, K, D, _, _ = cv2.calibrateCamera(obj, img, size, None, None)
+    json.dump({"K": K.tolist(), "D": D.tolist(), "size": list(size), "rms": rms, "photos": len(obj)}, open(path, "w"), indent=1)
+    return {"rms": rms, "photos": len(obj)}
 
 
 # ------------------------------------------------------------------------------------------------ simulation
@@ -172,7 +268,8 @@ class SimMachine:
         self.fed = 0
         self.light = 0.0
         self.doors: dict[int, bool] = {}
-        self.levels = [250, 250, 250]
+        self.levels = [250] * 9
+        self.tower = "raw"
         self.log: list[str] = []
 
     # Klipper-like

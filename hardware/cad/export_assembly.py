@@ -9,13 +9,13 @@ def put(name, shape, kind):
     items.append({"file": fn, "kind": kind})
 P = placed()
 for k, v in P.items():
-    kind = "black" if k in ("hood", "hood_lid", "sheen_cap", "scan_floor", "pod_cover") else ("bin" if k.startswith("bin_") and "side" not in k else "petg")
+    kind = "black" if (k in ("hood", "hood_lid", "sheen_cap", "scan_floor", "pod_cover", "bay_cover") or k.startswith("back_panel")) else ("bin" if k.startswith("bin_") and "side" not in k else "petg")
     put(k, v, kind)
 # bought parts (for the picture only)
 L = LENGTH
 put("rail_back", box(-5, L + 5, RAIL_Y - 10, RAIL_Y + 10, 0, 20), "alu")
 put("rail_front", box(-5, SCAN_X1, -RAIL_Y - 10, -RAIL_Y + 10, 0, 20), "alu")
-put("rail_back2", box(BIN_X[0] - PITCH / 2, BIN_X[1] + PITCH / 2, RAIL2_Y - 10, RAIL2_Y + 10, 0, 20), "alu")
+put("rail_back2", box(BIN_X[0] - PITCH / 2, END_X0, RAIL2_Y - 10, RAIL2_Y + 10, 0, 20), "alu")
 put("motor_feed", box(FEED_X - 21, FEED_X + 21, 60, 108, FEED_Z - 21, FEED_Z + 21), "motor")
 put("motor_track", box(END_SHAFT_X - 21, END_SHAFT_X + 21, WALL_OUT + 30, WALL_OUT + 78, PUL_Z - 21, PUL_Z + 21), "motor")
 put("standoff_feed", motor_standoff().translate((FEED_X, 60, FEED_Z)), "petg")
@@ -33,19 +33,19 @@ for s in (-1, 1):
             pul = pul.rotate((0, 0, 0), (0, 0, 1), 180)
         put(f"pulley_{s}_{int(x)}", pul.translate((x, s * yc, PUL_Z)), "alu")
     fn = fin() if s > 0 else fin().mirror("XZ")
-    for i in range(5):
+    nf = int((END_SHAFT_X - FIN_START_X - 20) // PITCH) + 1
+    for i in range(nf):
         fx = FIN_START_X + 8 + i * PITCH
         put(f"fin_{s}_{i}", fn.translate((fx, s * yc, BELT_BACK_LOW)), "fin")
-    for i in range(4):
+    for i in range(nf - 1):
         fx = FIN_START_X + 60 + i * PITCH
         put(f"finr_{s}_{i}", fn.mirror("XY").translate((fx, s * yc, PUL_Z + PUL_R + 0.45)), "fin")
 # cards: in the hopper, under the camera, one dropping in bin 2
 put("stack", box(TOWER_X0 + 0.7, TOWER_X0 + 88.7, -31.5, 31.5, PATH, PATH + 120), "stack")
 put("card_scan", box(SCAN_X - 44, SCAN_X + 44, -31.5, 31.5, PATH, PATH + 0.6), "card")
 put("card_bin1", box(BIN_X[0] - 44, BIN_X[0] + 44, -31.5, 31.5, PATH, PATH + 0.6), "card")
-BY = [BIN_Y, BIN_Y, BIN_Y]
-for i, h in enumerate((60, 25, 90)):
-    put(f"cards_in_bin{i}", box(BIN_X[i] - 44, BIN_X[i] + 44, BY[i] - 31.5, BY[i] + 31.5, 2, 2 + h * 0.3), "stack")
+for i, h in enumerate((60, 25, 90, 40, 120, 15, 70, 35, 100)[:BINS]):
+    put(f"cards_in_bin{i}", box(BIN_X[i] - 44, BIN_X[i] + 44, BIN_Y - 31.5, BIN_Y + 31.5, 2, 2 + h * 0.3), "stack")
 # the 7 in display in its cradle with the Pi on its back, and the camera ribbon (picture only)
 put("display", screen_placed(box(-SCREEN_W / 2, SCREEN_W / 2, -SCREEN_T, 0, 0, SCREEN_H)), "screen")
 put("pi5", screen_placed(box(-42.5, 42.5, 0, 1.6 + 8, PI_ON_SCREEN_Z, PI_ON_SCREEN_Z + 56)), "servo")
@@ -56,9 +56,14 @@ V, F, _ = ribbon_strip(); write_stl(os.path.join(out, "ribbon.stl"), V, F); item
 put("psu", box(PSU_X0, PSU_X0 + PSU_L, -PSU_H / 2, PSU_H / 2, RAIL_Z + 5, RAIL_Z + 5 + PSU_W), "alu")
 # camera on the hood roof
 put("camera", box(SCAN_X - 19, SCAN_X + 19, -19, 19, PATH + CAM_D + 44, PATH + CAM_D + 56).union(cyl_z(SCAN_X, 0, 15, PATH + CAM_D, PATH + CAM_D + 44)), "motor")
-# servos on the back walls
-for xb in BIN_X[:2]:
-    put(f"tof_{int(xb)}", box(xb - PITCH / 2 + TOF_X - 9, xb - PITCH / 2 + TOF_X + 9, -48.5, -35.5, PATH - 17, PATH - 15), "servo")
-    put(f"servo_{int(xb)}", box(xb - 11.5, xb + 11.5, WALL_OUT + 4, WALL_OUT + 16, PATH - 44, PATH - 32), "servo")
+# bin-level sensors, door servos, hub boards
+for i, xb in enumerate(BIN_X):
+    x0 = xb - PITCH / 2
+    put(f"tof_{i}", box(x0 + TOF_X - 9, x0 + TOF_X + 9, -48.5, -35.5, PATH - 17, PATH - 15), "servo")
+    if i < BINS - 1:
+        put(f"servo_{i}", servo_placed().translate((x0, 0, 0)), "servo")
+x0h = BIN_X[HUB_MODULE] - PITCH / 2
+for nm, (bx, bz, bw, bh) in HUB_BOARDS.items():
+    put(f"hub_{nm}", box(x0h + bx, x0h + bx + bw, WALL_IN - 1.0, WALL_IN + 0.6, bz, bz + bh), "accent")
 json.dump(items, open(os.path.join(out, "items.json"), "w"))
 print(len(items), "parts; length", L)

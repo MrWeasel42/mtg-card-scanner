@@ -6,6 +6,7 @@ from sorter import *
 import bought as B
 
 P = placed()
+EB = f"bin_{BINS - 1}"   # end bin
 def pr(*names):
     shp = None
     for n in names:
@@ -37,8 +38,21 @@ check("122 mm loop + pulleys (horizontal now) vs base", loop, base, 0.3)
 checks.append(dict(label="Exit roller speed / feed roller speed (same pulleys)", overlap=0, gap=round(11.8 / 11.8, 3), need=1.0,
                    ok=True, note="both D23.6 on 20T pulleys: the card isn't pushed into a slower nip"))
 check("Feed coupler (D19 x 25) vs its standoff", cpl_f, so_f, 0.5)
-xe = BIN_X[1] + PITCH / 2
-endm = pr("end_side_back", "end_side_front", "end_cap", "bin_2")
+check("Pressure bridge vs hopper tower (all three)", P["pressure_bridge"], tower("raw").union(tower("single")).union(tower("double")), 2.0)
+check("Pressure roller vs its bridge (floats in the slots)", P["exit_roller_top"], P["pressure_bridge"], 0.5)
+for k in TOWERS:
+    check(f"{k} tower vs feeder base (sits on its skirt)", tower(k), base, 0.1, "skirt flat on the floor, 2 M3 thumb screws")
+    x0t = TOWER_EXIT_X - TOWERS[k][0]
+    c = box(x0t + 0.5, TOWER_EXIT_X - 0.5, -TOWERS[k][1] / 2 + 0.5, TOWERS[k][1] / 2 - 0.5, PATH + 0.05, PATH + 0.7)
+    check(f"{k} tower: bottom card lies flat, free to slide out", c, tower(k).union(base), 0.0)
+    for i in TOWER_MAGNETS[k]:
+        hx, hy = HALL[i]
+        mag = cyl_z(hx, hy, 3.0, PATH + 0.2, PATH + 3.2)
+        check(f"{k} tower magnet {i + 1} vs card space", mag, box(x0t, TOWER_EXIT_X, -TOWERS[k][1] / 2, TOWERS[k][1] / 2, PATH, PATH + 20), 1.0)
+        checks.append(dict(label=f"{k} tower magnet {i + 1} to hall sensor (A3144 switches at ~5 mm with a 6x3 N35)", overlap=0, gap=round(PATH + 0.2 - (PATH - 3.2 + 1.6), 2),
+                           need=0, ok=PATH + 0.2 - (PATH - 3.2 + 1.6) <= 4.0, note="sensor flat in its pocket, magnet flush in the skirt"))
+xe = END_X0
+endm = pr("end_side_back", "end_side_front", "end_cap", EB)
 trk_m = B.nema17().translate((END_SHAFT_X, WALL_OUT + 30, PUL_Z))
 so_t = motor_standoff().translate((END_SHAFT_X, WALL_OUT, PUL_Z))
 cpl_t = cyl_y(END_SHAFT_X, PUL_Z, 9.5, WALL_OUT + 2.5, WALL_OUT + 27.5)
@@ -50,14 +64,14 @@ for sgn in (-1, 1):
     nm = "back" if sgn > 0 else "front"
     y0, y1 = sorted((sgn * 35.8, sgn * 48.2))
     st = cyl_y(FIN_START_X, PUL_Z, 12.0, y0, y1)
-    check(f"Start idler ({nm}) vs feeder base posts, tower, gate, pressure roller", st,
-          pr("feeder_base", "raw_tower", "gate_plate", "exit_roller_top"), 0.3, "flange to post wall")
+    check(f"Start idler ({nm}) vs feeder base posts, tower, gate, pressure roller + bridge", st,
+          pr("feeder_base", "raw_tower", "gate_plate", "exit_roller_top", "pressure_bridge"), 0.3, "flange to post wall")
     dr = cyl_y(END_SHAFT_X, PUL_Z, 12.0, y0, y1)
     check(f"Drive pulley ({nm}) vs end module", dr, pr("end_side_back", "end_side_front", "end_cap"), 0.3)
     hy0, hy1 = sorted((sgn * 28.5, sgn * 35.5))
     hub = cyl_y(END_SHAFT_X, PUL_Z, 8.0, hy0, hy1)
     check(f"Drive pulley hub ({nm}, inner side) vs end module, end ramp, bins", hub,
-          pr("end_side_back", "end_side_front", "end_cap", "end_ramp", "bin_2"), 1.0, "hub faces the track; was hitting the 625 seat")
+          pr("end_side_back", "end_side_front", "end_cap", "end_ramp", EB), 1.0, "hub faces the track; was hitting the 625 seat")
 bridge_r = PUL_Z - (PATH + RAIL_H + 0.5)
 checks.append(dict(label="Drive hub (r 8) inside the fin bridge's radius round the pulley", overlap=0, gap=round(bridge_r - 8.0, 2), need=2.0,
                    ok=bridge_r - 8.0 >= 2.0, note="fins ride round with the pulley; grub screw sits below the hub surface"))
@@ -78,7 +92,7 @@ def fin_path(sgn):
     return low.union(high).union(arcs.cut(box(FIN_START_X, END_SHAFT_X, -99, 99, PUL_Z - PUL_R, PUL_Z + PUL_R)))
 fixed = None
 for k, v in P.items():
-    if k.startswith("door_") or k in ("screen_cradle",):
+    if k.startswith("door_") or k.startswith("servo_link_") or k in ("screen_cradle",):
         continue
     fixed = v if fixed is None else fixed.union(v)
 for sgn in (-1, 1):
@@ -115,8 +129,20 @@ checks.append(dict(label="Fin finger below the card floor (no card can get under
 checks.append(dict(label="Fin lands behind the exit-roller nip", overlap=0, gap=round(EXIT_X - FIN_START_X, 2), need=4.0,
                    ok=EXIT_X - FIN_START_X >= 4.0, note="the card's tail leaves the nip at X 136; fins touch down at X 131"))
 loop = 2 * (END_SHAFT_X - FIN_START_X) + 2 * math.pi * PUL_R
-checks.append(dict(label="Belt loop = factory 1220 mm closed loop = whole number of fin pitches", overlap=0, gap=round(loop, 2), need=1220,
-                   ok=abs(loop - 1220) < 0.01 and abs(loop - FIN_PITCHES * PITCH) < 0.01, note=f"{loop:.1f} mm = {FIN_PITCHES} x {PITCH:.0f} (61 teeth per fin)"))
+want = {3: 1220.0, 9: 2684.0}.get(BINS, FIN_PITCHES * PITCH)
+checks.append(dict(label=f"Belt loop ({BINS} bins) = {want:.0f} mm = whole number of fin pitches", overlap=0, gap=round(loop, 2), need=want,
+                   ok=abs(loop - want) < 0.01 and abs(loop - FIN_PITCHES * PITCH) < 0.01, note=f"{loop:.1f} mm = {FIN_PITCHES} x {PITCH:.0f} (61 teeth per fin); 3 bins: factory 1220 loop, 9 bins: welded 2684 loop"))
+# --- a card all the way down the track: from the hopper, under the gate, through the nip, under the camera, over every
+# closed door, onto the end ramp. Raw and sleeved, lying on the floor. Nothing may stand in its way.
+fixed_nodoor = pr(*[k for k in P if not (k.startswith("door_") or k.startswith("servo_link_") or k in ("exit_roller", "exit_roller_top", "feed_roller", "screen_cradle", "pod_cover", "mount_wall_gap", "gate_plate"))])
+gb = P["gate_plate"].val().BoundingBox()
+checks.append(dict(label="Gate foot (adjustable) lowest point above the floor, as drawn", overlap=0, gap=round(gb.zmin - PATH, 2), need=0.0, ok=gb.zmin - PATH >= -0.1,
+                   note="the 3 deg lean tips the foot 0.5 mm toward the exit: set the gap at the foot's exit end; the slope is a lead-in"))
+for nm, w, xs, t in (("raw card (63 wide)", 31.5, TOWER_X0 + 0.5, 0.35), ("sleeved card (66 wide)", 33.0, TOWER_EXIT_X + 5.0, 0.7)):
+    lane = box(xs, END_X0 + 4, -w, w, PATH + 0.05, PATH + t)
+    check(f"Card path, {nm}, hopper -> end of the track vs every fixed part", lane, fixed_nodoor, 0.0,
+          "floor, gate gap, guides, hood tunnel, tie bars; v2 base had a bar here")
+    check(f"Card path, {nm}, vs closed doors", lane, pr(*[k for k in P if k.startswith("door_")]), 0.0)
 # --- feed-to-exit roller loop (122 mm) on the front, inside the base
 feed_pulley = cyl_y(FEED_X, FEED_Z, 8, -55, -39); exit_pulley = cyl_y(EXIT_X, EXIT_Z, 8, -55, -39)
 check("Feed-shaft pulley (122 mm loop) vs base", feed_pulley, base, 0.3, "pulley set 1 mm off the wall")
@@ -140,9 +166,8 @@ check("SKR Pico + plugs (on 8 mm tray bosses) vs base", skr, base, 1.0, "the Pi 
 # --- the rest of the electronics bay: 5 V USB-C converter on the tray beside the SKR, 6 V servo step-down on the left
 # inner wall, PCA9685 servo board on the back inner wall above the cable window (foam tape / zip ties)
 conv6 = B.potted_converter().rotate((0, 0, 0), (0, 1, 0), 90).translate((4.3, 8.0, 105.0))
-pca = B.pca9685().rotate((0, 0, 0), (1, 0, 0), 90).translate((28.0, 55.8, RAIL_Z + 64))
-bay = {"6 V servo step-down (left inner wall)": conv6,
-       "PCA9685 servo board (back inner wall)": pca}
+hall = cyl_z(HALL[0][0], HALL[0][1], 5.0, PATH - 30, PATH - 4).union(cyl_z(HALL[1][0], HALL[1][1], 5.0, PATH - 30, PATH - 4))
+bay = {"6 V servo step-down (left inner wall)": conv6, "Hall sensor leads (under the floor)": hall}
 names = list(bay)
 for i, n in enumerate(names):
     check(f"{n} vs feeder base", bay[n], base, 0.0, "taped / tied against the wall it sits on")
@@ -150,7 +175,7 @@ for i, n in enumerate(names):
     check(f"{n} vs roller shafts/pulleys", bay[n], shafts, 3.0)
     for m in names[i + 1:]:
         check(f"{n} vs {m}", bay[n], bay[m], 1.0)
-check("Bay boards vs bay cover", conv6.union(pca), P["bay_cover"], 1.0)
+check("Bay boards vs bay cover", conv6, P["bay_cover"], 1.0)
 check("SKR Pico + plugs vs roller shafts/pulleys", skr, shafts, 3.0)
 from sorter import CAM_CABLE_Z
 # --- PSU under the scanner
@@ -160,43 +185,60 @@ check("PSU (+25 mm wire space) vs scan module", psu, scan, 3.0)
 check("PSU vs bin 1", psu, P["bin_0"], 5.0)
 check("PSU vs feeder base", psu, base, 2.0)
 check("PSU vs its cradles", B.lrs100().translate((PSU_X0, 0, RAIL_Z + 5)).cut(box(PSU_X0 - 30, PSU_X0, -50, 50, 0, 200)), pr(*[k for k in P if k.startswith("psu_cradle")]), 0.0, "snug fit is intended")
-# --- servos, beams, bins, doors
-for i, xb in enumerate(BIN_X[:2]):
-    x0 = xb - PITCH / 2
-    sv = B.servo().rotate((0, 0, 0), (0, 0, 1), 180).translate((xb, WALL_OUT + 4 + 24, PATH - 38))
-    side = P[f"bin_side_back_{i}"]
-    check(f"Bin {i+1} servo body vs its wall", sv.cut(box(-1e3, 1e3, -1e3, WALL_OUT + 4.1, -1e3, 1e3)), side, 0.2)
-    eb = B.beam_half().translate((xb, WALL_OUT + 1, PATH - 22)); rb = B.beam_half().rotate((0, 0, 0), (0, 0, 1), 180).translate((xb, -WALL_OUT - 1, PATH - 22))
-    check(f"Bin {i+1} beam emitter in its pocket", eb.cut(box(-1e3, 1e3, WALL_OUT, 1e3, -1e3, 1e3)), side, 0.0)
-    # door swing: leaf rotated 60 deg about the hinge vs the bin below
-    leaf = box(x0 + 2, x0 + 103, -34.8, 34.8, PATH - 2.4, PATH).rotate((0, 34.5, PATH - 3), (1, 34.5, PATH - 3), 60)
-    check(f"Bin {i+1} door opened 60 deg vs bin top", leaf, P[f"bin_{i}"], 3.0, "doors open 60 deg; cards slide off from ~35 deg")
-    leafd = P[f"door_{i}"].rotate((0, 34.5, PATH - 3), (1, 34.5, PATH - 3), 60)
-    check(f"Bin {i+1} door (with lever) opened 60 deg vs tie bars + walls", leafd,
-          pr(*[k for k in P if k.startswith("tie_bar")], f"bin_side_front_{i}"), 0.4, "0.5 mm end gap to the joint bridges")
+# --- doors, servos, links, beams, bins (every bin module is the same part: checked on module 1, the hub module and the last)
+def mod(i):
+    return pr(f"bin_side_back_{i}", f"bin_side_front_{i}", f"tie_bar_{i}", f"tie_bar_{i + 1}", f"back_panel_{i}", f"bin_{i}")
+for i in sorted({0, HUB_MODULE, BINS - 2}):
+    x0 = BIN_X[i] - PITCH / 2
+    m = mod(i)
+    sv = servo_placed(0).translate((x0, 0, 0))
+    check(f"Bin {i+1} servo vs its module (tabs on the bracket)", sv.cut(box(x0 + SERVO_TOP_X + 3.4, x0 + SERVO_TOP_X + 6.1, -99, 99, 0, 999)), m, 0.15, "0.2 mm round the body in the bracket")
+    eb = B.beam_half().translate((BIN_X[i], WALL_OUT + 1, PATH - 22))
+    check(f"Bin {i+1} beam emitter in its pocket", eb.cut(box(-1e3, 1e3, WALL_OUT, 1e3, -1e3, 1e3)), P[f"bin_side_back_{i}"], 0.0)
+    for ang in (0, 20, 40, 60):
+        dr = door_open(ang=ang).translate((x0, 0, 0))
+        check(f"Bin {i+1} door at {ang} deg vs its module (walls, knuckles, tie bars, bin)", dr, m, 0.0 if ang == 0 else 0.3,
+              "closed: rests on the front ledge")
+        check(f"Bin {i+1} door at {ang} deg vs its servo", dr, servo_placed(ang).translate((x0, 0, 0)), 1.0)
+        lk = link_placed(ang).translate((x0, 0, 0))
+        check(f"Bin {i+1} servo link at {ang} deg vs module + servo body", lk, m.union(servo_placed(ang).translate((x0, 0, 0)).cut(
+              box(x0 + SERVO_TOP_X - 4.1, x0 + SERVO_TOP_X - 1.9, -99, 99, 0, 999))), 0.3, "horn end and lever end are screwed to it")
+    d60 = door_open().translate((x0, 0, 0))
+    check(f"Bin {i+1} door open 60 deg vs bin top", d60, P[f"bin_{i}"], 3.0, "cards slide off from ~35 deg")
     check(f"Bin {i+1} vs its module (posts, back wall, sensor mount)", P[f"bin_{i}"], pr(f"bin_side_back_{i}", f"bin_side_front_{i}"), 0.8, "slides out the front between the 2.5 mm posts")
-check("End bin vs end module walls, posts, end cap, ramp", P["bin_2"], pr("end_side_front", "end_side_back", "end_cap", "end_ramp"), 0.8)
+    beam = cyl_y(BIN_X[i], PATH - 22, 1.5, -WALL_IN + 0.5, WALL_IN - 0.5)
+    check(f"Bin {i+1} break-beam line, door closed (must be clear)", beam, m.union(P[f"door_{i}"]).union(servo_placed(0).translate((x0, 0, 0))), 0.3)
+    check(f"Bin {i+1} break-beam line through the open door's slot", beam, d60, 0.2, "the card sliding down crosses it")
+# hub boards on the back panel: inside the window, clear of the servo and the bins
+hb = None
+for (bx, bz, bw, bh) in HUB_BOARDS.values():
+    e = box(bx, bx + bw, WALL_IN + 0.6 - 16.0, WALL_IN + 0.6, bz, bz + bh)        # board + parts + plugs, 16 mm deep
+    hb = e if hb is None else hb.union(e)
+x0h = BIN_X[HUB_MODULE] - PITCH / 2
+hb = hb.translate((x0h, 0, 0))
+check("Bin hub boards vs the hub module (window, servo, bracket, bin)", hb, pr(f"bin_side_back_{HUB_MODULE}", f"bin_{HUB_MODULE}").union(servo_placed(0).translate((x0h, 0, 0))), 1.0)
+check("Bin hub boards vs the open door", hb, door_open().translate((x0h, 0, 0)), 3.0)
+check("End bin vs end module walls, posts, end cap, ramp", P[EB], pr("end_side_front", "end_side_back", "end_cap", "end_ramp"), 0.8)
 check("End ramp vs end module walls and end cap", P["end_ramp"], pr("end_side_front", "end_cap"), 0.5, "flange screws up under the back strip")
 rb = P["end_ramp"].val().BoundingBox()
 checks.append(dict(label="End ramp low edge above the end bin (same as an open door)", overlap=0, gap=round(rb.zmin - 135.0, 1), need=3.0,
                    ok=rb.zmin - 135.0 >= 3.0, note=f"low edge at Y {rb.ymin:.1f}; bin back wall at Y -1"))
-# --- bins forward: card landing room, second rail, level sensors
-rail2 = box(BIN_X[0] - PITCH / 2, BIN_X[1] + PITCH / 2, RAIL2_Y - 10, RAIL2_Y + 10, 0, RAIL_Z)
-check("Second back rail (Y +24) vs bins", rail2, pr("bin_0", "bin_1", "bin_2"), 2.0, "runs under the doors behind the bins; stops at the end module")
-open_edge_y = 34.5 - 69.3 * math.cos(math.radians(60))
-checks.append(dict(label="Open bin in front of the door's low edge (card landing room)", overlap=0, gap=round(open_edge_y - (BIN_Y - 36.0), 1), need=63.0,
-                   ok=open_edge_y - (BIN_Y - 36.0) >= 63.0, note="was 34 mm with the bins centred; a card is 63 mm wide"))
-for i, xb in enumerate(BIN_X):
-    x0 = xb - PITCH / 2
+rail2 = box(BIN_X[0] - PITCH / 2, END_X0, RAIL2_Y - 10, RAIL2_Y + 10, 0, RAIL_Z)
+check("Second back rail (Y +24) vs bins", rail2, pr(*[f"bin_{i}" for i in range(BINS)]), 2.0, "runs under the doors behind the bins; stops at the end module")
+dbb = door_open().val().BoundingBox()
+checks.append(dict(label="Open bin in front of the door's low edge (card landing room)", overlap=0, gap=round(dbb.ymin - (BIN_Y - 36.0), 1), need=63.0,
+                   ok=dbb.ymin - (BIN_Y - 36.0) >= 63.0, note=f"door's low edge at Y {dbb.ymin:.1f}, Z {dbb.zmin:.0f}; a card is 63 mm wide"))
+for i in sorted({0, HUB_MODULE, BINS - 1}):
+    x0 = BIN_X[i] - PITCH / 2
     zt, zb = PATH - 19.0, 3.0
     r = (zt - zb) * math.tan(math.radians(7.5))
     cone = cq.Workplane("XY").add(cq.Solid.makeCone(r, 0.3, zt - zb, cq.Vector(x0 + TOF_X, -42.0, zb), cq.Vector(0, 0, 1)))
-    others = {k: v for k, v in P.items() if not k.startswith("door_")}
-    hit = pr(*others.keys())
-    for k in [k for k in P if k.startswith("door_")]:
-        hit = hit.union(P[k].rotate((0, 34.5, PATH - 3), (1, 34.5, PATH - 3), 60))
-    check(f"Bin {i+1} level sensor view (15 deg cone) vs everything incl. open door", cone, hit, 0.5,
-          "set the VL53L1X to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum")
+    if i < BINS - 1:
+        hit = mod(i).union(door_open().translate((x0, 0, 0)))
+    else:
+        hit = pr("end_side_front", "end_side_back", "end_ramp", EB, f"tie_bar_{i}")
+    check(f"Bin {i+1} level sensor view (15 deg cone) vs its module incl. open door", cone, hit, 0.5,
+          "VL53L1X set to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum")
 # --- camera in the hood
 for d in (CAM_D_MIN, CAM_D_MAX):
     cp = camera_plate().translate((SCAN_X, 0, PATH + d + 44 - 4))

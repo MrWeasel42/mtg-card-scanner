@@ -38,6 +38,8 @@ function chrome() {
     `<span class="chip ${s.pc.online ? "ok" : "warn"}">${s.pc.online ? "● PC: " + esc(s.pc.name) : "○ No PC"}</span>`,
     `<span class="chip ${hwc}">Motors: ${esc(s.hw.motors)}</span>`,
     `<span class="chip">Identify: ${esc(s.identifier)}</span>`,
+    ({ raw: `<span class="chip">Tower: raw</span>`, single: `<span class="chip">Tower: 1 sleeve</span>`, double: `<span class="chip">Tower: 2 sleeves</span>` })[s.hw.tower]
+      || (s.hw.tower === null ? `<span class="chip warn">No tower</span>` : ""),
     s.sim ? `<span class="chip warn">SIMULATION</span>` : "",
   ].join("");
   $("#clock").textContent = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -185,13 +187,16 @@ const VIEWS = {
   camera() {
     return `<div style="display:flex;flex-direction:column;height:100%;gap:12px;overflow:hidden">
       <div class="row"><span class="seg"><button class="${camExp === "auto" ? "on" : ""}" data-act="camexp" data-arg="auto">Auto brightness</button><button class="${camExp === "fixed" ? "on" : ""}" data-act="camexp" data-arg="fixed">As when sorting</button></span>
-        <span class="muted small grow">Lens tip to card: 200 mm (7⅞″). Turn the focus ring until the card text is sharp. "As when sorting" is dark without the hood lights.</span></div>
+        <span class="muted small grow">Lens tip to card: 115 mm (4½″), adjustable 100–135 mm on the lid. Turn the focus ring until the card text is sharp. "As when sorting" is dark without the hood lights.</span></div>
       <img id="camimg" class="cam" alt="camera"></div>`;
   },
   tools() {
     const t = [["home", "⌂ Home the belt", "A fin stops on the scan station"], ["index", "→ Move one station", "Track moves 122 mm"],
       ["feed", "⤓ Feed 50 mm", "Turns the feed roller"], ["doors", "🚪 Test doors", "Each door opens and shuts twice"],
-      ["levels", "📏 Bin levels", "Distance to each stack"], ["motors-off", "🔌 Motors off", "Belts turn by hand"]];
+      ["levels", "📏 Bin levels", "Distance to each stack"], ["tower", "🗼 Which tower?", "Reads the tower-ID magnets"],
+      ["calib-shot", "▦ Lens photo", "Checkerboard under the camera, then tap (8+ times, move it each time)"],
+      ["calib-done", "✓ Finish lens calibration", "Works out the lens correction from the photos"],
+      ["motors-off", "🔌 Motors off", "Belts turn by hand"]];
     return `<p class="muted" style="margin-top:0">Setup and tests. The red STOP button cuts the motors at once.</p>
       <div class="bins">${t.map(([k, n, d]) => `<button class="tile" style="min-height:130px" data-tool="${k}"><span class="t" style="font-size:22px">${n}</span><span class="s">${d}</span></button>`).join("")}
       <button class="tile" style="min-height:130px" data-act="lights"><span class="t" style="font-size:22px">💡 Lights</span><span class="s">On / off</span></button></div>
@@ -203,8 +208,7 @@ const VIEWS = {
     const seg = (key, opts) => `<span class="seg">${opts.map(([v, l]) => `<button class="${String(st[key]) === String(v) ? "on" : ""}" data-set="${key}" data-val="${v}">${l}</button>`).join("")}</span>`;
     const u = S.update;
     return `<div class="list">
-      <div class="panel"><h3>Identify cards on</h3>${seg("identifyOn", [["auto", "Auto"], ["pc", "Always PC"], ["machine", "Always machine"]])}
-        <p class="muted small">Auto uses your PC when it's on and the machine when it isn't. On-machine identifying is coming in a later update; until then Auto and Machine use the PC when it's on, and cards scanned with no PC are kept and flagged so you can identify them later.</p></div>
+      <div class="panel"><h3>Identifying</h3><p class="muted small" style="margin:0">Cards are identified by the MTG Scanner app on your PC (Settings → Phone link on). If the PC is off, the machine keeps sorting: each card's photo is saved and it goes to the Flagged bin, and you identify those on the PC later.</p></div>
       <div class="panel"><h3>Price shown while sorting</h3>${seg("priceShow", [["last", "Last card"], ["top", "Highest so far"], ["both", "Both"]])}</div>
       <div class="panel"><h3>Screen sleep</h3>${seg("sleepMinutes", [[0, "Never"], [5, "5 min"], [10, "10 min"], [30, "30 min"]])}
         <p class="muted small">Never sleeps while sorting. Tap to wake.</p>

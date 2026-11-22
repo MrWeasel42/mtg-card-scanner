@@ -74,7 +74,7 @@ class Machine:
         self.sim_cards = 25                    # cards in the pretend hopper (--sim)
         self.sim_speed = 0.25                  # seconds per pretend step
         self.pc = identify.SimIdentifier() if sim else identify.PcIdentifier(cfg["pc"]["host"], cfg["pc"]["port"])
-        self.local = None                      # the on-machine identifier (coming later)
+        self.local = None                      # no on-machine identifier: the PC app identifies cards
         self.lock = threading.RLock()
         self.session: sessions.Session | None = None
         self.state = "idle"                    # idle | starting | running | stopping | stopped | error | estop
@@ -86,7 +86,7 @@ class Machine:
         self.messages: list[dict] = []
         self.last_card: dict | None = None
         self.started_at = 0.0
-        self.hw_status = {"motors": "unknown", "servos": "unknown", "camera": "unknown", "levels": "unknown"}
+        self.hw_status = {"motors": "unknown", "servos": "unknown", "camera": "unknown", "levels": "unknown", "tower": "unknown"}
         self._cam = None
         self._cam_lock = threading.Lock()
         self._sim_machine = None
@@ -113,19 +113,13 @@ class Machine:
 
     # ------------------------------------------------------------------ identifiers
     def identifier(self):
-        mode = self.settings["identifyOn"]
-        if mode == "machine":
-            return self.local
-        if mode == "pc":
-            return self.pc
-        if self.pc.online:
-            return self.pc
-        return self.local
+        """The PC app identifies cards. With no PC the machine keeps going: photos saved, cards Flagged."""
+        return self.pc if self.pc.online else None
 
     def identifier_label(self) -> str:
         i = self.identifier()
         if i is None:
-            return "On the machine (coming soon)" if self.settings["identifyOn"] == "machine" else "No PC found"
+            return "No PC found: cards are kept and flagged"
         return i.label
 
     def _background(self) -> None:
@@ -139,6 +133,12 @@ class Machine:
                     if self.pc.online != was:
                         self.say(f"PC {'connected: ' + self.pc.name if self.pc.online else 'disconnected'}.")
                     self.hw_status["motors"] = self._klipper_state()
+                    if self.hw_status["motors"] == "ready":
+                        t = hw.tower_kind(hw.Klipper(self.cfg["moonraker"]))
+                        if t != self.hw_status.get("tower"):
+                            self.hw_status["tower"] = t
+                            self.say({"raw": "Raw-card tower fitted.", "single": "Single-sleeved tower fitted.",
+                                      "double": "Double-sleeved tower fitted.", None: "No tower on the feeder."}.get(t, "Tower sensors not read."))
                 if time.time() - last_update_check > 1800:
                     last_update_check = time.time()
                     self.check_update()
@@ -229,7 +229,7 @@ class Machine:
         except Exception as e:
             self.hw_status["levels"] = "not found"
             self.say(f"Bin-level sensors not found ({e}): bins won't be checked for full.", "warn")
-            levels = _NoLevels(len(cfg["levels"]["xshut_gpio"]))
+            levels = _NoLevels(int(cfg["bins"]["in_use"]))
         with self._cam_lock:
             cam = self.camera()
             cam.auto(False)                    # sorting photos: fixed exposure under the hood lights
@@ -520,7 +520,7 @@ class Brain:
             return {"paused": True}
         ident_by = m.identifier()
         if ident_by is None:
-            ident = {"ok": False, "offline": True, "error": "No PC found (on-machine identifying is coming)"}
+            ident = {"ok": False, "offline": True, "error": "No PC found: card kept and flagged, identify it later on the PC"}
         else:
             ident = ident_by.identify(jpeg)
         c = m.session.add_card(jpeg, ident)
@@ -817,6 +817,29 @@ def tool(m: Machine, name: str, b: dict) -> dict:
         if name == "levels":
             lv = hw.Levels(m.cfg)
             return {"ok": True, "levels": lv.distances(), "text": "  ".join(f"bin {i + 1}: {v} mm" for i, v in enumerate(lv.distances()))}
+        if name == "tower":
+            t = hw.tower_kind(hw.Klipper(m.cfg["moonraker"]))
+            words = {"raw": "Raw-card tower", "single": "Single-sleeved tower", "double": "Double-sleeved tower",
+                     None: "No tower on the feeder", "unknown": "Couldn't read the tower sensors"}
+            return {"ok": True, "text": words.get(t, str(t))}
+        if name == "calib-shot":
+            with m._cam_lock:
+                cam = m.camera(); cam.auto(True)
+                lens, cam.lens = cam.lens, None              # raw photo, not corrected
+                try:
+                    j = cam.jpeg()
+                finally:
+                    cam.lens = lens
+            m._calib = (getattr(m, "_calib", []) + [j])[-30:]
+            return {"ok": True, "text": f"{len(m._calib)} photo(s). Move or tilt the board and tap again; 8 or more, then Finish."}
+        if name == "calib-done":
+            shots = getattr(m, "_calib", [])
+            path = os.path.expanduser(m.cfg["camera"].get("lens_file", "~/sorter_data/lens.json"))
+            r = hw.calibrate_lens(shots, path)
+            with m._cam_lock:
+                m.camera().lens = hw.Lens(path)
+            m._calib = []
+            return {"ok": True, "text": f"Lens calibrated from {r['photos']} photos (error {r['rms']:.2f} px). Photos are corrected from now on."}
         if name == "feed":
             k = hw.Klipper(m.cfg["moonraker"]); k.enable(True)
             k.move("feed", float(b.get("mm", 50)), m.cfg["feed"]["speed"])
