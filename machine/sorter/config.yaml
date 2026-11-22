@@ -30,7 +30,7 @@ feed:
   speed: 60
   max_to_sensor_mm: 160       # card must reach the card-clear sensor within this, else hopper empty / misfeed
   max_card_mm: 140            # ...and clear it within this (raw card is 88 long), else jam
-  after_clear_mm: 10          # carry on so the tail leaves the exit nip before a fin comes down
+  after_clear_mm: 13          # carry on so the tail leaves the exit nip (X 136) before a fin comes down (sensor at X 124.5)
   retries: 2                  # tries before calling the hopper empty
   empty_poll_s: 5             # hopper empty: try feeding again this often (never stops on its own)
 

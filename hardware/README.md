@@ -8,6 +8,7 @@
 - `cad/fitcheck.py`: every bought part at datasheet size checked against the printed parts, a card run down the whole
   track, every door swung through its travel, every cable length (`fit_report.json`).
 - `sheets/`: drawing sheet per part. `renders/`: pictures.
+- [AUDIT.md](AUDIT.md): the rev H design audit (every part, screw, cable, motion and card path checked; what changed). `audit/run_all.sh` re-runs it.
 
 Machine coordinates: X along the card path, Y across (front = -Y), Z up. Card floor at Z = 205 mm (8.1 in).
 Length 1.47 m (58 in) with 9 bins. Build order: the 3-bin raw-card machine first (feeder, scanner, bin modules 1-2,
@@ -15,11 +16,11 @@ end module), then bin modules 3-8 slot in between module 2 and the end module, t
 
 ![machine](renders/asm_iso.png)
 
-## Feeder (v3 base)
+## Feeder (v4 base, rev H audit)
 
 * The hopper floor is clear all the way from the entry side to the exit roller (v2 had a locating bar under the exit
   wall that would have stopped every card). Any of the three towers (raw, single-sleeved, double-sleeved) sits flat on
-  its skirt with 2 M3 thumb screws; the exit wall is in the same place on all three, so the gate and guides fit all.
+  its skirt with 2 M3 x 16 cap screws; the exit wall is in the same place on all three, so the gate and guides fit all.
 * Tower ID: two A3144 hall sensors in pockets in the hopper floor read 6 x 3 mm magnets pressed into the tower's
   skirt (raw = front, single = back, double = both). The app shows which tower is on.
 * Pressure roller: on a bridge across the feeder posts, floating in vertical slots over the exit roller.

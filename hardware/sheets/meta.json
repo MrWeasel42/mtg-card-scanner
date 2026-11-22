@@ -1,6 +1,11 @@
 {
  "fit_coupon": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "PRINT FIRST (done). Hole sizes are tuned to it.",
   "x": 112.0,
@@ -8,7 +13,12 @@
   "z": 16.0
  },
  "feeder_base": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "v3. Upright, 15% gyroid, 4 walls, 5 top layers, ~19 h. Tree supports only under the card-clear sensor pocket.",
   "x": 150.0,
@@ -16,7 +26,12 @@
   "z": 225.0
  },
  "raw_tower": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "Upright, 3 walls. Magnet in position 1 (front), south pole down.",
   "x": 124.7,
@@ -24,7 +39,12 @@
   "z": 187.0
  },
  "single_tower": {
-  "qty": "1 (A 0, B 0, C 1)",
+  "qty": 1,
+  "stages": [
+   0,
+   0,
+   1
+  ],
   "mat": "PETG",
   "note": "Single-sleeved cards (inside 92.5 x 67.5). Magnet in position 2 (back).",
   "x": 124.7,
@@ -32,7 +52,12 @@
   "z": 187.1
  },
  "double_tower": {
-  "qty": "1 (A 0, B 0, C 1)",
+  "qty": 1,
+  "stages": [
+   0,
+   0,
+   1
+  ],
   "mat": "PETG",
   "note": "Double-sleeved cards (inside 93.5 x 68.5). Magnets in both positions.",
   "x": 124.7,
@@ -40,15 +65,25 @@
   "z": 187.1
  },
  "gate_plate": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
-  "note": "Foot down. Glue a 1.5 mm silicone pad strip under the foot. Fits all three towers.",
-  "x": 9.0,
+  "note": "v4 (reprint: the v3 gate can't be adjusted). Foot down, no supports. 1 M3 insert in the top; 1.5 mm silicone pad under the foot. Fits all three towers.",
+  "x": 12.0,
   "y": 27.6,
-  "z": 36.0
+  "z": 36.2
  },
  "feed_roller": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "On its end, 100% infill. Three 16 ID x 3.5 O-rings.",
   "x": 20.0,
@@ -56,7 +91,12 @@
   "z": 20.0
  },
  "exit_roller": {
-  "qty": "2 (A 2, B 0, C 0)",
+  "qty": 2,
+  "stages": [
+   2,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "On its end, 100% infill. Two 16 ID x 3.5 O-rings each (one is the pressure roller).",
   "x": 20.0,
@@ -64,7 +104,12 @@
   "z": 20.0
  },
  "pressure_bridge": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "Beam down, no supports. 2 x M3 x 10 into the post-top inserts.",
   "x": 21.0,
@@ -72,15 +117,51 @@
   "z": 38.0
  },
  "stack_weight": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PLA",
   "note": "Fill the pocket with about 50 g (2 oz) of coins or nuts.",
   "x": 86.0,
   "y": 61.0,
   "z": 40.0
  },
+ "idler_slider": {
+  "qty": 2,
+  "stages": [
+   2,
+   0,
+   0
+  ],
+  "mat": "PETG",
+  "note": "On its side, 100% infill. One M3 insert; print 2 (one mirrored in the slicer is not needed: it's symmetric).",
+  "x": 8.0,
+  "y": 8.5,
+  "z": 18.5
+ },
+ "joint_plate": {
+  "qty": 16,
+  "stages": [
+   4,
+   12,
+   0
+  ],
+  "mat": "PETG",
+  "note": "Flat.",
+  "x": 28.0,
+  "y": 3.0,
+  "z": 14.0
+ },
  "fin": {
-  "qty": "48 (A 24, B 24, C 0)",
+  "qty": 48,
+  "stages": [
+   24,
+   24,
+   0
+  ],
   "mat": "PETG",
   "note": "Half of them mirrored. On its side, 0.12 mm layers. 3 x 3 mm silicone square in the face pocket.",
   "x": 5.0,
@@ -88,7 +169,12 @@
   "z": 7.7
  },
  "belt_drill_jig": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "Ridges up.",
   "x": 130.0,
@@ -96,7 +182,12 @@
   "z": 9.0
  },
  "fin_gauge": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "Flat.",
   "x": 12.0,
@@ -104,7 +195,12 @@
   "z": 8.5
  },
  "track_pulley_idler": {
-  "qty": "2 (A 2, B 0, C 0)",
+  "qty": 2,
+  "stages": [
+   2,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "Axis vertical, 0.12 mm layers, 100% infill. 2 x 685ZZ each.",
   "x": 24.0,
@@ -112,7 +208,12 @@
   "z": 24.0
  },
  "track_pulley_drive": {
-  "qty": "2 (A 2, B 0, C 0)",
+  "qty": 2,
+  "stages": [
+   2,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "Hub down, 0.12 mm layers, 100% infill. M3 nut + M3 x 4 grub.",
   "x": 24.0,
@@ -120,7 +221,12 @@
   "z": 24.0
  },
  "motor_standoff": {
-  "qty": "2 (A 2, B 0, C 0)",
+  "qty": 2,
+  "stages": [
+   2,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "On a side wall, 5 walls (printed on plate 1).",
   "x": 42.3,
@@ -128,31 +234,51 @@
   "z": 42.3
  },
  "scan_side_front": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
-  "note": "On its outer face.",
+  "note": "UPRIGHT (foot down), 225 mm tall. No supports.",
   "x": 205.0,
-  "y": 38.2,
+  "y": 39.0,
   "z": 225.0
  },
  "scan_side_back": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
-  "note": "On its outer face.",
+  "note": "UPRIGHT (foot down). Tree supports only under the strip over the belt-home sensor.",
   "x": 205.0,
-  "y": 38.2,
+  "y": 39.0,
   "z": 225.0
  },
  "scan_floor": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PLA matte green",
   "note": "Top face DOWN on the smooth side of the plate.",
-  "x": 204.0,
+  "x": 199.0,
   "y": 69.6,
   "z": 10.0
  },
  "hood": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PLA matte black",
   "note": "Upright, tongue on top. Tree supports under the tunnel, pads and LED ledges.",
   "x": 164.8,
@@ -160,7 +286,12 @@
   "z": 182.0
  },
  "hood_lid": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PLA matte black",
   "note": "Roof down, no supports.",
   "x": 155.0,
@@ -168,7 +299,12 @@
   "z": 53.5
  },
  "sheen_cap": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PLA matte black",
   "note": "Back face down. 50 mm piece of the COB strip inside.",
   "x": 76.0,
@@ -176,7 +312,12 @@
   "z": 20.0
  },
  "camera_plate": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "Tabs up. Camera connector faces LEFT (hopper side).",
   "x": 62.0,
@@ -184,31 +325,51 @@
   "z": 14.0
  },
  "polarizer_cap": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
-  "note": "Waiting on the lens measurement.",
-  "x": 39.6,
-  "y": 34.6,
+  "note": "Open end up, no supports. Slip fit on the 30.00 mm lens; film disc goes in the seat at the bottom.",
+  "x": 39.2,
+  "y": 34.2,
   "z": 10.0
  },
  "bin_side_back": {
-  "qty": "8 (A 2, B 6, C 0)",
+  "qty": 8,
+  "stages": [
+   2,
+   6,
+   0
+  ],
   "mat": "PETG",
-  "note": "On its outer face, tree supports under the hinge knuckles and servo bracket.",
+  "note": "UPRIGHT (foot down), 225 mm tall. Tree supports under the hinge knuckles only.",
   "x": 122.0,
   "y": 58.0,
   "z": 225.0
  },
  "bin_side_front": {
-  "qty": "8 (A 2, B 6, C 0)",
+  "qty": 8,
+  "stages": [
+   2,
+   6,
+   0
+  ],
   "mat": "PETG",
-  "note": "On its outer face.",
+  "note": "On its outer face (flat, 122 x 105). No supports.",
   "x": 122.0,
-  "y": 40.0,
-  "z": 245.0
+  "y": 24.2,
+  "z": 115.0
  },
  "door": {
-  "qty": "8 (A 2, B 6, C 0)",
+  "qty": 8,
+  "stages": [
+   2,
+   6,
+   0
+  ],
   "mat": "PETG",
   "note": "Top face DOWN on the smooth side, tree supports under the barrels and lever.",
   "x": 111.0,
@@ -216,7 +377,12 @@
   "z": 18.4
  },
  "servo_link": {
-  "qty": "9 (A 3, B 6, C 0)",
+  "qty": 9,
+  "stages": [
+   3,
+   6,
+   0
+  ],
   "mat": "PETG",
   "note": "Flat, 100% infill.",
   "x": 28.2,
@@ -224,31 +390,51 @@
   "z": 2.5
  },
  "tie_bar": {
-  "qty": "9 (A 3, B 6, C 0)",
+  "qty": 9,
+  "stages": [
+   3,
+   6,
+   0
+  ],
   "mat": "PETG",
   "note": "Floor plate face DOWN on the smooth side.",
-  "x": 10.0,
+  "x": 13.0,
   "y": 93.6,
   "z": 22.0
  },
  "back_panel": {
-  "qty": "7 (A 1, B 6, C 0)",
+  "qty": 7,
+  "stages": [
+   1,
+   6,
+   0
+  ],
   "mat": "PLA matte black",
   "note": "Outside face down. Covers a bin module's back window.",
   "x": 118.0,
   "y": 3.0,
-  "z": 113.0
+  "z": 122.0
  },
  "back_panel_hub": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PLA matte black",
   "note": "Outside face down. Bin module 2's panel: carries the bin hub boards.",
   "x": 118.0,
   "y": 15.0,
-  "z": 113.0
+  "z": 122.0
  },
  "bin": {
-  "qty": "9 (A 3, B 6, C 0)",
+  "qty": 9,
+  "stages": [
+   3,
+   6,
+   0
+  ],
   "mat": "PLA",
   "note": "Open side up, 2 walls, 10% infill. ~5 h each.",
   "x": 98.0,
@@ -256,23 +442,38 @@
   "z": 135.0
  },
  "end_side_front": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
-  "note": "",
-  "x": 130.5,
-  "y": 37.0,
-  "z": 245.0
+  "note": "On its outer face (flat). No supports.",
+  "x": 133.5,
+  "y": 20.0,
+  "z": 115.0
  },
  "end_side_back": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
-  "note": "",
-  "x": 130.5,
+  "note": "UPRIGHT (foot down). Tree supports under the strip over the ramp flange.",
+  "x": 133.5,
   "y": 37.0,
   "z": 225.0
  },
  "end_cap": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "",
   "x": 4.0,
@@ -280,55 +481,77 @@
   "z": 100.0
  },
  "end_ramp": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "Ramp face DOWN on the smooth side, tree supports under the flange.",
-  "x": 110.5,
+  "x": 108.5,
   "y": 50.6,
   "z": 58.5
  },
  "electronics_tray": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
-  "note": "Flat.",
-  "x": 133.0,
+  "note": "Flat, bosses up.",
+  "x": 122.0,
   "y": 108.0,
   "z": 11.0
  },
  "bay_cover": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PLA matte black",
   "note": "Flat, outside face down.",
-  "x": 136.0,
+  "x": 150.0,
   "y": 3.0,
   "z": 89.0
  },
  "psu_cradle": {
-  "qty": "2 (A 2, B 0, C 0)",
+  "qty": 2,
+  "stages": [
+   2,
+   0,
+   0
+  ],
   "mat": "PETG",
-  "note": "On its back.",
+  "note": "On its side (X face down). Two M3 nuts drop into the slots.",
   "x": 18.0,
-  "y": 144.0,
-  "z": 60.0
+  "y": 93.6,
+  "z": 122.0
  },
  "inlet_plate": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "Flat.",
   "x": 116.0,
   "y": 4.0,
   "z": 68.0
  },
- "channel_cover": {
-  "qty": "11 (A 5, B 6, C 0)",
-  "mat": "PLA matte black",
-  "note": "On its back. Clips over the back wire channel.",
-  "x": 104.0,
-  "y": 4.0,
-  "z": 28.0
- },
  "screen_cradle": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "Face down. 4 M3 inserts in the ears.",
   "x": 214.3,
@@ -336,15 +559,25 @@
   "z": 126.8
  },
  "pod_cover": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PLA matte black",
   "note": "Back face down, tree supports for the GoPro standoff.",
   "x": 214.3,
-  "y": 81.5,
+  "y": 90.5,
   "z": 126.8
  },
  "mount_wall": {
-  "qty": "1 (A 1, B 0, C 0)",
+  "qty": 1,
+  "stages": [
+   1,
+   0,
+   0
+  ],
   "mat": "PETG",
   "note": "Screen mount across the hopper/scanner gap on the front walls.",
   "x": 104.0,

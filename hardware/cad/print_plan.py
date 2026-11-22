@@ -3,7 +3,9 @@ Stage A = 3-bin raw-card test machine, B = the other 6 bins, C = sleeved towers.
 import os
 from sorter import PRINTED, STAGES
 
-DONE = {"fit_coupon": "printed", "motor_standoff": "printed (plate 1)", "gate_plate": "printed (plate 1)"}
+DONE = {"fit_coupon": "printed", "motor_standoff": "printed", "gate_plate": "printed v3: REPRINT (v4 hangs on its screw)",
+        "screen_cradle": "printed (plate 1)", "servo_link": "printed (plate 1)", "mount_wall": "printed (plate 1)",
+        "exit_roller": "printed (plate 1)", "feed_roller": "printed (plate 1)"}
 rows = {"A": [], "B": [], "C": []}
 for name, (fn, mat, note) in PRINTED.items():
     bb = fn().val().BoundingBox()

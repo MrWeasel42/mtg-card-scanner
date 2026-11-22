@@ -1,0 +1,6 @@
+placed/
+placed_vis/
+renders/
+*.log
+*.json
+__pycache__/

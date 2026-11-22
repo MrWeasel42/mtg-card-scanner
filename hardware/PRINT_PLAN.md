@@ -12,59 +12,60 @@ module from bin module 2, bolt modules 3-8 in, bolt the end module back on, swap
 | `fit_coupon.stl` | 1 | PETG | 112 x 88 x 16 mm (4.4 x 3.5 x 0.6 in) | printed | PRINT FIRST (done). Hole sizes are tuned to it. |
 | `feeder_base.stl` | 1 | PETG | 150 x 144 x 225 mm (5.9 x 5.7 x 8.9 in) |  | v3. Upright, 15% gyroid, 4 walls, 5 top layers, ~19 h. Tree supports only under the card-clear sensor pocket. |
 | `raw_tower.stl` | 1 | PETG | 125 x 100 x 187 mm (4.9 x 3.9 x 7.4 in) |  | Upright, 3 walls. Magnet in position 1 (front), south pole down. |
-| `gate_plate.stl` | 1 | PETG | 9 x 28 x 36 mm (0.4 x 1.1 x 1.4 in) | printed (plate 1) | Foot down. Glue a 1.5 mm silicone pad strip under the foot. Fits all three towers. |
-| `feed_roller.stl` | 1 | PETG | 20 x 40 x 20 mm (0.8 x 1.6 x 0.8 in) |  | On its end, 100% infill. Three 16 ID x 3.5 O-rings. |
-| `exit_roller.stl` | 2 | PETG | 20 x 30 x 20 mm (0.8 x 1.2 x 0.8 in) |  | On its end, 100% infill. Two 16 ID x 3.5 O-rings each (one is the pressure roller). |
+| `gate_plate.stl` | 1 | PETG | 12 x 28 x 36 mm (0.5 x 1.1 x 1.4 in) | printed v3: REPRINT (v4 hangs on its screw) | v4 (reprint: the v3 gate can't be adjusted). On its outer (+X) face, no supports. 1 M3 insert in the top; 1.5 mm silicone pad under the foot. Fits all three towers. |
+| `feed_roller.stl` | 1 | PETG | 20 x 40 x 20 mm (0.8 x 1.6 x 0.8 in) | printed (plate 1) | On its end, 100% infill. Three 16 ID x 3.5 O-rings. |
+| `exit_roller.stl` | 2 | PETG | 20 x 30 x 20 mm (0.8 x 1.2 x 0.8 in) | printed (plate 1) | On its end, 100% infill. Two 16 ID x 3.5 O-rings each (one is the pressure roller). |
 | `pressure_bridge.stl` | 1 | PETG | 21 x 118 x 38 mm (0.8 x 4.6 x 1.5 in) |  | Beam down, no supports. 2 x M3 x 10 into the post-top inserts. |
 | `stack_weight.stl` | 1 | PLA | 86 x 61 x 40 mm (3.4 x 2.4 x 1.6 in) |  | Fill the pocket with about 50 g (2 oz) of coins or nuts. |
+| `idler_slider.stl` | 2 | PETG | 8 x 8 x 18 mm (0.3 x 0.3 x 0.7 in) |  | On its side, 100% infill. One M3 insert; print 2 (one mirrored in the slicer is not needed: it's symmetric). |
+| `joint_plate.stl` | 4 | PETG | 28 x 3 x 14 mm (1.1 x 0.1 x 0.6 in) |  | Flat. |
 | `fin.stl` | 24 | PETG | 5 x 17 x 8 mm (0.2 x 0.7 x 0.3 in) |  | Half of them mirrored. On its side, 0.12 mm layers. 3 x 3 mm silicone square in the face pocket. |
 | `belt_drill_jig.stl` | 1 | PETG | 130 x 18 x 9 mm (5.1 x 0.7 x 0.4 in) |  | Ridges up. |
 | `fin_gauge.stl` | 1 | PETG | 12 x 84 x 8 mm (0.5 x 3.3 x 0.3 in) |  | Flat. |
 | `track_pulley_idler.stl` | 2 | PETG | 24 x 13 x 24 mm (0.9 x 0.5 x 0.9 in) |  | Axis vertical, 0.12 mm layers, 100% infill. 2 x 685ZZ each. |
 | `track_pulley_drive.stl` | 2 | PETG | 24 x 20 x 24 mm (0.9 x 0.8 x 0.9 in) |  | Hub down, 0.12 mm layers, 100% infill. M3 nut + M3 x 4 grub. |
-| `motor_standoff.stl` | 2 | PETG | 42 x 30 x 42 mm (1.7 x 1.2 x 1.7 in) | printed (plate 1) | On a side wall, 5 walls (printed on plate 1). |
-| `scan_side_front.stl` | 1 | PETG | 205 x 38 x 225 mm (8.1 x 1.5 x 8.9 in) |  | On its outer face. |
-| `scan_side_back.stl` | 1 | PETG | 205 x 38 x 225 mm (8.1 x 1.5 x 8.9 in) |  | On its outer face. |
-| `scan_floor.stl` | 1 | PLA matte green | 204 x 70 x 10 mm (8.0 x 2.7 x 0.4 in) |  | Top face DOWN on the smooth side of the plate. |
+| `motor_standoff.stl` | 2 | PETG | 42 x 30 x 42 mm (1.7 x 1.2 x 1.7 in) | printed | On a side wall, 5 walls (printed on plate 1). |
+| `scan_side_front.stl` | 1 | PETG | 205 x 39 x 225 mm (8.1 x 1.5 x 8.9 in) |  | UPRIGHT (foot down), 225 mm tall. No supports. |
+| `scan_side_back.stl` | 1 | PETG | 205 x 39 x 225 mm (8.1 x 1.5 x 8.9 in) |  | UPRIGHT (foot down). Tree supports only under the strip over the belt-home sensor. |
+| `scan_floor.stl` | 1 | PLA matte green | 199 x 70 x 10 mm (7.8 x 2.7 x 0.4 in) |  | Top face DOWN on the smooth side of the plate. |
 | `hood.stl` | 1 | PLA matte black | 165 x 155 x 182 mm (6.5 x 6.1 x 7.2 in) |  | Upright, tongue on top. Tree supports under the tunnel, pads and LED ledges. |
 | `hood_lid.stl` | 1 | PLA matte black | 155 x 150 x 54 mm (6.1 x 5.9 x 2.1 in) |  | Roof down, no supports. |
 | `sheen_cap.stl` | 1 | PLA matte black | 76 x 9 x 20 mm (3.0 x 0.4 x 0.8 in) |  | Back face down. 50 mm piece of the COB strip inside. |
 | `camera_plate.stl` | 1 | PETG | 62 x 69 x 14 mm (2.4 x 2.7 x 0.6 in) |  | Tabs up. Camera connector faces LEFT (hopper side). |
 | `polarizer_cap.stl` | 1 | PETG | 39 x 34 x 10 mm (1.5 x 1.3 x 0.4 in) |  | Open end up, no supports. Slip fit on the 30.00 mm lens; film disc goes in the seat at the bottom. |
-| `bin_side_back.stl` | 2 | PETG | 122 x 58 x 225 mm (4.8 x 2.3 x 8.9 in) |  | On its outer face, tree supports under the hinge knuckles and servo bracket. |
-| `bin_side_front.stl` | 2 | PETG | 122 x 40 x 245 mm (4.8 x 1.6 x 9.6 in) |  | On its outer face. |
+| `bin_side_back.stl` | 2 | PETG | 122 x 58 x 225 mm (4.8 x 2.3 x 8.9 in) |  | UPRIGHT (foot down), 225 mm tall. Tree supports under the hinge knuckles only. |
+| `bin_side_front.stl` | 2 | PETG | 122 x 24 x 115 mm (4.8 x 1.0 x 4.5 in) |  | On its outer face (flat, 122 x 105). No supports. |
 | `door.stl` | 2 | PETG | 111 x 70 x 18 mm (4.4 x 2.8 x 0.7 in) |  | Top face DOWN on the smooth side, tree supports under the barrels and lever. |
-| `servo_link.stl` | 3 | PETG | 28 x 6 x 2 mm (1.1 x 0.2 x 0.1 in) |  | Flat, 100% infill. |
-| `tie_bar.stl` | 3 | PETG | 10 x 94 x 22 mm (0.4 x 3.7 x 0.9 in) |  | Floor plate face DOWN on the smooth side. |
-| `back_panel.stl` | 1 | PLA matte black | 118 x 3 x 113 mm (4.6 x 0.1 x 4.4 in) |  | Outside face down. Covers a bin module's back window. |
-| `back_panel_hub.stl` | 1 | PLA matte black | 118 x 15 x 113 mm (4.6 x 0.6 x 4.4 in) |  | Outside face down. Bin module 2's panel: carries the bin hub boards. |
+| `servo_link.stl` | 3 | PETG | 28 x 6 x 2 mm (1.1 x 0.2 x 0.1 in) | printed (plate 1) | Flat, 100% infill. |
+| `tie_bar.stl` | 3 | PETG | 13 x 94 x 22 mm (0.5 x 3.7 x 0.9 in) |  | Floor plate face DOWN on the smooth side. |
+| `back_panel.stl` | 1 | PLA matte black | 118 x 3 x 122 mm (4.6 x 0.1 x 4.8 in) |  | Outside face down. Covers a bin module's back window. |
+| `back_panel_hub.stl` | 1 | PLA matte black | 118 x 15 x 122 mm (4.6 x 0.6 x 4.8 in) |  | Outside face down. Bin module 2's panel: carries the bin hub boards. |
 | `bin.stl` | 3 | PLA | 98 x 79 x 135 mm (3.9 x 3.1 x 5.3 in) |  | Open side up, 2 walls, 10% infill. ~5 h each. |
-| `end_side_front.stl` | 1 | PETG | 130 x 37 x 245 mm (5.1 x 1.5 x 9.6 in) |  |  |
-| `end_side_back.stl` | 1 | PETG | 131 x 37 x 225 mm (5.1 x 1.5 x 8.9 in) |  |  |
+| `end_side_front.stl` | 1 | PETG | 134 x 20 x 115 mm (5.3 x 0.8 x 4.5 in) |  | On its outer face (flat). No supports. |
+| `end_side_back.stl` | 1 | PETG | 134 x 37 x 225 mm (5.3 x 1.5 x 8.9 in) |  | UPRIGHT (foot down). Tree supports under the strip over the ramp flange. |
 | `end_cap.stl` | 1 | PETG | 4 x 108 x 100 mm (0.2 x 4.3 x 3.9 in) |  |  |
-| `end_ramp.stl` | 1 | PETG | 110 x 51 x 58 mm (4.4 x 2.0 x 2.3 in) |  | Ramp face DOWN on the smooth side, tree supports under the flange. |
-| `electronics_tray.stl` | 1 | PETG | 133 x 108 x 11 mm (5.2 x 4.3 x 0.4 in) |  | Flat. |
-| `bay_cover.stl` | 1 | PLA matte black | 136 x 3 x 89 mm (5.4 x 0.1 x 3.5 in) |  | Flat, outside face down. |
-| `psu_cradle.stl` | 2 | PETG | 18 x 144 x 60 mm (0.7 x 5.7 x 2.4 in) |  | On its back. |
+| `end_ramp.stl` | 1 | PETG | 108 x 51 x 58 mm (4.3 x 2.0 x 2.3 in) |  | Ramp face DOWN on the smooth side, tree supports under the flange. |
+| `electronics_tray.stl` | 1 | PETG | 122 x 108 x 11 mm (4.8 x 4.3 x 0.4 in) |  | Flat, bosses up. |
+| `bay_cover.stl` | 1 | PLA matte black | 150 x 3 x 89 mm (5.9 x 0.1 x 3.5 in) |  | Flat, outside face down. |
+| `psu_cradle.stl` | 2 | PETG | 18 x 94 x 122 mm (0.7 x 3.7 x 4.8 in) |  | On its side (X face down). Two M3 nuts drop into the slots. |
 | `inlet_plate.stl` | 1 | PETG | 116 x 4 x 68 mm (4.6 x 0.2 x 2.7 in) |  | Flat. |
-| `channel_cover.stl` | 5 | PLA matte black | 104 x 4 x 28 mm (4.1 x 0.2 x 1.1 in) |  | On its back. Clips over the back wire channel. |
-| `screen_cradle.stl` | 1 | PETG | 214 x 21 x 127 mm (8.4 x 0.8 x 5.0 in) |  | Face down. 4 M3 inserts in the ears. |
-| `pod_cover.stl` | 1 | PLA matte black | 214 x 82 x 127 mm (8.4 x 3.2 x 5.0 in) |  | Back face down, tree supports for the GoPro standoff. |
-| `mount_wall.stl` | 1 | PETG | 104 x 26 x 20 mm (4.1 x 1.0 x 0.8 in) |  | Screen mount across the hopper/scanner gap on the front walls. |
+| `screen_cradle.stl` | 1 | PETG | 214 x 21 x 127 mm (8.4 x 0.8 x 5.0 in) | printed (plate 1) | Face down. 4 M3 inserts in the ears. |
+| `pod_cover.stl` | 1 | PLA matte black | 214 x 90 x 127 mm (8.4 x 3.6 x 5.0 in) |  | Back face down, tree supports for the GoPro standoff. |
+| `mount_wall.stl` | 1 | PETG | 104 x 26 x 20 mm (4.1 x 1.0 x 0.8 in) | printed (plate 1) | Screen mount across the hopper/scanner gap on the front walls. |
 
 ## Stage B: bins 3-8 (print while testing A; they go in between bin module 2 and the end module)
 
 | File | Qty | Material | Size | Status | Notes |
 |---|---|---|---|---|---|
+| `joint_plate.stl` | 12 | PETG | 28 x 3 x 14 mm (1.1 x 0.1 x 0.6 in) |  | Flat. |
 | `fin.stl` | 24 | PETG | 5 x 17 x 8 mm (0.2 x 0.7 x 0.3 in) |  | Half of them mirrored. On its side, 0.12 mm layers. 3 x 3 mm silicone square in the face pocket. |
-| `bin_side_back.stl` | 6 | PETG | 122 x 58 x 225 mm (4.8 x 2.3 x 8.9 in) |  | On its outer face, tree supports under the hinge knuckles and servo bracket. |
-| `bin_side_front.stl` | 6 | PETG | 122 x 40 x 245 mm (4.8 x 1.6 x 9.6 in) |  | On its outer face. |
+| `bin_side_back.stl` | 6 | PETG | 122 x 58 x 225 mm (4.8 x 2.3 x 8.9 in) |  | UPRIGHT (foot down), 225 mm tall. Tree supports under the hinge knuckles only. |
+| `bin_side_front.stl` | 6 | PETG | 122 x 24 x 115 mm (4.8 x 1.0 x 4.5 in) |  | On its outer face (flat, 122 x 105). No supports. |
 | `door.stl` | 6 | PETG | 111 x 70 x 18 mm (4.4 x 2.8 x 0.7 in) |  | Top face DOWN on the smooth side, tree supports under the barrels and lever. |
 | `servo_link.stl` | 6 | PETG | 28 x 6 x 2 mm (1.1 x 0.2 x 0.1 in) |  | Flat, 100% infill. |
-| `tie_bar.stl` | 6 | PETG | 10 x 94 x 22 mm (0.4 x 3.7 x 0.9 in) |  | Floor plate face DOWN on the smooth side. |
-| `back_panel.stl` | 6 | PLA matte black | 118 x 3 x 113 mm (4.6 x 0.1 x 4.4 in) |  | Outside face down. Covers a bin module's back window. |
+| `tie_bar.stl` | 6 | PETG | 13 x 94 x 22 mm (0.5 x 3.7 x 0.9 in) |  | Floor plate face DOWN on the smooth side. |
+| `back_panel.stl` | 6 | PLA matte black | 118 x 3 x 122 mm (4.6 x 0.1 x 4.8 in) |  | Outside face down. Covers a bin module's back window. |
 | `bin.stl` | 6 | PLA | 98 x 79 x 135 mm (3.9 x 3.1 x 5.3 in) |  | Open side up, 2 walls, 10% infill. ~5 h each. |
-| `channel_cover.stl` | 6 | PLA matte black | 104 x 4 x 28 mm (4.1 x 0.2 x 1.1 in) |  | On its back. Clips over the back wire channel. |
 
 ## Stage C: sleeved towers
 

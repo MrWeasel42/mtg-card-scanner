@@ -80,7 +80,7 @@ RF = PUL_Z - (PATH - GROOVE_D + 0.5)                 # finger tip radius round a
 RB = PUL_Z - (PATH + RAIL_H + 0.5)                   # bridge underside radius (14.0)
 def fin_path(sgn):
     """Everywhere a fin goes. Finger |Y| 27-33.25 (down into the lane), bridge + leg |Y| 33.25-43.75 above the rail."""
-    yf = sorted((sgn * FIN_REACH_Y, sgn * (RAIL_IN - 1.0))); yb = sorted((sgn * (RAIL_IN - 1.0), sgn * 43.75))
+    yf = sorted((sgn * FIN_REACH_Y, sgn * FIN_OUT_Y)); yb = sorted((sgn * FIN_OUT_Y, sgn * 43.75))
     zf = PATH - GROOVE_D + 0.5; zb = PATH + RAIL_H + 0.5
     low = box(FIN_START_X, END_SHAFT_X, *yf, zf, BELT_BACK_LOW).union(box(FIN_START_X, END_SHAFT_X, *yb, zb, BELT_BACK_LOW))
     top_b = PUL_Z + PUL_R + 0.45
@@ -102,14 +102,14 @@ for sgn in (-1, 1):
     lowb = box(FIN_START_X, END_SHAFT_X, y0, y1, BELT_BACK_LOW + 0.05, BELT_BACK_LOW + 1.38)
     check(f"Belt bottom run ({'back' if sgn>0 else 'front'}) vs walls (rests on the ledge)", lowb, fixed, 0.0)
 # card-clear sensor under the floor at the feeder exit
-tcrt = box(122.0, 132.0, -24.9, -19.1, PATH - 11.0, PATH - 4.0)
-check("Card-clear sensor (TCRT5000 head) vs exit roller, shafts, 122 mm loop", tcrt,
-      pr("exit_roller", "feed_roller").union(cyl_y(EXIT_X, EXIT_Z, 2.6, -60, 60)).union(cyl_y(EXIT_X, EXIT_Z, 8, -55, -39)), 1.0)
+tcrt = box(CARD_CLEAR_X - 5.0, CARD_CLEAR_X + 5.0, -24.9, -19.1, PATH - 11.0, PATH - 4.0)
+check("Card-clear sensor (TCRT5000 head) vs exit roller, shafts (shaft slid 2 mm back), 122 mm loop", tcrt,
+      pr("exit_roller", "feed_roller").union(cyl_y(EXIT_X - 2, EXIT_Z, 2.6, -60, 60)).union(cyl_y(EXIT_X, EXIT_Z, 8, -55, -39)), 1.0)
 # belt home sensor under the back strip: module envelope (head + board + parts underneath)
 home = box(HOME_X - 5.0, HOME_X + 5.0, HOME_Y - 2.9, HOME_Y + 2.9, PATH - 12.0, PATH - 4.5).union(
        box(HOME_X - 6.0, HOME_X + 27.0, HOME_Y - 7.0, HOME_Y + 7.0, PATH - 22.0, PATH - 12.0))
 check("Belt home sensor (TCRT5000 module) vs scan module, floor, PSU", home,
-      pr("scan_side_back", "scan_side_front", "scan_floor").union(B.lrs100().translate((PSU_X0, 0, RAIL_Z + 5))), 0.0)
+      pr("scan_side_back", "scan_side_front", "scan_floor").union(B.lrs100().translate((PSU_X0, sum(PSU_Y) / 2, RAIL_Z + 6))), 0.0)
 zfin = PATH + RAIL_H + 0.5
 checks.append(dict(label="Home sensor: fin bridge height above the window (TCRT5000 best at 2-4 mm)", overlap=0,
                    gap=round(zfin - PATH, 2), need=2.0, ok=2.0 <= zfin - PATH <= 4.0, note="no fin: black belt back at 7 mm"))
@@ -159,8 +159,8 @@ stack = box(TOWER_X0 + 0.75, xi1 - 0.75, -31.5, 31.5, PATH + 3, PATH + 3 + 550 *
 stack = stack.rotate((0, 0, PATH), (1, 0, PATH), -TOWER_LEAN).rotate((xi1, 0, PATH), (xi1, 1, PATH), TOWER_LEAN_X)
 check("Full card stack (550 raw) vs hopper walls", stack, P["raw_tower"], 0.5, "nothing inside the L: braces are on the outside")
 # --- electronics bay
-tray_z = RAIL_Z + 17.2 + 3
-skr = B.skr_pico().translate((8.5 + 12 - 3.5, SKR_Y0 + 3.5 - 3.5, tray_z + 8))
+tray_z = RAIL_Z + 17.0 + 3
+skr = B.skr_pico().translate((SKR_X - 3.5, SKR_Y0, tray_z + 8))
 shafts = cyl_y(FEED_X, FEED_Z, 9.5, -60, 60).union(cyl_y(EXIT_X, EXIT_Z, 9.5, -60, 60))
 check("SKR Pico + plugs (on 8 mm tray bosses) vs base", skr, base, 1.0, "the Pi (in the screen pod) talks to it over UART")
 # --- the rest of the electronics bay: 5 V USB-C converter on the tray beside the SKR, 6 V servo step-down on the left
@@ -180,12 +180,12 @@ check("SKR Pico + plugs vs bay cover", skr, P["bay_cover"], 1.0, "its front plug
 check("SKR Pico + plugs vs roller shafts/pulleys", skr, shafts, 3.0)
 from sorter import CAM_CABLE_Z
 # --- PSU under the scanner
-psu = B.lrs100().translate((PSU_X0, 0, RAIL_Z + 5))
+psu = B.lrs100().translate((PSU_X0, sum(PSU_Y) / 2, RAIL_Z + 6))
 scan = pr("scan_side_front", "scan_side_back", "scan_floor")
 check("PSU (+25 mm wire space) vs scan module", psu, scan, 3.0)
 check("PSU vs bin 1", psu, P["bin_0"], 5.0)
 check("PSU vs feeder base", psu, base, 2.0)
-check("PSU vs its cradles", B.lrs100().translate((PSU_X0, 0, RAIL_Z + 5)).cut(box(PSU_X0 - 30, PSU_X0, -50, 50, 0, 200)), pr(*[k for k in P if k.startswith("psu_cradle")]), 0.0, "snug fit is intended")
+check("PSU vs its cradles", B.lrs100().translate((PSU_X0, sum(PSU_Y) / 2, RAIL_Z + 6)).cut(box(PSU_X0 - 30, PSU_X0, -50, 50, 0, 200)), pr(*[k for k in P if k.startswith("psu_cradle")]), 0.0, "snug fit is intended")
 # --- doors, servos, links, beams, bins (every bin module is the same part: checked on module 1, the hub module and the last)
 def mod(i):
     return pr(f"bin_side_back_{i}", f"bin_side_front_{i}", f"tie_bar_{i}", f"tie_bar_{i + 1}", f"back_panel_{i}", f"bin_{i}")
@@ -251,7 +251,7 @@ for d in (CAM_D_MIN, CAM_D_MAX):
     cam = B.hq_camera().translate((SCAN_X, 0, PATH + d + 44))
     check(f"HQ camera at lens height {d:.0f} mm vs hood + lid", cam, P["hood"].union(P["hood_lid"]), 2.0, "clamped to the slotted ribs under the lid")
 # --- screen
-check("Screen wall mount (between hopper and hood) vs front wire channel", P["mount_wall_gap"], P["scan_side_front"].cut(box(120, 230, -60, -54.9, PATH - 40, PATH)), 0.5)
+check("Screen wall mount: flat on the scan front wall, clear of the feeder base", P["mount_wall_gap"], P["feeder_base"], 0.5)
 blk = screen_placed(screen_block())
 pod = P["screen_cradle"].union(P["pod_cover"])
 check("Screen + Pi block vs hood + hopper", blk, P["hood"].union(P["raw_tower"]), 2.0, "in front of the gap, tilted back")
