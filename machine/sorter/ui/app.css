@@ -161,3 +161,10 @@ body.sub .brand { display: none; }
 #nav .ptitle { font-size: 22px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 6px; }
 .sheet .shead { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .sheet .shead h1 { flex: 1; margin: 0; }
+
+/* full-width segmented choice (Catalog / Sort only) */
+.seg.full { display: flex; width: 100%; } .seg.full button { flex: 1; }
+/* on-screen keyboard: page and dialogs move up above it; keys light up when pressed */
+body.kbd-open #view { padding-bottom: calc(var(--kbd-h) + 16px); }
+body.kbd-open #modal { bottom: var(--kbd-h); align-items: flex-start; }
+#kbd button.down { background: var(--accent); color: var(--accent-ink); transform: scale(.94); }

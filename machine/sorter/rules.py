@@ -24,6 +24,43 @@ RARITY_CODES = ["common", "uncommon", "rare", "mythic", "special"]
 TYPE_NAMES = ["Creature", "Instant", "Sorcery", "Artifact", "Enchantment", "Planeswalker", "Land", "Battle"]
 
 
+# Share of all paper Magic printings by first letter of the name (Scryfall, Nov 2026), in %. Alphabetical bins are
+# split so each gets about the same number of cards; the machine's own scanned cards are mixed in as they build up.
+LETTER_SHARE = {"A": 5.56, "B": 5.49, "C": 6.92, "D": 5.61, "E": 3.49, "F": 5.07, "G": 5.03, "H": 3.16, "I": 3.2,
+                "J": 1.15, "K": 2.47, "L": 3.11, "M": 6.37, "N": 2.11, "O": 2.01, "P": 5.09, "Q": 0.35, "R": 5.0,
+                "S": 13.18, "T": 7.29, "U": 1.46, "V": 2.39, "W": 3.39, "X": 0.09, "Y": 0.46, "Z": 0.54}
+LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+
+def alpha_split(groups: int, counts: dict | None = None) -> list[str]:
+    """A-Z cut into `groups` runs of letters with as even a number of cards in each as possible.
+    counts = cards seen per first letter on this machine; they count for more as they pile up."""
+    seen = sum((counts or {}).values())
+    w = [LETTER_SHARE[c] / 100 * 1000 + (counts or {}).get(c, 0) for c in LETTERS] if seen else [LETTER_SHARE[c] for c in LETTERS]
+    groups = max(1, min(groups, 26))
+    n = len(w)
+    pre = [0.0]
+    for x in w:
+        pre.append(pre[-1] + x)
+    INF = float("inf")
+    # best[k][i]: smallest possible biggest group, splitting the first i letters into k groups
+    best = [[INF] * (n + 1) for _ in range(groups + 1)]
+    cut = [[0] * (n + 1) for _ in range(groups + 1)]
+    best[0][0] = 0.0
+    for k in range(1, groups + 1):
+        for i in range(k, n + 1):
+            for j in range(k - 1, i):
+                v = max(best[k - 1][j], pre[i] - pre[j])
+                if v < best[k][i] - 1e-9:
+                    best[k][i], cut[k][i] = v, j
+    out, i = [], n
+    for k in range(groups, 0, -1):
+        j = cut[k][i]
+        out.append(LETTERS[j] if i - j == 1 else f"{LETTERS[j]}-{LETTERS[i - 1]}")
+        i = j
+    return out[::-1]
+
+
 def _money(d: float) -> str:
     return f"${d:.0f}" if float(d) == int(d) else f"${d:.2f}".rstrip("0").rstrip(".")
 
@@ -67,7 +104,7 @@ def new_rule(kind: str = "Price") -> dict:
     return _rule({"kind": kind})
 
 
-def preset_rules(s: dict) -> list:
+def preset_rules(s: dict, letter_counts: dict | None = None) -> list:
     by = s.get("by", "Price")
     rules: list = []
     if by == "Price":
@@ -80,10 +117,10 @@ def preset_rules(s: dict) -> list:
                 rules.append(_rule({"kind": "Price", "min": lo, "max": hi}))
             rules.append(_rule({"kind": "Price", "min": b[-1]}))
     elif by == "Alphabet":
-        for r in s.get("alphaRanges", []):
-            if r.strip():
-                rules.append(_rule({"kind": "Letters", "letters": r.strip()}))
-        rules.append(_rule({"kind": "Letters", "letters": "#"}))
+        # every bin but the end one gets a run of A-Z; names starting with a number go to the end bin
+        s["alphaRanges"] = alpha_split(max(1, int(s.get("binsInUse", 3)) - 1), letter_counts)
+        for r in s["alphaRanges"]:
+            rules.append(_rule({"kind": "Letters", "letters": r}))
     elif by == "Color":
         for c in COLOR_CODES:
             rules.append(_rule({"kind": "Color", "colors": [c]}))
@@ -102,10 +139,10 @@ def preset_rules(s: dict) -> list:
     return rules[:MAX_BINS - 1]
 
 
-def apply_preset(s: dict, by: str) -> dict:
+def apply_preset(s: dict, by: str, letter_counts: dict | None = None) -> dict:
     s = copy.deepcopy(s)
     s["by"] = by
-    s["rules"] = preset_rules(s)
+    s["rules"] = preset_rules(s, letter_counts)
     return s
 
 
@@ -140,7 +177,7 @@ def describe(r: dict | None) -> str:
         return f"{_money(lo)}–{_money(hi)[1:]}"
     if k == "Color":
         cs = [COLOR_NAMES[i] for i, c in enumerate(COLOR_CODES) if c in r["colors"]]
-        return " + ".join(cs) if cs else "No colours picked"
+        return " + ".join(cs) if cs else "No colors picked"
     if k == "Letters":
         parts = ["Numbers / symbols" if x == "#" else (f"{x[0]}–{x[2]}" if len(x) == 3 else x) for x in letter_ranges(r["letters"])]
         return ", ".join(parts) if parts else "No letters set"

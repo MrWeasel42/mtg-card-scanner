@@ -154,6 +154,19 @@ class Machine:
         except Exception:
             return "Klipper not running"
 
+    def letter_counts(self) -> dict:
+        """Cards identified on this machine, by first letter (alphabetical bins learn your collection)."""
+        out: dict = {}
+        try:
+            for sess in self.store.all():
+                for c in sess.cards:
+                    f = rules.first_letter(((c.get("card") or {}).get("name")) or "")
+                    if f:
+                        out[f] = out.get(f, 0) + 1
+        except Exception:
+            pass
+        return out
+
     # ------------------------------------------------------------------ hardware
     def camera(self):
         if self.sim:
@@ -624,7 +637,7 @@ class Handler(BaseHTTPRequestHandler):
             opts = {"ok": True, "binsInUse": m.bins_in_use, "last": last, "lastMode": m.settings["lastMode"],
                     "lastName": m.settings.get("lastName", ""), "saved": m.settings["savedSetups"],
                     "pc": rules.normalize(pc.get("bins"), m.bins_in_use) if pc and pc.get("bins") else None,
-                    "presets": {by: rules.apply_preset(last, by) for by in rules.SORT_BY},
+                    "presets": {by: rules.apply_preset(last, by, m.letter_counts()) for by in rules.SORT_BY},
                     "kinds": rules.KINDS, "colors": list(zip(rules.COLOR_CODES, rules.COLOR_NAMES)),
                     "rarities": rules.RARITY_CODES, "types": rules.TYPE_NAMES,
                     "defaultName": f"Scan {dt.datetime.now():%b %-d, %-I:%M %p}"}
@@ -634,7 +647,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.json({"ok": True, "labels": rules.bin_labels(s), "setup": s})
         if method == "POST" and a == ["preset"]:
             b = self.body()
-            s = rules.apply_preset(rules.normalize(b.get("setup"), m.bins_in_use), b.get("by", "Price"))
+            s = rules.apply_preset(rules.normalize(b.get("setup"), m.bins_in_use), b.get("by", "Price"), m.letter_counts())
             return self.json({"ok": True, "setup": s, "labels": rules.bin_labels(s)})
         if method == "POST" and a == ["setups", "save"]:
             b = self.body()

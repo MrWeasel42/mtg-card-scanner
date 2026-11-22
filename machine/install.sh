@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 MACHINE=$(pwd)
 echo "== Packages (camera, Python bits, kiosk browser)"
 sudo apt-get update -qq
-sudo apt-get install -y python3-picamera2 python3-pil python3-yaml python3-pip git cage chromium wlr-randr
+sudo apt-get install -y python3-picamera2 python3-pil python3-yaml python3-pip git cage chromium wlr-randr fonts-noto-color-emoji
 pip install -q --break-system-packages -r sorter/requirements.txt
 
 echo "== Services"

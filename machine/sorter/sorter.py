@@ -1,7 +1,7 @@
 """
 Card sorter main program (runs on the Pi 5).
 
-The PC app decides every card's bin (its session's bin rules: price, colour, letters, rarity or set). The machine
+The PC app decides every card's bin (its session's bin rules: price, color, letters, rarity or set). The machine
 has up to 9 bins; `bins.in_use` says how many are built (the prototype: 3). Stations sit one fin pitch apart:
     0 landing -> 1 scan -> 2 bin 1 door -> 3 bin 2 door -> ... -> in_use+1 end ramp (bin in_use, also Flagged)
 One cycle, every fin on a station:

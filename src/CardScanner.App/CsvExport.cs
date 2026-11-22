@@ -20,7 +20,7 @@ public static class CsvExport
         new("Deckbox", "Deckbox", "Deckbox inventory import (also read by many other collection sites).", "Deckbox.csv"),
         new("TCGplayer", "TCGplayer list", "A Mass Entry list (1 Card Name [SET]) to paste at tcgplayer.com/massentry to price or buy the cards. TCGplayer has no collection import for non-sellers.", "TCGplayer Mass Entry.txt"),
         new("Roca", "ROCA / TCGplayer", "Same columns as a ROCA Sorter export: one row per scan with TCGplayer product ID, bin, REJECT for flagged cards, confidence and photo. Good for comparing runs and for TCGplayer-based tools.", "ROCA style.csv"),
-        new("General", "General CSV", "One row per scanned card with everything: printing, finish, price, colours, type, bin, why it was flagged.", "All details.csv"),
+        new("General", "General CSV", "One row per scanned card with everything: printing, finish, price, colors, type, bin, why it was flagged.", "All details.csv"),
     ];
 
     private sealed record Row(CardScanner.Core.Catalog.CardInfo Card, string Finish, string Condition, bool Altered, bool Misprint,

@@ -20,7 +20,7 @@ public partial class RuleOption : ObservableObject
 /// <summary>One bin in the picture of the machine, and the rule it's edited with.</summary>
 public partial class BinSlot : ObservableObject
 {
-    public static readonly string[] KindList = ["Empty (takes nothing)", "Price range", "Colour", "Name starts with", "Rarity", "Set", "Card type", "Everything else"];
+    public static readonly string[] KindList = ["Empty (takes nothing)", "Price range", "Color", "Name starts with", "Rarity", "Set", "Card type", "Everything else"];
     private static readonly RuleKind?[] KindOf = [null, RuleKind.Price, RuleKind.Color, RuleKind.Letters, RuleKind.Rarity, RuleKind.Set, RuleKind.Type, RuleKind.Anything];
 
     private readonly BinEditorViewModel _owner;
@@ -137,7 +137,7 @@ public partial class BinSlot : ObservableObject
 public partial class BinEditorViewModel : ObservableObject
 {
     public static readonly int[] BinCountList = [2, 3, 4, 5, 6, 7, 8, 9];
-    public static readonly string[] PresetList = ["Price brackets", "Colour", "Alphabet", "Rarity", "Set (keeps your set lists)"];
+    public static readonly string[] PresetList = ["Price brackets", "Color", "Alphabetical", "Rarity", "Set (keeps your set lists)"];
 
     public ObservableCollection<BinSlot> Slots { get; } = [];
     [ObservableProperty] private int _binsInUse = 3;

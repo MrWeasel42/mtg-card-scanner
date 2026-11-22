@@ -230,7 +230,7 @@ function startView() {
   const o = ST.opts;
   const srcs = [["last", "Last used"]].concat(o.pc ? [["pc", "My PC setup"]] : [])
     .concat(o.saved.map((x, i) => ["saved:" + i, "★ " + x.name]))
-    .concat([["Price", "By price"], ["Alphabet", "By letters"], ["Color", "By colour"], ["Rarity", "By rarity"], ["Set", "By set"]]);
+    .concat([["Price", "By price"], ["Alphabet", "Alphabetical"], ["Color", "By color"], ["Rarity", "By rarity"], ["Set", "By set"]]);
   const bins = ST.labels.map((l, i) => {
     const b = i + 1, end = b === ST.setup.binsInUse;
     return `<div class="bin ${end ? "end" : ""}" ${end ? "" : `data-editbin="${b}"`}><div class="n">BIN ${b}${end ? " · END" : " · tap to edit"}</div><div class="l">${esc(l)}</div></div>`;
@@ -238,7 +238,7 @@ function startView() {
   return `<div class="start">
     <div class="panel">
       <div class="field"><h3>Session name</h3><input id="sname" class="input" value="${esc(ST.name)}" data-kbd></div>
-      <div class="field"><h3>Mode</h3><span class="seg"><button class="${ST.mode === "Catalog" ? "on" : ""}" data-mode="Catalog">📋 Catalog</button><button class="${ST.mode === "Sort" ? "on" : ""}" data-mode="Sort">🗂 Sort only</button></span>
+      <div class="field"><h3>Mode</h3><span class="seg full"><button class="${ST.mode === "Catalog" ? "on" : ""}" data-mode="Catalog">📋 Catalog</button><button class="${ST.mode === "Sort" ? "on" : ""}" data-mode="Sort">🗂 Sort only</button></span>
         <div class="muted small">${ST.mode === "Catalog" ? "Identify, sort, and save ManaBox + Moxfield CSVs." : "Sort into bins; no CSVs."}</div></div>
       <div class="field"><h3>Identifying on</h3><div>${esc(S?.identifier || "")}</div></div>
       <div class="row" style="margin-top:20px"><button class="btn big primary grow" data-act="go">▶ Start</button></div>
@@ -267,7 +267,7 @@ function editBin(b) {
   const r = JSON.parse(JSON.stringify(ST.setup.rules[b - 1] || { kind: "Price", name: "", min: null, max: null, colors: [], letters: "", rarities: [], sets: [], types: [] }));
   const o = ST.opts;
   const draw = () => {
-    const kinds = o.kinds.map(k => `<button class="${r.kind === k ? "on" : ""}" data-k="${k}">${k === "Anything" ? "Everything" : k}</button>`).join("");
+    const kinds = o.kinds.map(k => `<button class="${r.kind === k ? "on" : ""}" data-k="${k}">${{ Anything: "Everything", Letters: "Alphabetical" }[k] || k}</button>`).join("");
     let body = "";
     if (r.kind === "Price") body = `<div class="row"><div class="field grow"><h3>From $</h3><input id="pmin" class="input" inputmode="decimal" value="${r.min ?? ""}" data-kbd="num" placeholder="no minimum"></div>
         <div class="field grow"><h3>To $</h3><input id="pmax" class="input" inputmode="decimal" value="${r.max ?? ""}" data-kbd="num" placeholder="no maximum"></div></div>`;
@@ -485,8 +485,12 @@ document.addEventListener("focusin", e => { if (KIOSK && e.target.matches("[data
 function showKbd(el) {
   kbdTarget = el; kbdNum = el.dataset.kbd === "num";
   drawKbd(); $("#kbd").hidden = false;
+  // everything moves up above the keyboard, and the box being typed in stays in sight
+  document.documentElement.style.setProperty("--kbd-h", $("#kbd").offsetHeight + "px");
+  document.body.classList.add("kbd-open");
+  requestAnimationFrame(() => el.scrollIntoView({ block: "center", behavior: "smooth" }));
 }
-function hideKbd() { $("#kbd").hidden = true; kbdTarget = null; }
+function hideKbd() { $("#kbd").hidden = true; kbdTarget = null; document.body.classList.remove("kbd-open"); }
 function drawKbd() {
   const rows = kbdNum ? [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], [".", "0", "⌫"]]
     : [["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-"], ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "⌫"],
@@ -495,9 +499,12 @@ function drawKbd() {
   $("#kbd").innerHTML = rows.map(r => `<div class="r">${r.map(x => `<button class="${x === "⇧" || x === "⌫" ? "w" : ""}" data-key="${esc(x)}">${esc(k(x))}</button>`).join("")}</div>`).join("")
     + `<div class="r">${kbdNum ? "" : `<button class="sp" data-key=" ">space</button>`}<button class="w" data-key="clear">Clear</button><button class="w ok" data-key="done">Done</button></div>`;
 }
+const keyUp = b => setTimeout(() => b.classList.remove("down"), 120);
+["pointerup", "pointercancel", "pointerleave"].forEach(ev => $("#kbd").addEventListener(ev, e => { const b = e.target.closest?.("[data-key]"); if (b) keyUp(b); }));
 $("#kbd").addEventListener("pointerdown", e => {
   const b = e.target.closest("[data-key]"); if (!b || !kbdTarget) return;
   e.preventDefault();
+  b.classList.add("down"); keyUp(b);
   const key = b.dataset.key, el = kbdTarget;
   if (key === "done") return hideKbd();
   if (key === "⇧") { kbdShift = !kbdShift; return drawKbd(); }

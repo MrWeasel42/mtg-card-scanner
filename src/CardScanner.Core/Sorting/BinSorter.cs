@@ -62,7 +62,7 @@ public sealed class BinRule
                     ({ } lo, { } hi) => $"{M(lo)}–{M(hi)[1..]}",
                 };
             case RuleKind.Color:
-                return Colors.Count == 0 ? "No colours picked"
+                return Colors.Count == 0 ? "No colors picked"
                      : string.Join(" + ", ColorCodes.Where(Colors.Contains).Select(c => ColorNames[Array.IndexOf(ColorCodes, c)]));
             case RuleKind.Letters:
                 var parts = LetterRanges().Select(r => r == "#" ? "Numbers / symbols" : r.Length == 3 ? $"{r[0]}–{r[2]}" : r).ToList();
