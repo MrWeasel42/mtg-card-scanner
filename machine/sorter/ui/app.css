@@ -152,3 +152,12 @@ h1 { font-size: 28px; margin: 0 0 12px; } h2 { font-size: 22px; margin: 18px 0 1
 
 /* kiosk: no mouse pointer unless a real mouse is moving */
 html.nocursor, html.nocursor * { cursor: none !important; }
+
+/* top navigation: the same Back / Home in the same spot on every page */
+#nav { display: none; align-items: center; gap: 10px; min-width: 0; }
+body.sub #nav { display: flex; }
+body.sub .brand { display: none; }
+#nav .btn { min-height: 52px; padding: 0 20px; font-size: 20px; }
+#nav .ptitle { font-size: 22px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 6px; }
+.sheet .shead { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.sheet .shead h1 { flex: 1; margin: 0; }

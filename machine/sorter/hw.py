@@ -135,9 +135,19 @@ class Camera:
         self.cam = Picamera2()
         conf = self.cam.create_still_configuration(main={"size": (c["width"], c["height"])})
         self.cam.configure(conf)
-        self.cam.set_controls({"ExposureTime": int(c["exposure_us"]), "AnalogueGain": float(c["gain"]), "AwbEnable": True})
+        self.fixed = {"AeEnable": False, "ExposureTime": int(c["exposure_us"]), "AnalogueGain": float(c["gain"]), "AwbEnable": True}
+        self.cam.set_controls(self.fixed)
+        self.is_auto = False
         self.cam.start()
         time.sleep(1.0)
+
+    def auto(self, on: bool) -> None:
+        """Auto exposure (live view in room light) or the fixed exposure the sorting photos use under the hood LEDs."""
+        if on == self.is_auto:
+            return
+        self.cam.set_controls({"AeEnable": True, "AwbEnable": True} if on else self.fixed)
+        self.is_auto = on
+        time.sleep(0.3)
 
     def jpeg(self) -> bytes:
         buf = io.BytesIO()

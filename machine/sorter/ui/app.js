@@ -65,12 +65,45 @@ function chrome() {
     if (ub.dataset.h !== h) { ub.innerHTML = h; ub.dataset.h = h; }
     ub.hidden = false;
   } else ub.hidden = true;
+  drawNav();
   // e-stop: whenever anything can move
   $("#estop").hidden = !(RUNNING.includes(s.state) || view === "tools" || s.state === "error");
 }
 
 // --------------------------------------------------------------------------------------------- navigation
-function go(v, arg = null) { view = v; viewArg = arg; lastDraw = ""; closeModal(); hideKbd(); render(true); if (S) chrome(); }
+// Every page but Home gets the same top bar: ‹ Back (one level up), ⌂ Home on pages deeper than one level,
+// and the page name. No other Back / Done / Cancel buttons on the pages themselves.
+let reviewFrom = "session";
+function navFor() {
+  const busy = S && (RUNNING.includes(S.state) || ["error", "estop"].includes(S.state));
+  switch (view) {
+    case "home": return null;
+    case "run":
+      if (busy || !S?.session) return { title: S?.session ? "Sorting" : "Nothing running", back: busy ? null : "home" };
+      return { title: "Session stopped", back: "home", backLabel: "‹ Finish later" };
+    case "start": return { title: "Start sorting", back: "home" };
+    case "sessions": return { title: "Sessions", back: "home" };
+    case "session": return { title: "Session", back: "sessions", home: true };
+    case "review": return { title: "Review flagged cards", back: reviewFrom, backArg: viewArg, home: true };
+    case "camera": return { title: "Camera", back: "home" };
+    case "tools": return { title: "Tools", back: "home" };
+    case "settings": return { title: "Settings", back: "home" };
+  }
+  return { title: "", back: "home" };
+}
+function drawNav() {
+  const n = navFor();
+  document.body.classList.toggle("sub", !!n);
+  if (!n) return;
+  const back = n.back === "home" ? `<button class="btn" data-act="nav-home">${n.backLabel || "‹ Back"}</button>`
+    : n.back ? `<button class="btn" data-go="${n.back}" ${n.backArg ? `data-arg="${esc(n.backArg)}"` : ""}>‹ Back</button>` : "";
+  const html = back + (n.home ? `<button class="btn" data-act="nav-home">⌂ Home</button>` : "") + `<span class="ptitle">${esc(n.title)}</span>`;
+  if ($("#nav").dataset.h !== html) { $("#nav").innerHTML = html; $("#nav").dataset.h = html; }
+}
+function go(v, arg = null) {
+  if (v === "review" && view !== "review") reviewFrom = view === "run" ? "run" : "session";
+  view = v; viewArg = arg; lastDraw = ""; closeModal(); hideKbd(); render(true); drawNav(); if (S) chrome();
+}
 function render(force) {
   const html = VIEWS[view]?.();
   if (html === undefined) return;
@@ -102,7 +135,7 @@ const VIEWS = {
   run() {
     if (!S) return "";
     const s = S, ss = s.session;
-    if (!ss) { return `<div class="panel"><h1>Nothing running</h1><button class="btn" data-go="home">Home</button></div>`; }
+    if (!ss) { return `<div class="panel muted">No session is open.</div>`; }
     const lc = s.lastCard;
     const showLast = s.settings.priceShow !== "top", showTop = s.settings.priceShow !== "last";
     const stopped = s.state === "stopped";
@@ -130,8 +163,7 @@ const VIEWS = {
       : `<div class="photo"></div><div class="name muted">${s.phase === "homing" ? "Homing the belt…" : "Waiting for the first card…"}</div>`;
     const controls = stopped ? `
         <button class="btn big primary" data-go="review" data-arg="${ss.id}" ${ss.toReview ? "" : "disabled"}>⚑ Review flagged (${ss.toReview})</button>
-        <button class="btn big" data-act="finish">✓ Finish${ss.mode === "Catalog" ? " & save CSVs" : ""}</button>
-        <button class="btn big" data-act="close">Later</button>`
+        <button class="btn big" data-act="finish">✓ Finish${ss.mode === "Catalog" ? " & save CSVs" : ""}</button>`
       : s.state === "stopping" ? `<button class="btn big" disabled>Clearing the track…</button>`
       : `<button class="btn big ${s.paused ? "primary" : "warnb"}" data-act="${s.paused ? "resume" : "pause"}">${s.paused ? "▶ Resume" : "⏸ Pause"}</button>
          <button class="btn big danger" data-act="stop">■ Stop session</button>`;
@@ -152,27 +184,25 @@ const VIEWS = {
   review() { return reviewView(); },
   camera() {
     return `<div style="display:flex;flex-direction:column;height:100%;gap:12px">
-      <div class="row"><h1 class="grow" style="margin:0">Camera</h1>
-        <span class="muted small">Lens tip to card: 200 mm (7⅞″). Turn the focus ring until the card text is sharp.</span>
-        <button class="btn" data-go="home">Done</button></div>
+      <div class="row"><span class="seg"><button class="${camExp === "auto" ? "on" : ""}" data-act="camexp" data-arg="auto">Auto brightness</button><button class="${camExp === "fixed" ? "on" : ""}" data-act="camexp" data-arg="fixed">As when sorting</button></span>
+        <span class="muted small grow">Lens tip to card: 200 mm (7⅞″). Turn the focus ring until the card text is sharp. "As when sorting" is dark without the hood lights.</span></div>
       <img id="camimg" class="cam" alt="camera"></div>`;
   },
   tools() {
     const t = [["home", "⌂ Home the belt", "A fin stops on the scan station"], ["index", "→ Move one station", "Track moves 122 mm"],
       ["feed", "⤓ Feed 50 mm", "Turns the feed roller"], ["doors", "🚪 Test doors", "Each door opens and shuts twice"],
       ["levels", "📏 Bin levels", "Distance to each stack"], ["motors-off", "⏻ Motors off", "Belts turn by hand"]];
-    return `<h1>Tools</h1><p class="muted">Setup and tests. The red STOP button cuts the motors at once.</p>
+    return `<p class="muted" style="margin-top:0">Setup and tests. The red STOP button cuts the motors at once.</p>
       <div class="bins">${t.map(([k, n, d]) => `<button class="tile" style="min-height:130px" data-tool="${k}"><span class="t" style="font-size:22px">${n}</span><span class="s">${d}</span></button>`).join("")}
       <button class="tile" style="min-height:130px" data-act="lights"><span class="t" style="font-size:22px">💡 Lights</span><span class="s">On / off</span></button></div>
-      <div id="toolout" class="panel" style="margin-top:14px">Pick a tool.</div>
-      <div style="margin-top:14px"><button class="btn" data-go="home">Done</button></div>`;
+      <div id="toolout" class="panel" style="margin-top:14px">Pick a tool.</div>`;
   },
   settings() {
     if (!S) return "";
     const st = S.settings;
     const seg = (key, opts) => `<span class="seg">${opts.map(([v, l]) => `<button class="${String(st[key]) === String(v) ? "on" : ""}" data-set="${key}" data-val="${v}">${l}</button>`).join("")}</span>`;
     const u = S.update;
-    return `<h1>Settings</h1><div class="list">
+    return `<div class="list">
       <div class="panel"><h3>Identify cards on</h3>${seg("identifyOn", [["auto", "Auto"], ["pc", "Always PC"], ["machine", "Always machine"]])}
         <p class="muted small">Auto uses your PC when it's on and the machine when it isn't. On-machine identifying is coming in a later update; until then Auto and Machine use the PC when it's on, and cards scanned with no PC are kept and flagged so you can identify them later.</p></div>
       <div class="panel"><h3>Price shown while sorting</h3>${seg("priceShow", [["last", "Last card"], ["top", "Highest so far"], ["both", "Both"]])}</div>
@@ -182,8 +212,7 @@ const VIEWS = {
       <div class="panel"><h3>Software</h3><div class="row"><div class="grow">Version ${esc(S.version)}<div class="muted small">${u.available ? "Update available: " + esc(u.latest) : u.error ? esc(u.error) : "Up to date (checks every 30 min)."}</div></div>
         <button class="btn" data-act="checkupdate">${u.checking ? "Checking…" : "Check now"}</button>
         ${u.available ? `<button class="btn primary" data-act="update">Update now</button>` : ""}</div></div>
-      <div class="panel row"><div class="grow">Shut down the Pi before unplugging the machine.</div><button class="btn danger" data-act="shutdown">Shut down</button></div>
-      <div><button class="btn" data-go="home">Done</button></div></div>`;
+      <div class="panel row"><div class="grow">Shut down the Pi before unplugging the machine.</div><button class="btn danger" data-act="shutdown">Shut down</button></div></div>`;
   },
 };
 
@@ -212,7 +241,7 @@ function startView() {
       <div class="field"><h3>Mode</h3><span class="seg"><button class="${ST.mode === "Catalog" ? "on" : ""}" data-mode="Catalog">📋 Catalog</button><button class="${ST.mode === "Sort" ? "on" : ""}" data-mode="Sort">🗂 Sort only</button></span>
         <div class="muted small">${ST.mode === "Catalog" ? "Identify, sort, and save ManaBox + Moxfield CSVs." : "Sort into bins; no CSVs."}</div></div>
       <div class="field"><h3>Identifying on</h3><div>${esc(S?.identifier || "")}</div></div>
-      <div class="row" style="margin-top:20px"><button class="btn big primary grow" data-act="go">▶ Start</button><button class="btn big" data-go="home">Cancel</button></div>
+      <div class="row" style="margin-top:20px"><button class="btn big primary grow" data-act="go">▶ Start</button></div>
     </div>
     <div class="panel">
       <h3>Bins (${ST.setup.binsInUse} on this machine)</h3>
@@ -248,9 +277,9 @@ function editBin(b) {
     if (r.kind === "Letters") body = `<div class="field"><h3>First letters</h3><input id="letters" class="input" value="${esc(r.letters)}" data-kbd placeholder="e.g. A-F, Q   (# = numbers)"></div>`;
     if (r.kind === "Set") body = `<div class="field"><h3>Set codes</h3><input id="sets" class="input" value="${esc(r.sets.join(", "))}" data-kbd placeholder="e.g. MH3, MH2"></div>`;
     if (r.kind === "Anything") body = `<p class="muted">Takes every card that reaches it.</p>`;
-    $("#sheet").innerHTML = `<h1>Bin ${b}</h1><div class="toggles" style="margin-bottom:14px">${kinds}</div>${body}
+    $("#sheet").innerHTML = `<div class="shead"><h1>Bin ${b}</h1><button class="btn" data-b="cancel">✕ Cancel</button></div><div class="toggles" style="margin-bottom:14px">${kinds}</div>${body}
       <div class="field"><h3>Name on the screen (optional)</h3><input id="rname" class="input" value="${esc(r.name)}" data-kbd placeholder="described from the rule"></div>
-      <div class="row"><button class="btn primary big grow" data-b="save">Save bin ${b}</button><button class="btn big" data-b="empty">Empty bin</button><button class="btn big" data-b="cancel">Cancel</button></div>`;
+      <div class="row"><button class="btn primary big grow" data-b="save">Save bin ${b}</button><button class="btn big" data-b="empty">Empty bin</button></div>`;
   };
   const read = () => {
     const v = id => $("#" + id)?.value;
@@ -285,8 +314,7 @@ function sessionsView() {
       <div class="muted small">${new Date(s.started).toLocaleString()} · ${esc(s.mode)} · ${s.cards} cards · ${money(s.total)}</div></div>
       ${s.toReview ? `<span class="tag warn">⚑ ${s.toReview} to review</span>` : ""}${tag}</div>`;
   }).join("") || `<div class="panel muted">No sessions yet.</div>`;
-  return `<div class="row" style="margin-bottom:12px"><h1 class="grow" style="margin:0">Sessions</h1><button class="btn" data-go="home">Home</button></div>
-    <p class="muted small">Download on any phone or PC on your Wi-Fi at <b>http://sorter.local:8080</b>. Your PC app also backs up every finished session automatically.</p>
+  return `<p class="muted small" style="margin-top:0">Download on any phone or PC on your Wi-Fi at <b>http://sorter.local:8080</b>. Your PC app also backs up every finished session automatically.</p>
     <div class="list">${items}</div>`;
 }
 function sessionView() {
@@ -297,11 +325,11 @@ function sessionView() {
   const isOpen = S?.session?.id === s.id && RUNNING.includes(S.state);
   return `<div class="row" style="margin-bottom:12px"><div class="grow"><h1 style="margin:0">${esc(s.name)}</h1>
       <div class="muted small">${new Date(s.started).toLocaleString()} · ${esc(s.mode)} · ${s.cards} cards · ${s.flagged} flagged · total ${money(s.total)}${s.top ? " · highest " + esc(s.top.name) + " " + money(s.top.price) : ""}</div></div>
-      <button class="btn" data-go="sessions">Back</button></div>
+      </div>
     <div class="bins" style="margin-bottom:14px">${bins}</div>
     <div class="row">
       <button class="btn big ${s.toReview ? "primary" : ""}" data-go="review" data-arg="${s.id}" ${s.toReview ? "" : "disabled"}>⚑ Review flagged (${s.toReview})</button>
-      ${s.state !== "finished" && !isOpen ? `<button class="btn big" data-act="finishsess" data-arg="${s.id}">✓ Finish${s.mode === "Catalog" ? " & write CSVs" : ""}</button>` : ""}
+      ${s.state !== "finished" && !isOpen ? `<button class="btn big" data-act="finishsess" data-arg="${s.id}">✓ Finish${s.mode === "Catalog" ? " & save CSVs" : ""}</button>` : ""}
       ${files}<a class="btn" href="/api/sessions/${s.id}/bundle.zip" download>⬇ Everything (.zip)</a>
     </div>
     <div class="row" style="margin-top:14px"><button class="btn small" data-act="rename" data-arg="${s.id}">Rename</button>
@@ -318,8 +346,8 @@ function reviewView() {
   }
   if (!RV.cards) return `<div class="panel">Loading…</div>`;
   const c = RV.cards[RV.i];
-  if (!c) return `<div class="panel"><h1>All flagged cards reviewed ✓</h1><p class="muted">Finish the session to write the CSVs.</p>
-      <div class="row"><button class="btn big primary" data-act="finishsess" data-arg="${RV.sid}">✓ Finish</button><button class="btn big" data-go="session" data-arg="${RV.sid}">Back</button></div></div>`;
+  if (!c) return `<div class="panel"><h1>All flagged cards reviewed ✓</h1><p class="muted">Finish the session to save the CSVs.</p>
+      <div class="row"><button class="btn big primary" data-act="${reviewFrom === "run" ? "finish" : "finishsess"}" data-arg="${RV.sid}">✓ Finish & save CSVs</button></div></div>`;
   const cands = (RV.extra || c.candidates || []);
   const finishes = (c.finishes && c.finishes.length ? c.finishes : [{ key: "nonfoil", label: "Non-foil" }, { key: "foil", label: "Foil" }]);
   RV.finish = RV.finish || c.finish; RV.condition = RV.condition || c.condition || "Near Mint";
@@ -332,7 +360,7 @@ function reviewView() {
         <button class="btn small" data-act="rv-reid">↻ Identify again</button></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:12px;min-height:0">
-      <div class="row"><h1 class="grow" style="margin:0">Which printing is it?</h1><button class="btn" data-go="session" data-arg="${RV.sid}">Done</button></div>
+      <h1 style="margin:0">Which printing is it?</h1>
       <div class="row"><input id="rvsearch" class="input grow" placeholder="Not listed? Search a card name…" data-kbd><button class="btn" data-act="rv-search">Search</button></div>
       <div class="cands">${cands.map((x, i) => `<button class="cand ${i === 0 && !RV.extra ? "top" : ""}" data-pick="${i}">
         <div class="img" style="background-image:url('${img(x)}')"></div><div class="nm">${esc(x.name)}</div>
@@ -354,7 +382,7 @@ async function reviewPick(i) {
 function nextReview() { RV.cards.splice(RV.i, 1); RV.extra = null; RV.finish = null; RV.condition = null; if (RV.i >= RV.cards.length) RV.i = Math.max(0, RV.cards.length - 1); if (!RV.cards.length) RV.i = 0; render(true); SD = null; }
 
 // --------------------------------------------------------------------------------------------- camera
-let camTimer = null;
+let camTimer = null, camExp = "auto";
 AFTER.camera = () => {
   api("lights", { on: true });
   const img = $("#camimg");
@@ -363,7 +391,7 @@ AFTER.camera = () => {
     const n = new Image();
     n.onload = () => { img.src = n.src; camTimer = setTimeout(tick, 150); };
     n.onerror = () => { camTimer = setTimeout(tick, 1500); };
-    n.src = "/api/preview.jpg?t=" + Date.now();
+    n.src = "/api/preview.jpg?exp=" + camExp + "&t=" + Date.now();
   };
   clearTimeout(camTimer); tick();
 };
@@ -407,6 +435,12 @@ const ACT = {
   reset: () => api("reset", {}),
   finish: async () => { const r = await api("session/finish", {}); if (r.ok) { toast(r.exports?.length ? "Saved: " + r.exports.join(", ") : "Session saved."); go("home"); } return r; },
   close: async () => { await api("session/close", {}); go("home"); },
+  "nav-home": async () => {   // Home from anywhere; a stopped, unfinished session is left to finish later
+    if (S && RUNNING.includes(S.state)) return go("run");
+    if (S?.state === "stopped" && S.session) await api("session/close", {});
+    go("home");
+  },
+  camexp: v => { camExp = v; render(true); },
   finishsess: async sid => { const r = await api(`sessions/${sid}/finish`, {}); if (r.ok) { toast("Saved."); SD = null; go("session", sid); } return r; },
   delsess: async sid => { if (await confirmBox("Delete this session?", "Its photos and CSVs are deleted from the machine (your PC backup stays).", "Delete")) { const r = await api(`sessions/${sid}/delete`, {}); SL = null; go("sessions"); return r; } },
   rename: async sid => { const n = await promptBox("Rename session", SD?.name || ""); if (n) { await api(`sessions/${sid}/rename`, { name: n }); SD = null; render(true); } },
@@ -432,14 +466,14 @@ function closeModal() { $("#modal").hidden = true; $("#sheet").onclick = null; h
 function confirmBox(title, text, ok) {
   return new Promise(res => {
     openModal();
-    $("#sheet").innerHTML = `<h1>${esc(title)}</h1><p class="muted">${esc(text)}</p><div class="row"><button class="btn big danger grow" data-b="1">${esc(ok)}</button><button class="btn big" data-b="0">Cancel</button></div>`;
+    $("#sheet").innerHTML = `<div class="shead"><h1>${esc(title)}</h1><button class="btn" data-b="0">✕ Cancel</button></div><p class="muted">${esc(text)}</p><div class="row"><button class="btn big danger grow" data-b="1">${esc(ok)}</button></div>`;
     $("#sheet").onclick = e => { const b = e.target.closest("[data-b]"); if (b) { closeModal(); res(b.dataset.b === "1"); } };
   });
 }
 function promptBox(title, value) {
   return new Promise(res => {
     openModal();
-    $("#sheet").innerHTML = `<h1>${esc(title)}</h1><input id="pbox" class="input" value="${esc(value)}" data-kbd><div class="row" style="margin-top:14px"><button class="btn big primary grow" data-b="1">OK</button><button class="btn big" data-b="0">Cancel</button></div>`;
+    $("#sheet").innerHTML = `<div class="shead"><h1>${esc(title)}</h1><button class="btn" data-b="0">✕ Cancel</button></div><input id="pbox" class="input" value="${esc(value)}" data-kbd><div class="row" style="margin-top:14px"><button class="btn big primary grow" data-b="1">OK</button></div>`;
     $("#sheet").onclick = e => { const b = e.target.closest("[data-b]"); if (b) { const v = $("#pbox").value.trim(); closeModal(); res(b.dataset.b === "1" ? v : null); } };
     if (KIOSK) showKbd($("#pbox"));
   });

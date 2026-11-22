@@ -168,12 +168,14 @@ class Machine:
             self._sim_machine = hw.SimMachine(cards=40)
         return self._sim_machine
 
-    def preview_jpeg(self) -> bytes:
-        """A small frame for the camera view (lights on while it's open)."""
+    def preview_jpeg(self, auto: bool = True) -> bytes:
+        """A small frame for the camera view (lights on while it's open). auto = auto exposure (room light);
+        off = the fixed exposure the sorting photos use, to check the picture under the hood lights."""
         with self._cam_lock:
             if self.sim:
                 return _placeholder_jpeg()
             cam = self.camera()
+            cam.auto(auto)
             try:
                 from PIL import Image
                 img = cam.cam.capture_image("main")
@@ -217,6 +219,7 @@ class Machine:
             levels = _NoLevels(len(cfg["levels"]["xshut_gpio"]))
         with self._cam_lock:
             cam = self.camera()
+            cam.auto(False)                    # sorting photos: fixed exposure under the hood lights
         return sorter_mod.Sorter(cfg, m, doors, beams, levels, cam, brain, logs)
 
     # ------------------------------------------------------------------ sessions
@@ -740,7 +743,7 @@ class Handler(BaseHTTPRequestHandler):
         if method == "GET" and a == ["preview.jpg"]:
             if m.state in ("running", "starting", "stopping"):
                 return self.json({"ok": False, "error": "Camera is busy sorting"}, 409)
-            return self._send(200, m.preview_jpeg(), "image/jpeg")
+            return self._send(200, m.preview_jpeg(auto=q.get("exp", ["auto"])[0] != "fixed"), "image/jpeg")
         if method == "POST" and a == ["lights"]:
             m.lights(bool(self.body().get("on")))
             return self.json({"ok": True})
