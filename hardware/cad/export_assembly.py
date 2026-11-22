@@ -9,7 +9,7 @@ def put(name, shape, kind):
     items.append({"file": fn, "kind": kind})
 P = placed()
 for k, v in P.items():
-    kind = "black" if k in ("hood", "scan_floor", "pod_cover") else ("bin" if k.startswith("bin_") and "side" not in k else "petg")
+    kind = "black" if k in ("hood", "hood_lid", "sheen_cap", "scan_floor", "pod_cover") else ("bin" if k.startswith("bin_") and "side" not in k else "petg")
     put(k, v, kind)
 # bought parts (for the picture only)
 L = LENGTH

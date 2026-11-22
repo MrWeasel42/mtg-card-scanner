@@ -136,7 +136,21 @@ check("Full card stack (550 raw) vs hopper walls", stack, P["raw_tower"], 0.5, "
 tray_z = RAIL_Z + 17.2 + 3
 skr = B.skr_pico().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, tray_z + 8))
 shafts = cyl_y(FEED_X, FEED_Z, 9.5, -60, 60).union(cyl_y(EXIT_X, EXIT_Z, 9.5, -60, 60))
-check("SKR Pico + plugs (on 8 mm tray bosses) vs base", skr, base, 1.0, "the Pi talks to it over UART from the hood")
+check("SKR Pico + plugs (on 8 mm tray bosses) vs base", skr, base, 1.0, "the Pi (in the screen pod) talks to it over UART")
+# --- the rest of the electronics bay: 5 V USB-C converter on the tray beside the SKR, 6 V servo step-down on the left
+# inner wall, PCA9685 servo board on the back inner wall above the cable window (foam tape / zip ties)
+conv6 = B.potted_converter().rotate((0, 0, 0), (0, 1, 0), 90).translate((4.3, 8.0, 105.0))
+pca = B.pca9685().rotate((0, 0, 0), (1, 0, 0), 90).translate((28.0, 55.8, RAIL_Z + 64))
+bay = {"6 V servo step-down (left inner wall)": conv6,
+       "PCA9685 servo board (back inner wall)": pca}
+names = list(bay)
+for i, n in enumerate(names):
+    check(f"{n} vs feeder base", bay[n], base, 0.0, "taped / tied against the wall it sits on")
+    check(f"{n} vs SKR Pico + plugs, tray", bay[n], skr.union(P["electronics_tray"]), 0.0 if "tray" in n else 1.0)
+    check(f"{n} vs roller shafts/pulleys", bay[n], shafts, 3.0)
+    for m in names[i + 1:]:
+        check(f"{n} vs {m}", bay[n], bay[m], 1.0)
+check("Bay boards vs bay cover", conv6.union(pca), P["bay_cover"], 1.0)
 check("SKR Pico + plugs vs roller shafts/pulleys", skr, shafts, 3.0)
 from sorter import CAM_CABLE_Z
 # --- PSU under the scanner
@@ -186,36 +200,46 @@ for i, xb in enumerate(BIN_X):
 # --- camera in the hood
 for d in (CAM_D_MIN, CAM_D_MAX):
     cp = camera_plate().translate((SCAN_X, 0, PATH + d + 44 - 4))
-    check(f"Camera plate + tabs at lens height {d:.0f} mm vs hood (ribs)", cp, P["hood"], 0.2, "tab to rib 0.3 mm, closes when the M3 x 10 is tightened")
+    check(f"Camera plate + tabs at lens height {d:.0f} mm vs hood lid (ribs)", cp, P["hood_lid"], 0.2, "tab to rib 0.3 mm, closes when the M3 x 10 is tightened")
     zc = PATH + d + 44 + CAM_HOLE_DZ
     checks.append(dict(label=f"Hanger screw inside the rib slot at {d:.0f} mm", overlap=0, gap=round(min(zc - CAM_SLOT_Z0, CAM_SLOT_Z1 - zc), 2), need=0.0,
                        ok=CAM_SLOT_Z0 - 0.01 <= zc <= CAM_SLOT_Z1 + 0.01, note="slot runs the whole 158-205 range"))
 for d in (CAM_D_MIN, CAM_D_MAX):
     cam = B.hq_camera().translate((SCAN_X, 0, PATH + d + 44))
-    check(f"HQ camera at lens height {d:.0f} mm vs hood", cam, P["hood"], 2.0, "clamped to the slotted roof ribs")
+    check(f"HQ camera at lens height {d:.0f} mm vs hood + lid", cam, P["hood"].union(P["hood_lid"]), 2.0, "clamped to the slotted ribs under the lid")
 # --- screen
 check("Screen wall mount (between hopper and hood) vs front wire channel", P["mount_wall_gap"], P["scan_side_front"].cut(box(120, 230, -60, -54.9, PATH - 40, PATH)), 0.5)
 blk = screen_placed(screen_block())
 pod = P["screen_cradle"].union(P["pod_cover"])
 check("Screen + Pi block vs hood + hopper", blk, P["hood"].union(P["raw_tower"]), 2.0, "in front of the gap, tilted back")
 check("Screen + Pi block vs pod frame + cover", blk, pod, 0.0, "drops in from behind, 0.4 mm play")
+conv = screen_placed(converter_block())
+check("5 V converter vs Pi block (in the pod)", conv, blk, 3.0, "beside the Pi, at its USB-C end")
+check("5 V converter vs pod (only its bosses)", conv, P["screen_cradle"].union(P["pod_cover"]), 0.0)
 check("Pi cooler vs pod back wall (air gap)", screen_placed(box(-35, 35, 9.6, PI_STACK, PI_ON_SCREEN_Z + 6, PI_ON_SCREEN_Z + 50)), P["pod_cover"], 5.0)
 others = pr(*[k for k in P if k not in ("mount_wall_gap", "screen_cradle", "pod_cover")])
 check("Screen pod vs everything else (hopper, hood, walls)", pod, others, 3.0)
 check("Pod's GoPro tab vs the wall mount's prongs", P["pod_cover"], P["mount_wall_gap"], 0.0, "2 prongs between 3, M5 thumbscrew")
 rib, rib_len = camera_ribbon()
 check("Camera ribbon vs hood (through the slot, under the rails)", rib, P["hood"], 0.1)
+check("Camera ribbon vs hood lid", rib, P["hood_lid"], 1.0)
+check("Hood lid vs hood (light trap clearance)", P["hood_lid"], P["hood"], 0.15, "tongue in the groove, 0.2 mm all round")
+check("Sheen cap vs everything but the hood", P["sheen_cap"], pr(*[k for k in P if k not in ("hood", "sheen_cap")]), 2.0)
 check("Camera ribbon vs pod", rib, pod, 0.3)
-check("Camera ribbon vs everything else (track, fins, hopper)", rib, pr(*[k for k in P if k not in ("hood", "screen_cradle", "pod_cover")]), 2.0)
+check("Camera ribbon vs everything else (track, fins, hopper)", rib, pr(*[k for k in P if k not in ("hood", "hood_lid", "screen_cradle", "pod_cover")]), 2.0)
 for d in (CAM_D_MIN, CAM_D_MAX):
     cp = camera_plate().translate((SCAN_X, 0, PATH + d + 44 - 4)).union(B.hq_camera().translate((SCAN_X, 0, PATH + d + 44)))
     check(f"Ribbon run beside the camera vs camera + plate at {d:.0f} mm", rib.cut(box(SCAN_X - 12, 1e3, -1e3, 1e3, -1e3, 1e3)), cp, 0.5,
           "up to the fold; the last bit follows the camera when you set its height")
 checks.append(dict(label="Camera ribbon run (Pi -> behind screen -> up inside the hood -> camera)", overlap=0, gap=round(500 - rib_len, 1), need=40,
                    ok=500 - rib_len >= 40, note=f"~{rib_len:.0f} mm on a 500 mm cable"))
-u = usbc_cable_run()
-checks.append(dict(label="USB-C power cable (converter in the bay -> Pi) vs its 305 mm lead", overlap=0, gap=round(305 - u, 1), need=25,
-                   ok=305 - u >= 25, note=f"~{u:.0f} mm; hangs free from the pod into the bay"))
+import wiring
+for r in wiring.runs():
+    if r["have"] is None:
+        continue
+    need = r["run"] * 1.15
+    checks.append(dict(label=f'Cable: {r["cable"]} ({r["run"]:.0f} mm run +15%)', overlap=0, gap=round(r["have"] - need, 1), need=0,
+                       ok=r["have"] >= need, note=r["use"]))
 # --- wiring
 loom_back = 8 * 3 + 8 * 2 + 9 * 3          # servo + emitter + bin-full conductors, full 9-bin build
 area = loom_back * 3.1416 * (1.1 / 2) ** 2

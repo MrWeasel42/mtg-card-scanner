@@ -83,3 +83,14 @@ def hq_camera():
 
 def display():
     return box(-94.75, 94.75, -15, 0, 0, 120)
+
+def pca9685():
+    """Adafruit 815 flat: 62.5 x 25.4 PCB at z 0..1.6, servo headers + plugs on top (keep-out 18 mm), both I2C
+    header ends with plugs (keep-out 12 mm past each end)."""
+    return box(0, 62.5, 0, 25.4, 0, 1.6).union(box(0, 62.5, 0, 25.4, 1.6, 20)).union(box(-12, 74.5, 4, 21, 1.6, 12))
+
+def potted_converter():
+    """Potted 24 V step-down (5 V USB-C or 6 V): body 48 x 34 x 14 with ear tabs to 61 long; leads leave both ends
+    (15 mm bend room)."""
+    b = box(-24, 24, -17, 17, 0, 14).union(box(-30.5, 30.5, -6, 6, 0, 2))
+    return b.union(box(-39, -24, -8, 8, 2, 12)).union(box(24, 39, -8, 8, 2, 12))

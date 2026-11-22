@@ -293,7 +293,71 @@
   "gap": 5.0,
   "need": 1.0,
   "ok": true,
-  "note": "the Pi talks to it over UART from the hood"
+  "note": "the Pi (in the screen pod) talks to it over UART"
+ },
+ {
+  "label": "6 V servo step-down (left inner wall) vs feeder base",
+  "overlap": 0.0,
+  "gap": 0.3,
+  "need": 0.0,
+  "ok": true,
+  "note": "taped / tied against the wall it sits on"
+ },
+ {
+  "label": "6 V servo step-down (left inner wall) vs SKR Pico + plugs, tray",
+  "overlap": 0.0,
+  "gap": 2.89,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "6 V servo step-down (left inner wall) vs roller shafts/pulleys",
+  "overlap": 0.0,
+  "gap": 83.74,
+  "need": 3.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "6 V servo step-down (left inner wall) vs PCA9685 servo board (back inner wall)",
+  "overlap": 0.0,
+  "gap": 14.52,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "PCA9685 servo board (back inner wall) vs feeder base",
+  "overlap": 0.0,
+  "gap": 0.2,
+  "need": 0.0,
+  "ok": true,
+  "note": "taped / tied against the wall it sits on"
+ },
+ {
+  "label": "PCA9685 servo board (back inner wall) vs SKR Pico + plugs, tray",
+  "overlap": 0.0,
+  "gap": 24.28,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "PCA9685 servo board (back inner wall) vs roller shafts/pulleys",
+  "overlap": 0.0,
+  "gap": 75.22,
+  "need": 3.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Bay boards vs bay cover",
+  "overlap": 0.0,
+  "gap": 51.0,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
  },
  {
   "label": "SKR Pico + plugs vs roller shafts/pulleys",
@@ -480,7 +544,7 @@
   "note": "set the VL53L1X to a 4 x 4 region (about 15 deg); full stack is 63 mm away, past its 40 mm minimum"
  },
  {
-  "label": "Camera plate + tabs at lens height 158 mm vs hood (ribs)",
+  "label": "Camera plate + tabs at lens height 100 mm vs hood lid (ribs)",
   "overlap": 0.0,
   "gap": 0.3,
   "need": 0.2,
@@ -488,7 +552,7 @@
   "note": "tab to rib 0.3 mm, closes when the M3 x 10 is tightened"
  },
  {
-  "label": "Hanger screw inside the rib slot at 158 mm",
+  "label": "Hanger screw inside the rib slot at 100 mm",
   "overlap": 0,
   "gap": 0.0,
   "need": 0.0,
@@ -496,7 +560,7 @@
   "note": "slot runs the whole 158-205 range"
  },
  {
-  "label": "Camera plate + tabs at lens height 205 mm vs hood (ribs)",
+  "label": "Camera plate + tabs at lens height 135 mm vs hood lid (ribs)",
   "overlap": 0.0,
   "gap": 0.3,
   "need": 0.2,
@@ -504,7 +568,7 @@
   "note": "tab to rib 0.3 mm, closes when the M3 x 10 is tightened"
  },
  {
-  "label": "Hanger screw inside the rib slot at 205 mm",
+  "label": "Hanger screw inside the rib slot at 135 mm",
   "overlap": 0,
   "gap": 0.0,
   "need": 0.0,
@@ -512,20 +576,20 @@
   "note": "slot runs the whole 158-205 range"
  },
  {
-  "label": "HQ camera at lens height 158 mm vs hood",
+  "label": "HQ camera at lens height 100 mm vs hood + lid",
   "overlap": 0.0,
   "gap": 15.6,
   "need": 2.0,
   "ok": true,
-  "note": "clamped to the slotted roof ribs"
+  "note": "clamped to the slotted ribs under the lid"
  },
  {
-  "label": "HQ camera at lens height 205 mm vs hood",
+  "label": "HQ camera at lens height 135 mm vs hood + lid",
   "overlap": 0.0,
-  "gap": 2.0,
+  "gap": 4.0,
   "need": 2.0,
   "ok": true,
-  "note": "clamped to the slotted roof ribs"
+  "note": "clamped to the slotted ribs under the lid"
  },
  {
   "label": "Screen wall mount (between hopper and hood) vs front wire channel",
@@ -550,6 +614,22 @@
   "need": 0.0,
   "ok": true,
   "note": "drops in from behind, 0.4 mm play"
+ },
+ {
+  "label": "5 V converter vs Pi block (in the pod)",
+  "overlap": 0.0,
+  "gap": 8.5,
+  "need": 3.0,
+  "ok": true,
+  "note": "beside the Pi, at its USB-C end"
+ },
+ {
+  "label": "5 V converter vs pod (only its bosses)",
+  "overlap": 0.0,
+  "gap": 0.0,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
  },
  {
   "label": "Pi cooler vs pod back wall (air gap)",
@@ -584,6 +664,30 @@
   "note": ""
  },
  {
+  "label": "Camera ribbon vs hood lid",
+  "overlap": 0.0,
+  "gap": 27.19,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Hood lid vs hood (light trap clearance)",
+  "overlap": 0.0,
+  "gap": 0.2,
+  "need": 0.15,
+  "ok": true,
+  "note": "tongue in the groove, 0.2 mm all round"
+ },
+ {
+  "label": "Sheen cap vs everything but the hood",
+  "overlap": 0.0,
+  "gap": 25.0,
+  "need": 2.0,
+  "ok": true,
+  "note": ""
+ },
+ {
   "label": "Camera ribbon vs pod",
   "overlap": 0.0,
   "gap": 2.2,
@@ -600,17 +704,17 @@
   "note": ""
  },
  {
-  "label": "Ribbon run beside the camera vs camera + plate at 158 mm",
+  "label": "Ribbon run beside the camera vs camera + plate at 100 mm",
   "overlap": 0.0,
-  "gap": 37.82,
+  "gap": 19.03,
   "need": 0.5,
   "ok": true,
   "note": "up to the fold; the last bit follows the camera when you set its height"
  },
  {
-  "label": "Ribbon run beside the camera vs camera + plate at 205 mm",
+  "label": "Ribbon run beside the camera vs camera + plate at 135 mm",
   "overlap": 0.0,
-  "gap": 7.0,
+  "gap": 14.5,
   "need": 0.5,
   "ok": true,
   "note": "up to the fold; the last bit follows the camera when you set its height"
@@ -618,18 +722,154 @@
  {
   "label": "Camera ribbon run (Pi -> behind screen -> up inside the hood -> camera)",
   "overlap": 0,
-  "gap": 55.5,
+  "gap": 140.5,
   "need": 40,
   "ok": true,
-  "note": "~445 mm on a 500 mm cable"
+  "note": "~360 mm on a 500 mm cable"
  },
  {
-  "label": "USB-C power cable (converter in the bay -> Pi) vs its 305 mm lead",
+  "label": "Cable: Mains (IEC inlet -> PSU) (92 mm run +15%)",
   "overlap": 0,
-  "gap": 31.8,
-  "need": 25,
+  "gap": 44.0,
+  "need": 0,
   "ok": true,
-  "note": "~273 mm; hangs free from the pod into the bay"
+  "note": "the inlet's own pre-wired 18 AWG leads"
+ },
+ {
+  "label": "Cable: USB-C power (Pi) (76 mm run +15%)",
+  "overlap": 0,
+  "gap": 193.1,
+  "need": 0,
+  "ok": true,
+  "note": "the converter's own 12 in (305 mm) lead"
+ },
+ {
+  "label": "Cable: Camera ribbon (360 mm run +15%)",
+  "overlap": 0,
+  "gap": 86.5,
+  "need": 0,
+  "ok": true,
+  "note": "Pi 5 camera cable, 500 mm (22-pin mini -> 15-pin standard)"
+ },
+ {
+  "label": "Cable: Display ribbon + power (60 mm run +15%)",
+  "overlap": 0,
+  "gap": 31.0,
+  "need": 0,
+  "ok": true,
+  "note": "the cables in the display box"
+ },
+ {
+  "label": "Cable: UART to the motor board (TX, RX, GND) (261 mm run +15%)",
+  "overlap": 0,
+  "gap": 100.1,
+  "need": 0,
+  "ok": true,
+  "note": "female-female jumpers, 40 cm (in one black braided sleeve with the rest of the loom)"
+ },
+ {
+  "label": "Cable: I2C + 3.3 V (servo board, bin sensors) (299 mm run +15%)",
+  "overlap": 0,
+  "gap": 56.4,
+  "need": 0,
+  "ok": true,
+  "note": "female-female jumpers, 40 cm"
+ },
+ {
+  "label": "Cable: Bin-sensor XSHUT x3 + beam signals x2 (201 mm run +15%)",
+  "overlap": 0,
+  "gap": 168.9,
+  "need": 0,
+  "ok": true,
+  "note": "female-female jumpers, 40 cm, joined in the bay"
+ },
+ {
+  "label": "Cable: Feed motor (297 mm run +15%)",
+  "overlap": 0,
+  "gap": 658.5,
+  "need": 0,
+  "ok": true,
+  "note": "the motor's own 1 m cable (coil the spare)"
+ },
+ {
+  "label": "Cable: Track motor (977 mm run +15%)",
+  "overlap": 0,
+  "gap": 876.1,
+  "need": 0,
+  "ok": true,
+  "note": "its 1 m cable + a 1 m 4-pin stepper extension (BUY)"
+ },
+ {
+  "label": "Cable: Card-clear sensor (TCRT5000) (187 mm run +15%)",
+  "overlap": 0,
+  "gap": 85.0,
+  "need": 0,
+  "ok": true,
+  "note": "female-female jumpers, 30 cm"
+ },
+ {
+  "label": "Cable: Belt-home sensor (TCRT5000) (357 mm run +15%)",
+  "overlap": 0,
+  "gap": 89.1,
+  "need": 0,
+  "ok": true,
+  "note": "female-female jumpers, 50 cm (BUY)"
+ },
+ {
+  "label": "Cable: Door servo, bin 1 (517 mm run +15%)",
+  "overlap": 0,
+  "gap": 155.5,
+  "need": 0,
+  "ok": true,
+  "note": "servo's 25 cm lead + 50 cm servo extension (BUY)"
+ },
+ {
+  "label": "Cable: Beam emitter, bin 1 (533 mm run +15%)",
+  "overlap": 0,
+  "gap": 137.2,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 50 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Beam receiver, bin 1 (448 mm run +15%)",
+  "overlap": 0,
+  "gap": 234.3,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 50 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Door servo, bin 2 (639 mm run +15%)",
+  "overlap": 0,
+  "gap": 515.2,
+  "need": 0,
+  "ok": true,
+  "note": "servo's 25 cm lead + 1 m servo extension (BUY)"
+ },
+ {
+  "label": "Cable: Beam emitter, bin 2 (655 mm run +15%)",
+  "overlap": 0,
+  "gap": 496.9,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 1 m servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Beam receiver, bin 2 (570 mm run +15%)",
+  "overlap": 0,
+  "gap": 94.0,
+  "need": 0,
+  "ok": true,
+  "note": "its 25 cm leads + 50 cm servo extension (Dupont crimped on the leads)"
+ },
+ {
+  "label": "Cable: Bay fan (optional, 30 mm) (67 mm run +15%)",
+  "overlap": 0,
+  "gap": 73.0,
+  "need": 0,
+  "ok": true,
+  "note": "fan's own leads"
  },
  {
   "label": "Back wire channel fill, full 9-bin build",

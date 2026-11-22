@@ -25,4 +25,17 @@ First design pass: nothing printed yet. Test-print the gate plate and an exit ro
   straight up to the Pi (~270 mm), in through the hole in the bay cover.
 * Picture the right way up: `bash ~/mtg-card-scanner/machine/screen-rotate.sh 90` (or 270).
 
+## Hood and lid
+
 ![hood inside](renders/hood_cutaway.png)
+
+* The camera sits 4.5 in (115 mm) above the card, adjustable 100-135 mm. Close up the 6 mm lens bows the picture
+  (fisheye); the machine straightens it in software after a one-time lens calibration (Tools -> Calibrate lens).
+* The roof is a **lid** (`hood_lid`) with the camera hanging from it: lift it off and set height and focus with
+  the camera in your hands, watching the live view. A tongue on the hood sits in a groove between the lid's two
+  skirts (light can't get past two right-angle turns) and a key on the back means it only goes on one way.
+* LED channels on the front and back walls, 55 mm (2.2 in) above the card, so a glossy card or sleeve reflects them
+  away from the lens. Sheen LED: 20 mm of the same strip in `sheen_cap` on the back wall, shining in low.
+* Every cable, its route and its length: [WIRING.md](WIRING.md).
+
+![lid off](renders/hood_lid_off.png)

@@ -53,7 +53,8 @@ GATE = 0.45                       # raw-card gate opening, set with the adjuster
 TOWER_LEAN = 3.0                  # degrees the hopper leans back (+Y)
 PSU_L, PSU_W, PSU_H = 129.0, 97.0, 30.0   # Mean Well LRS-100-24 (L x W x H); terminal block on one 97 mm end
 PSU_X0 = 180.0                    # PSU case starts here; its terminals face -X with 25 mm for the wires
-CAM_D = 200.0                     # lens front to card, adjustable 158-205 mm (the 6 mm lens focuses from 200 mm)
+CAM_D = 115.0                     # lens front to card (4.5 in; Eric's test: sharp from ~4 in, card fills the frame).
+                                  # Adjustable 100-135 mm. The lens's barrel distortion is taken out in software (lens calibration).
 CHAN_Z0, CHAN_Z1 = 28.0, 50.0     # back wire channel: 10 x 18 mm inside (fits the full 9-bin loom at <40% fill)
 CHAN_F0, CHAN_F1 = 150.0, 172.0   # front channel runs higher, above the bin bays
 END_BIN_D = 113.0; END_BIN_Y = -18.5   # end bin: Y +38 .. -75
@@ -455,11 +456,15 @@ SCAN_X0, SCAN_X1 = 150.0, BIN_X[0] - PITCH / 2  # scan module footprint along X 
 HOOD_X0, HOOD_X1 = SCAN_X - 77.0, SCAN_X + 78.0
 CAM_RIB_X0 = 34.6    # camera hanger ribs at |X - SCAN_X| 34.6..38.6
 CAM_HOLE_DZ = 5.0    # tab insert centre, above the camera PCB's underside
-CAM_D_MIN, CAM_D_MAX = 158.0, 205.0
+CAM_D_MIN, CAM_D_MAX = 100.0, 135.0
 CAM_SLOT_Z0 = PATH + 44 + CAM_D_MIN + CAM_HOLE_DZ   # lens tip is 44 below the PCB underside
 CAM_SLOT_Z1 = PATH + 44 + CAM_D_MAX + CAM_HOLE_DZ
-HOOD_H = 266.0        # lens-to-card 160-205 mm with 2 mm over the camera at the top; prints 256 tall (Neptune 4 Pro: 265)
+HOOD_H = 198.0        # lens-to-card 100-135 mm, camera plate under the lid's roof at the top setting
 CAM_CABLE_Z = PATH + HOOD_H - 15.0  # camera connector level (roughly)
+SHEEN_Z = WALL_TOP + 6.0            # sheen LED port in the back wall, under the back LED ledge
+LED_H = 55.0                        # LED strips this far above the card
+LID_Z = PATH + HOOD_H - 12.0        # the hood's removable lid starts here
+LID_KEY_X = SCAN_X + 40.0           # lid key on the back side, off-centre: the lid only goes on one way
 RIB_Y = -46.0                       # camera ribbon's line along the hood's left wall and roof (clear of the camera ribs)
 RIB_SLOT_Z = WALL_TOP + 15.0        # ribbon slot low in the hood's left wall, just above the conveyor
 SCREEN_TILT = 15.0                  # screen leans back this many degrees
@@ -529,6 +534,13 @@ def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True, ba
 
 HOME_X, HOME_Y = SCAN_X0 + 10.0, 39.5   # belt home sensor (TCRT5000 looking up at the fins, back side)
 
+def scan_side_front():
+    """Front wall of the scan module. A hole at the feeder end lets the front channel's looms (bin-level sensors,
+    beam receivers) into the space under the scanner, and from there through the feeder base's pass-through
+    into the electronics bay."""
+    f = side_frame(SCAN_X0, SCAN_X1, -1, bin_opening=False)
+    return f.cut(box(SCAN_X0 + 4, SCAN_X0 + 22, -(WALL_OUT + 1), -(WALL_IN - 1), CHAN_F0 + 3, CHAN_F1 - 3))
+
 def scan_side_back():
     """Back wall of the scan module, with the power/cable window that the inlet plate covers."""
     f = side_frame(SCAN_X0, SCAN_X1, 1, bin_opening=False)
@@ -569,15 +581,7 @@ def hood():
         for sg in (-1, 1):
             y0p, y1p = sorted((sg * WALL_IN_UP, sg * 72.5))
             h = h.union(box(xa, xb, y0p, y1p, WALL_TOP, WALL_TOP + 5))
-    # camera hanger: two ribs hang from the roof with a vertical slot each; camera_plate's tabs carry inserts,
-    # 2 x M3 x 10 through the slots set the lens height anywhere from 158 to 207 mm above the card.
-    zr = PATH + HOOD_H - 3
-    for sx in (-1, 1):
-        xa, xb = sorted((SCAN_X + sx * CAM_RIB_X0, SCAN_X + sx * (CAM_RIB_X0 + 4)))
-        h = h.union(box(xa, xb, -10, 10, CAM_SLOT_Z0 - 4.5, zr + 0.5))
-        h = h.cut(box(xa - 1, xb + 1, -1.7, 1.7, CAM_SLOT_Z0, CAM_SLOT_Z1))
-        for zz in (CAM_SLOT_Z0, CAM_SLOT_Z1):
-            h = h.cut(cyl_x(0, zz, 1.7, xa - 1, xb + 1))
+    # (the camera hangs from the removable lid: hood_lid)
     # Camera ribbon: in through a slot low in the LEFT (hopper-side) wall, just above the conveyor and hidden behind
     # the screen, then up the inside of the wall under pairs of opposing L-rails (slide the ribbon in under them
     # before plugging it in), then across at camera height (beside the camera plate) to the camera's front edge.
@@ -590,22 +594,69 @@ def hood():
             h = h.union(box(x0 + 3 - 0.1, x0 + 3 + 2.4, y0r, y1r, z, z + 18))                 # stem off the wall
             y0l, y1l = sorted((e + sg * 2, e - sg * 3))
             h = h.union(box(x0 + 3 + 1.4, x0 + 3 + 2.4, y0l, y1l, z, z + 18))                # lip over the ribbon edge
-    # LED channel ledges (aluminium channel 17 x 8 mm) at 90 mm above the card, all round
-    zled = PATH + 90
+    # LED channel ledges (aluminium channel 17 x 8 mm) on the front and back walls, LED_H above the card: low enough
+    # that a glossy card or sleeve reflects them away from the lens (mirror point lands outside the card)
+    zled = PATH + LED_H
     h = h.union(box(x0 + 3, x1 - 3, y0 + 3, y0 + 14, zled - 2, zled))
     h = h.union(box(x0 + 3, x1 - 3, y1 - 14, y1 - 3, zled - 2, zled))
-    # sheen LED port (low angle, back wall)
-    h = h.cut(cyl_y(SCAN_X, WALL_TOP + 10, 6, y1 - 4, y1 + 1))
+    # sheen LED port (low angle, back wall): a 2 cm piece of the COB strip in sheen_cap shines in through it
+    h = h.cut(cyl_y(SCAN_X, SHEEN_Z, 6, y1 - 4, y1 + 1))
+    for dx in (-17, 17):                                                   # sheen_cap screws (M3 inserts)
+        h = h.union(cyl_y(SCAN_X + dx, SHEEN_Z, 4.5, y1 - 0.5, y1 + 5))
+        h = h.cut(cyl_y(SCAN_X + dx, SHEEN_Z, M3_INSERT / 2, y1 - 0.4, y1 + 6))
+    # LED wires (both channels + the sheen LED) leave through this hole low in the back wall, near the right end,
+    # and drop down the back of the scan module into the back wire channel
+    h = h.cut(cyl_y(x1 - 14, WALL_TOP + 22, 3.5, y1 - 4, y1 + 1))
     # feet that sit on the scan-module walls, M3 holes
     for s in (-1, 1):
         for xc in (x0 + 8, x1 - 8):
             if SCAN_X0 + 8 <= xc <= SCAN_X1 - 8 or True:
                 h = h.cut(cyl_z(xc, s * (WALL_IN_UP + WALL_OUT) / 2, M3 / 2, WALL_TOP - 1, WALL_TOP + 6))
-    return h
+    # the top comes off as hood_lid: cut here, add the tongue of the light trap
+    h = h.intersect(box(x0 - 1, x1 + 1, y0 - 1, y1 + 1, -1e3, LID_Z))
+    tongue = box(x0 + 1.6, x1 - 1.6, y0 + 1.6, y1 - 1.6, LID_Z - 0.01, LID_Z + 6).cut(box(x0 + 3, x1 - 3, y0 + 3, y1 - 3, LID_Z - 1, LID_Z + 7))
+    tongue = tongue.cut(box(LID_KEY_X - 10.4, LID_KEY_X + 10.4, y1 - 4, y1 + 1, LID_Z - 1, LID_Z + 7))   # key notch
+    return h.union(tongue)
+
+def hood_lid():
+    """Removable roof of the hood with the camera hanging from it. Light trap: the hood's 1.4 mm tongue sits in a
+    groove between the lid's outer and inner skirts (two right-angle turns, light can't get through). A key on the
+    back side only fits the notch in the tongue one way round, so the lid always goes on the right way.
+    Lift it off and the camera comes with it: set the height and focus in your hands, watching the live view.
+    Camera hanger: two ribs with vertical slots; camera_plate's tabs (M3 inserts) clamp on with 2 x M3 x 10.
+    Prints roof down, no supports."""
+    x0, x1, y0, y1 = HOOD_X0, HOOD_X1, -75.0, 75.0
+    top = PATH + HOOD_H
+    ring = lambda a, b, z0, z1: box(x0 + a, x1 - a, y0 + a, y1 - a, z0, z1).cut(box(x0 + b, x1 - b, y0 + b, y1 - b, z0 - 1, z1 + 1))
+    l = box(x0, x1, y0, y1, top - 3, top)                                  # roof
+    l = l.union(ring(0, 1.4, LID_Z + 0.2, top))                            # outer skirt (flush with the walls)
+    l = l.union(ring(1.4, 3.0, LID_Z + 6.2, top))                          # wall over the tongue
+    l = l.union(ring(3.2, 4.6, LID_Z + 1.0, top))                          # inner skirt
+    l = l.union(box(LID_KEY_X - 10, LID_KEY_X + 10, y1 - 3.2, y1 - 1.4, LID_Z + 0.2, LID_Z + 6.2))   # key
+    for xg in (x0 + 25, x1 - 25):                                          # finger grips on the roof
+        l = l.cut(box(xg - 12, xg + 12, -30, 30, top - 1, top + 1))
+    zr = top - 3
+    for sx in (-1, 1):
+        xa, xb = sorted((SCAN_X + sx * CAM_RIB_X0, SCAN_X + sx * (CAM_RIB_X0 + 4)))
+        l = l.union(box(xa, xb, -10, 10, CAM_SLOT_Z0 - 4.5, zr + 0.5))
+        l = l.cut(box(xa - 1, xb + 1, -1.7, 1.7, CAM_SLOT_Z0, CAM_SLOT_Z1))
+        for zz in (CAM_SLOT_Z0, CAM_SLOT_Z1):
+            l = l.cut(cyl_x(0, zz, 1.7, xa - 1, xb + 1))
+    return l
+
+def sheen_cap():
+    """Light-tight cap over the sheen LED port on the outside of the hood's back wall: holds a 20 mm piece of the
+    24 V COB strip facing in. 2 x M3 x 8 into the hood's inserts; wires out of the bottom to the LED exit."""
+    c = box(-24, 24, 0, 9, -10, 10)
+    c = c.cut(box(-12, 12, -1, 6, -5, 5))                                  # strip pocket (20 x 8 strip + room)
+    c = c.cut(box(-3, 3, -1, 4, -11, -4))                                  # wire exit
+    for dx in (-17, 17):
+        c = c.cut(cyl_y(dx, 0, M3 / 2, -1, 10))
+    return c
 
 def camera_plate():
     """Carries the HQ camera (4 x M2.5 x 6 on 30 x 30, under the PCB; the lens mount drops through the hole).
-    Two tabs with M3 heat-set inserts clamp to the slotted ribs on the hood roof (M3 x 10 from outside).
+    Two tabs with M3 heat-set inserts clamp to the slotted ribs on the hood lid (M3 x 10, lid off).
     Local frame: plate z 0..4, top face against the camera PCB."""
     p = box(-31, 31, -31, 31, 0, 4)
     for sx in (-1, 1):
@@ -754,7 +805,8 @@ def end_cap():
 def electronics_tray():
     """Slides into the feeder base under the hopper. SKR Pico (same 58 x 49 mm M2.5 pattern as a Pi) at the front
     on 8 mm bosses; servo driver, 6 V step-down and LED MOSFET on a 10 mm grid of M3 holes behind it. Zip-tie
-    slots along both edges for the looms. (The Pi 5 lives on the back of the hood, next to the camera.)"""
+    slots along both edges for the looms. (The Pi 5 lives in the screen pod; the 6 V step-down and the servo board
+    sit on the bay's inner walls. hardware/WIRING.md has every cable.)"""
     T = 3.0
     t = box(0, 133, -54, 54, 0, T)
     for dx in (0, 58):
@@ -784,7 +836,7 @@ def bay_cover():
             c = c.cut(cyl_y(108 + dx, 30 + dz, 1.5, -1, 4))
     for (x, z) in ((5, 6), (131, 6), (5, 66), (131, 66)):
         c = c.cut(cyl_y(x, z, M3 / 2, -1, 4))
-    c = c.cut(cyl_y(128, 80, 7.5, -1, 4))                                 # USB-C cable up to the Pi (plug passes through)
+    c = c.cut(box(111, 133, -1, 4, 74, 86))                               # USB-C + the Pi's jumper loom (plugs pass through)
     return c
 
 def psu_cradle():
@@ -883,7 +935,7 @@ POD_PIV_W = (175.0, -WALL_OUT - 9 - 19, PATH - 21)   # pivot on mount_wall_gap's
 POD_D = 40.0             # screen pod depth behind the display: Pi stack 29 + 6 mm air over the fan + 3 mm wall
 SCR_PIV = (0.0, POD_D + POD_STANDOFF + 12.0, 12.0)   # GoPro pivot in the cradle frame: low on the pod's back
 CONV_L, CONV_W, CONV_T, CONV_EARS = 48.0, 34.0, 14.0, 55.0   # 24 V -> 5 V USB-C converter (measured), ear slots 55 apart
-CONV_X, CONV_Z = -70.0, 60.0   # (unused: the converter lives in the electronics bay)
+CONV_X, CONV_Z = -68.0, 60.0   # 5 V USB-C converter in the pod, beside the Pi's USB-C end
 USBC_X = -31.0                 # Pi's USB-C port, from the screen centre (port edge up, at the GPIO end)
 RIB_EXIT_Z = PI_ON_SCREEN_Z + 56 + 10   # camera ribbon leaves the pod's back just above the Pi
 
@@ -959,9 +1011,10 @@ def screen_cradle():
     return c
 
 def pod_cover():
-    """Back of the screen pod: hides the Pi and the ends of its cables. Vents over the Pi's fan. The camera ribbon
-    leaves through a slot in the back just above the Pi; the USB-C power cable through a notch low down, and drops
-    straight into the electronics bay. GoPro tab on a standoff low on the back. 4 x M3 x 10 to the frame."""
+    """Back of the screen pod: hides the Pi, its 5 V USB-C converter (on 2 M3 inserts beside the Pi) and the cable
+    ends. Vents over the Pi's fan and beside the converter. The camera ribbon leaves through a slot in the back just
+    above the Pi; one bundle (the converter's 24 V pair + the Pi's jumper loom) leaves through the notch at the
+    bottom and hangs free down into the electronics bay. GoPro tab on a standoff low on the back."""
     W, H, T, w = SCREEN_W + 0.8, SCREEN_H + 0.8, 3.0, 2.5
     x0, x1, z0, z1 = -W / 2 - T, W / 2 + T, -0.4 - T, H - 0.4 + T
     c = box(x0, x1, T, POD_D, z0, z1).cut(box(x0 + w, x1 - w, T - 1, POD_D - w, z0 + w, z1 - w))
@@ -973,10 +1026,21 @@ def pod_cover():
     for xv in range(-32, 33, 8):                                             # fan / board vents
         c = c.cut(box(xv - 2, xv + 2, POD_D - w - 1, POD_D + 1, PI_ON_SCREEN_Z + 6, PI_ON_SCREEN_Z + 50))
     c = c.cut(box(CAM_PORT_X - 11, CAM_PORT_X + 11, POD_D - w - 1, POD_D + 1, RIB_EXIT_Z - 2.5, RIB_EXIT_Z + 2.5))
-    c = c.cut(box(USBC_X - 7, USBC_X + 7, POD_D - w - 1, POD_D + 1, z0 - 1, z0 + w + 10))   # USB-C cable notch
+    c = c.cut(box(USBC_X - 11, USBC_X + 11, POD_D - w - 1, POD_D + 1, z0 - 1, z0 + w + 12))   # USB-C + GPIO loom notch
+    for zv in range(20, 101, 10):                                            # converter vents (side wall)
+        c = c.cut(box(x0 - 1, x0 + w + 1, 12, 30, zv, zv + 4))
+    for dz in (-CONV_EARS / 2, CONV_EARS / 2):                               # 5 V converter bosses (M3 inserts)
+        c = c.union(cyl_y(CONV_X, CONV_Z + dz, 4.5, POD_D - w - 6, POD_D - w + 0.1))
+        c = c.cut(cyl_y(CONV_X, CONV_Z + dz, M3_INSERT / 2, POD_D - w - 7, POD_D - w - 1))
     c = c.union(box(-17, 17, POD_D - 0.5, POD_D + POD_STANDOFF, SCR_PIV[2] - 9.5, SCR_PIV[2] + 9.5))   # standoff
     tab = gopro(2, 12, base_w=30, base_t=0.01).rotate((0, 0, 0), (1, 0, 0), -90).translate((0, POD_D + POD_STANDOFF, SCR_PIV[2]))
     return c.union(tab)
+
+def converter_block():
+    """The 24 V -> 5 V USB-C converter on its bosses inside the pod (body + ears), cradle frame."""
+    yb = POD_D - 2.5 - 6
+    b = box(CONV_X - CONV_W / 2, CONV_X + CONV_W / 2, yb - CONV_T, yb, CONV_Z - CONV_L / 2, CONV_Z + CONV_L / 2)
+    return b.union(box(CONV_X - 6, CONV_X + 6, yb - 2, yb, CONV_Z - CONV_L / 2 - 7, CONV_Z + CONV_L / 2 + 7))
 
 def camera_ribbon():
     """The camera ribbon's path (picture + length check): Pi port -> out the pod's back -> across the hidden gap behind
@@ -999,15 +1063,6 @@ def camera_ribbon():
         s_ = cq.Workplane(cq.Plane(origin=a, xDir=wd, normal=d)).box(16, 0.6, L, centered=(True, True, False))
         shp = s_ if shp is None else shp.union(s_)
     return shp, total + 6 * 6                                            # + the bends and folds
-
-def usbc_cable_run():
-    """USB-C power cable from the 5 V converter in the electronics bay up to the Pi (length check only)."""
-    port = screen_xf(USBC_X, 10, PI_ON_SCREEN_Z + 56)
-    notch = screen_xf(USBC_X, POD_D, 4)
-    hole = (7 + 128.0, -63.0, RAIL_Z + 6 + 80)
-    up = 25                                                              # plug + bend over the top of the port
-    run = up + math.dist(port, notch) + math.dist(notch, hole) + 60      # + ~60 mm inside the bay to the converter
-    return run
 
 # ============================================================================ final-look shell (render / later print)
 def shell_parts(length=660.0):
@@ -1053,10 +1108,12 @@ PRINTED = {
     "sensor_clip":     (sensor_clip, 4, "PETG", "Holds an Adafruit break-beam half (20 x 10 x 8 housing)."),
     "fit_coupon":      (fit_coupon, 1, "PETG", "PRINT FIRST. Flat. Test inserts, bearings, shaft, pin and nut against the * sizes; tell Claude which fit."),
     "motor_standoff":  (motor_standoff, 2, "PETG", "Standing on a side wall, 5 walls. One for the feed motor, one for the track motor. M3 x 8 to the motor, M3 x 10 to the wall."),
-    "scan_side_front": (lambda: side_frame(SCAN_X0, SCAN_X1, -1, bin_opening=False), 1, "PETG", "On its outer face."),
+    "scan_side_front": (scan_side_front, 1, "PETG", "On its outer face."),
     "scan_side_back":  (lambda: scan_side_back(), 1, "PETG", "On its outer face."),
     "scan_floor":      (scan_floor, 1, "PLA matte green", "Top face DOWN on the smooth side of the plate: flat, slick, dull."),
-    "hood":            (hood, 1, "PLA matte black", "Upside down (roof on the plate), tree supports for the tunnel only. ~16 h."),
+    "hood":            (hood, 1, "PLA matte black", "Upright, tongue on top. Tree supports under the tunnel, pads and LED ledges."),
+    "hood_lid":        (hood_lid, 1, "PLA matte black", "Roof down, no supports. Camera plate clamps to its ribs."),
+    "sheen_cap":       (sheen_cap, 1, "PLA matte black", "Back face down. 20 mm of COB strip inside; 2 x M3 x 8 to the hood."),
     "camera_plate":    (camera_plate, 1, "PETG", "Tabs up. 2 M3 inserts in the tabs; clamps to the hood ribs with 2 x M3 x 10. Camera ribbon connector toward the FRONT."),
     "polarizer_cap":   (polarizer_cap, 1, "PETG", ""),
     "bin_side_back":   (lambda: bin_module_side(1), 2, "PETG", "On its outer face; one per bin module."),
@@ -1075,7 +1132,7 @@ PRINTED = {
     "inlet_plate":     (inlet_plate, 1, "PETG", "Flat. Cutout 47.5 x 27.5 mm for a snap-in C14 inlet; check yours."),
     "channel_cover":   (channel_cover, 6, "PLA", "On its back. Clips over the wire channels."),
     "screen_cradle":   (screen_cradle, 1, "PETG", "Face down. Display (Pi on its back) drops in from behind, Pi's port edge UP. 4 M3 inserts in the ears."),
-    "pod_cover":       (pod_cover, 1, "PLA matte black", "Back face down, tree supports for the GoPro standoff. 4 x M3 x 10 to the frame."),
+    "pod_cover":       (pod_cover, 1, "PLA matte black", "Back face down, tree supports for the GoPro standoff. 2 M3 inserts for the 5 V converter; 4 x M3 x 10 to the frame."),
     "mount_wall":      (mount_wall, 1, "PETG", "Screen mount: bolts across the hopper/scanner gap on the front walls; the screen pod clips on (M5 thumbscrew)."),
     "mount_roof":      (mount_roof, 1, "PETG", "Optional: screen on top of the hood."),
     "gopro_arm":       (gopro_arm, 2, "PETG", "100% infill. Or use store-bought GoPro extension arms."),
@@ -1092,10 +1149,12 @@ def placed():
     P["feed_roller"] = feed_roller().translate((FEED_X, 0, FEED_Z))
     P["exit_roller"] = exit_roller().translate((EXIT_X, 0, EXIT_Z))
     P["exit_roller_top"] = exit_roller().translate((EXIT_X, 0, PATH + 9.6))
-    P["scan_side_front"] = side_frame(SCAN_X0, SCAN_X1, -1, bin_opening=False)
+    P["scan_side_front"] = scan_side_front()
     P["scan_side_back"] = scan_side_back()
     P["scan_floor"] = scan_floor()
     P["hood"] = hood()
+    P["hood_lid"] = hood_lid()
+    P["sheen_cap"] = sheen_cap().translate((SCAN_X, 75.0 + 5, SHEEN_Z))
     for i, xb in enumerate(BIN_X[:2]):
         x0 = xb - PITCH / 2
         P[f"bin_side_back_{i}"] = bin_module_side(1).translate((x0, 0, 0))

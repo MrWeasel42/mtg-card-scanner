@@ -61,6 +61,10 @@ class Klipper:
     def lights(self, value: float) -> None:
         self.gcode(f"SET_PIN PIN=lights VALUE={value:.2f}")
 
+    def sheen(self, value: float) -> None:
+        """Low-angle sheen LED (foil check photo)."""
+        self.gcode(f"SET_PIN PIN=sheen VALUE={value:.2f}")
+
 
 # ------------------------------------------------------------------------------------------------ servos
 class Doors:
