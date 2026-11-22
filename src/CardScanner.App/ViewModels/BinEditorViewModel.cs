@@ -145,6 +145,66 @@ public partial class BinEditorViewModel : ObservableObject
     [ObservableProperty] private string _preset = PresetList[0];
     private BinSetup _base = new();
     private bool _loading;
+    private UiSettings? _store;
+
+    // ---- saved setups ("★ Save these bins as…"), the same as on the machine's touchscreen
+    public ObservableCollection<string> SavedNames { get; } = [];
+    [ObservableProperty] private string? _savedPick;
+    [ObservableProperty] private string _saveName = "";
+    [ObservableProperty] private string _savedText = "";
+    public bool HasSaved => SavedNames.Count > 0;
+
+    /// <summary>Where saved setups are kept (the app's settings).</summary>
+    public void AttachStore(UiSettings store)
+    {
+        _store = store;
+        RefreshSaved();
+    }
+
+    private void RefreshSaved()
+    {
+        var pick = SavedPick;
+        SavedNames.Clear();
+        foreach (var x in _store?.SavedSetups ?? []) SavedNames.Add(x.Name);
+        SavedPick = SavedNames.Contains(pick ?? "") ? pick : null;
+        OnPropertyChanged(nameof(HasSaved));
+    }
+
+    /// <summary>Picking a saved setup loads it straight away (like tapping it on the machine).</summary>
+    partial void OnSavedPickChanged(string? value)
+    {
+        var x = _store?.SavedSetups.FirstOrDefault(s => s.Name == value);
+        if (x is null) return;
+        Load(x.Setup.Clone());
+        SaveName = x.Name;
+        SavedText = $"Loaded “{x.Name}”.";
+        Changed?.Invoke();
+    }
+
+    [RelayCommand]
+    private void SaveAs()
+    {
+        if (_store is null) return;
+        var name = SaveName.Trim();
+        if (name.Length == 0) name = "My setup";
+        _store.SavedSetups.RemoveAll(s => s.Name == name);
+        _store.SavedSetups.Insert(0, new NamedSetup { Name = name, Setup = ToSetup() });
+        if (_store.SavedSetups.Count > 12) _store.SavedSetups.RemoveRange(12, _store.SavedSetups.Count - 12);
+        _store.Save();
+        RefreshSaved();
+        SavedText = $"★ Saved as “{name}”.";
+    }
+
+    [RelayCommand]
+    private void DeleteSaved()
+    {
+        if (_store is null || SavedPick is not { } name) return;
+        _store.SavedSetups.RemoveAll(s => s.Name == name);
+        _store.Save();
+        SavedPick = null;
+        RefreshSaved();
+        SavedText = $"Deleted “{name}”.";
+    }
 
     /// <summary>Raised whenever anything changes (the Settings page shows "not saved yet").</summary>
     public event Action? Changed;

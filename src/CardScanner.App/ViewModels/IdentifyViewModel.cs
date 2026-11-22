@@ -39,6 +39,7 @@ public partial class IdentifyViewModel : ObservableObject
         _thumbs = new ThumbnailCache(paths);
         _logPath = Path.Combine(paths.LogsDir, "identify_results_v7.csv");
         _settings = UiSettings.Load(paths);
+        BinEditor.AttachStore(_settings);
         PhoneLink.Instance.StatusChanged += t => Avalonia.Threading.Dispatcher.UIThread.Post(() => PhoneLinkStatus = t);
         PhoneLinkStatus = PhoneLink.Instance.Status;
         PhoneLink.Instance.Handler = HandlePhoneRequestAsync;
@@ -244,11 +245,24 @@ public partial class IdentifyViewModel : ObservableObject
     /// <summary>A photo sent by the phone app: identified like a dropped file, but in the background (no busy
     /// banner, the page stays usable) and only added to the list if a card was actually found.
     /// Call on the UI thread.</summary>
-    private async Task<ResultItemViewModel> IdentifyPhonePhotoAsync(string file)
+    /// <summary>A photo from the phone or the machine. sets/turn: the machine session's set lock and "turned
+    /// around" (identify again); both only for this photo, so the PC's own session is untouched.</summary>
+    private async Task<ResultItemViewModel> IdentifyPhonePhotoAsync(string file, string sets = "", bool turn = false)
     {
         await _gate.WaitAsync();
-        try { return await IdentifyOneAsync(file, insert: false); }
-        finally { _gate.Release(); }
+        var keep = _recognizer?.SetLock;
+        try
+        {
+            var locked = sets.Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                             .Select(x => x.ToLowerInvariant()).ToHashSet();
+            if (locked.Count > 0 && _recognizer is not null) _recognizer.SetLock = locked;
+            return await IdentifyOneAsync(file, insert: false, forceUpsideDown: turn ? true : null);
+        }
+        finally
+        {
+            if (_recognizer is not null) _recognizer.SetLock = keep;
+            _gate.Release();
+        }
     }
 
     private void Insert(ResultItemViewModel item)
@@ -259,12 +273,12 @@ public partial class IdentifyViewModel : ObservableObject
         _ = item.LoadThumbnailsAsync(_thumbs);
     }
 
-    private async Task<ResultItemViewModel> IdentifyOneAsync(string file, bool insert = true)
+    private async Task<ResultItemViewModel> IdentifyOneAsync(string file, bool insert = true, bool? forceUpsideDown = null)
     {
         ResultItemViewModel item;
         try
         {
-            var result = await Task.Run(() => _recognizer.IdentifyFile(file));
+            var result = await Task.Run(() => _recognizer.IdentifyFile(file, forceUpsideDown: forceUpsideDown));
             item = new ResultItemViewModel(result, this);
             SaveCropDiagnostics(result);
         }

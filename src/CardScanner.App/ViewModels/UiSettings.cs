@@ -7,6 +7,13 @@ namespace CardScanner.App.ViewModels;
 /// <summary>Where the compare view puts the tags, card info and buttons.</summary>
 public enum CompareLayout { Left, Top, Right }
 
+/// <summary>A bin setup saved under a name.</summary>
+public sealed class NamedSetup
+{
+    public string Name { get; set; } = "";
+    public CardScanner.Core.Sorting.BinSetup Setup { get; set; } = new();
+}
+
 /// <summary>Small per-user preferences, saved as settings.json next to the logs.</summary>
 public sealed class UiSettings
 {
@@ -23,6 +30,10 @@ public sealed class UiSettings
     /// <summary>The bin rules and mode used for the last scan session (the start panel opens with them).</summary>
     public CardScanner.Core.Sorting.BinSetup Bins { get; set; } = new();
     public bool CatalogMode { get; set; } = true;
+
+    /// <summary>Bin setups saved by name ("★ Save these bins as…"), newest first, up to 12. The same list the
+    /// machine's touchscreen keeps; the machine also offers these as "★ name (PC)".</summary>
+    public List<NamedSetup> SavedSetups { get; set; } = [];
 
     /// <summary>Export formats ticked last time (Finish writes these too).</summary>
     public List<string> ExportFormats { get; set; } = ["ManaBox", "Moxfield"];

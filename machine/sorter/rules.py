@@ -13,6 +13,7 @@ A rule: {"kind": "Price"|"Color"|"Letters"|"Rarity"|"Set"|"Type"|"Anything", "na
 from __future__ import annotations
 
 import copy
+import re
 import unicodedata
 
 MAX_BINS = 9
@@ -291,3 +292,17 @@ def choose(s: dict, c: dict, flagged: bool = False, flag_reason: str | None = No
     if c.get("price") is None and any(r and r["kind"] == "Price" for r in rules):
         return {"bin": end, "label": "Flagged", "wanted": 0, "reason": "no price"}
     return {"bin": end, "label": "Everything else", "wanted": end, "reason": "no bin's rule fits"}
+
+
+def parse_sets(v) -> list[str]:
+    """A set lock as typed ("HOB, hoc  spg") or a list -> ["hob", "hoc", "spg"] (blank = every set)."""
+    if not v:
+        return []
+    if isinstance(v, str):
+        v = re.split(r"[\s,;/]+", v)
+    out = []
+    for x in v:
+        x = str(x).strip().lower()
+        if x and x not in out:
+            out.append(x)
+    return out

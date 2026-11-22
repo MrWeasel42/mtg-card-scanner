@@ -293,7 +293,8 @@ class LocalIdentifier:
             return f"catalog check failed: {e}"
 
     # -- identifying
-    def identify(self, jpeg: bytes) -> dict:
+    def identify(self, jpeg: bytes, sets=None, turn: bool = False) -> dict:
+        """sets: only these printings are considered (a session's set lock); turn: the card is upside down."""
         if self.rec is None:
             return {"ok": False, "offline": True, "error": f"The machine's card reader isn't ready ({self.detail})"}
         t0 = time.monotonic()
@@ -303,7 +304,11 @@ class LocalIdentifier:
                 photo = cv2.imdecode(np.frombuffer(jpeg, np.uint8), cv2.IMREAD_COLOR)
                 if photo is None:
                     raise ValueError("Couldn't open the photo.")
-                r = rec.identify(photo, "machine")
+                rec.set_lock = {x.lower() for x in sets} if sets else None
+                try:
+                    r = rec.identify(photo, "machine", force_upside_down=True if turn else None)
+                finally:
+                    rec.set_lock = None
             item = Item(r, photo)
             card = item.top.card if item.top else None
             if card is None or (not item.pinned and not (r.name_read or "").strip() and not r.collector.raw.strip()):

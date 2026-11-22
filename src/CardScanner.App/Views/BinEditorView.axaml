@@ -35,6 +35,21 @@
   </UserControl.Styles>
 
   <StackPanel Spacing="12">
+    <!-- saved setups (the same list idea as the machine's touchscreen) -->
+    <WrapPanel>
+      <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,24,6" IsVisible="{Binding HasSaved}">
+        <TextBlock Text="★ Saved setups" VerticalAlignment="Center" />
+        <ComboBox ItemsSource="{Binding SavedNames}" SelectedItem="{Binding SavedPick}" Width="200"
+                  PlaceholderText="Pick one to load" />
+        <Button Content="Delete" Command="{Binding DeleteSavedCommand}" IsEnabled="{Binding SavedPick, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
+        <TextBox Text="{Binding SaveName}" Width="170" Watermark="Name, e.g. Color sort" />
+        <Button Content="★ Save these bins as" Command="{Binding SaveAsCommand}"
+                ToolTip.Tip="Keeps this bin setup under a name, to pick again any time (here or on the machine's screen)." />
+        <TextBlock Classes="muted" FontSize="12" VerticalAlignment="Center" Text="{Binding SavedText}" />
+      </StackPanel>
+    </WrapPanel>
     <!-- bins in use + presets -->
     <WrapPanel>
       <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,24,6">

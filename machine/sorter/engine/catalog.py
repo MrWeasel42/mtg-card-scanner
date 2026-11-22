@@ -107,6 +107,8 @@ class CardInfo:
     colors: str = ""
     type_line: str = ""
     lang: str = "en"
+    tcgplayer_id: str = ""
+    tcgplayer_etched_id: str = ""
 
     @property
     def language_name(self) -> str:
@@ -126,7 +128,7 @@ class CardInfo:
                 "number": self.collector_number, "rarity": self.rarity, "colors": self.colors, "typeLine": self.type_line,
                 "lang": self.lang, "finishes": [x.strip() for x in self.finishes.split(",") if x.strip()],
                 "prices": {"nonfoil": self.price_usd, "foil": self.price_usd_foil, "etched": self.price_usd_etched},
-                "imageUrl": self.image_url}
+                "imageUrl": self.image_url, "tcgplayerId": self.tcgplayer_id, "tcgplayerEtchedId": self.tcgplayer_etched_id}
 
 
 _BASE_COLUMNS = ("id, name, set_code, set_name, collector_number, released_at, frame, finishes, promo_types, "
@@ -143,6 +145,8 @@ class CardCatalog:
         self._con = _connect(db_path)
         has = lambda sql: self._con.execute(sql).fetchone() is not None
         self._cols = _BASE_COLUMNS + (", lang" if has("SELECT 1 FROM pragma_table_info('cards') WHERE name = 'lang'") else ", 'en'")
+        self._cols += (", tcgplayer_id, tcgplayer_etched_id"
+                       if has("SELECT 1 FROM pragma_table_info('cards') WHERE name = 'tcgplayer_id'") else ", NULL, NULL")
         self.set_sizes: dict[str, set[int]] = {}
         if has("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'set_info'"):
             for code, size in self._con.execute("SELECT set_code, printed_size FROM set_info WHERE printed_size > 0"):
@@ -153,7 +157,8 @@ class CardCatalog:
         s = lambda v: "" if v is None else str(v)
         f = lambda v: None if v is None else float(v)
         return CardInfo(r[0], r[1], r[2], r[3], r[4], s(r[5]), s(r[6]), s(r[7]), s(r[8]), s(r[9]), f(r[10]), f(r[11]),
-                        f(r[12]), s(r[13]), s(r[14]), s(r[15]), s(r[16]), s(r[17]) or "en")
+                        f(r[12]), s(r[13]), s(r[14]), s(r[15]), s(r[16]), s(r[17]) or "en",
+                        s(r[18]) if len(r) > 18 else "", s(r[19]) if len(r) > 19 else "")
 
     def get_many(self, ids) -> dict[str, CardInfo]:
         ids = list(ids)

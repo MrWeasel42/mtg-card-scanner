@@ -25,6 +25,11 @@ public partial class HomeViewModel : ObservableObject
 
     [ObservableProperty] private string _continueText = "";
     [ObservableProperty] private bool _hasRecent;
+    [ObservableProperty] private RecentSession? _renaming;
+    [ObservableProperty] private string _renameText = "";
+    [ObservableProperty] private string _recentNote = "";
+    public bool IsRenaming => Renaming is not null;
+    partial void OnRenamingChanged(RecentSession? value) => OnPropertyChanged(nameof(IsRenaming));
 
     public HomeViewModel(MainViewModel main, IdentifyViewModel scan)
     {
@@ -98,6 +103,59 @@ public partial class HomeViewModel : ObservableObject
     [RelayCommand] private void OpenPhonePhotosFolder() => OpenFolder(Scan.AppPaths.PhonePhotosDir);
     public string DataFolderText => Scan.AppPaths.Root;
     [RelayCommand] private void OpenRecent(RecentSession? s) { if (s is not null) OpenFolder(s.Folder); }
+    [RelayCommand] private void OpenMachine() => _main.ShowMachine();
+
+    // ---- rename / delete a past session (the same as on the machine's screen)
+    [RelayCommand]
+    private void StartRename(RecentSession? s)
+    {
+        if (s is null) return;
+        Renaming = s;
+        RenameText = s.Name;
+    }
+
+    [RelayCommand] private void CancelRename() => Renaming = null;
+
+    [RelayCommand]
+    private void SaveRename()
+    {
+        if (Renaming is not { } s) return;
+        var name = RenameText.Trim();
+        Renaming = null;
+        if (name.Length == 0 || name == s.Name) return;
+        try
+        {
+            var json = Path.Combine(s.Folder, "session.json");
+            var node = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(json))!.AsObject();
+            node["Name"] = name;
+            File.WriteAllText(json, node.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+            RecentNote = $"Renamed to “{name}”. (Its folder and CSV file names stay as they were.)";
+        }
+        catch (Exception ex) { Log.Error("Rename session", ex); RecentNote = "Couldn't rename it: " + ex.Message; }
+        Refresh();
+    }
+
+    /// <summary>The session's folder goes to the Recycle Bin (so it can be put back).</summary>
+    [RelayCommand]
+    private void DeleteRecent(RecentSession? s)
+    {
+        if (s is null) return;
+        if (Scan.SessionActive && Scan.SessionFolder is { } open && Path.GetFullPath(open) == Path.GetFullPath(s.Folder))
+        {
+            RecentNote = "That session is open: finish it first.";
+            return;
+        }
+        try
+        {
+            if (OperatingSystem.IsWindows())
+                Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(s.Folder, Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                    Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+            else Directory.Delete(s.Folder, recursive: true);
+            RecentNote = $"“{s.Name}” moved to the Recycle Bin.";
+        }
+        catch (Exception ex) { Log.Error("Delete session", ex); RecentNote = "Couldn't delete it: " + ex.Message; }
+        Refresh();
+    }
 
     internal static void OpenFolder(string dir)
     {
@@ -121,6 +179,17 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty] private string _binsSavedText = "";
 
+    /// <summary>A format Finish writes (the same list as the machine's Settings → Export formats).</summary>
+    public sealed partial class FormatPick : ObservableObject
+    {
+        private readonly Action _changed;
+        public CsvExport.Format Format { get; }
+        [ObservableProperty] private bool _isOn;
+        public FormatPick(CsvExport.Format f, bool on, Action changed) { Format = f; _isOn = on; _changed = changed; }
+        partial void OnIsOnChanged(bool value) => _changed();
+    }
+    public ObservableCollection<FormatPick> Formats { get; } = [];
+
     public SettingsViewModel(MainViewModel main, IdentifyViewModel scan)
     {
         _main = main;
@@ -131,6 +200,9 @@ public partial class SettingsViewModel : ObservableObject
 
     public void Refresh()
     {
+        Formats.Clear();
+        foreach (var f in CsvExport.Formats)
+            Formats.Add(new FormatPick(f, Scan.Settings.ExportFormats.Contains(f.Key), SaveFormats));
         _shown = false;
         Scan.LoadSetupDefaults();
         BinsSavedText = "";
@@ -161,6 +233,14 @@ public partial class SettingsViewModel : ObservableObject
             Scan.Layout = Array.IndexOf(LayoutList, value) switch { 1 => CompareLayout.Right, 2 => CompareLayout.Top, _ => CompareLayout.Left };
             OnPropertyChanged();
         }
+    }
+
+    private void SaveFormats()
+    {
+        var on = Formats.Where(f => f.IsOn).Select(f => f.Format.Key).ToList();
+        if (on.Count == 0) return;                      // at least one: the last tick can't be taken off
+        Scan.Settings.ExportFormats = on;
+        Scan.Settings.Save();
     }
 
     [RelayCommand]

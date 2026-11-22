@@ -182,3 +182,28 @@ body.sub .brand { display: none; }
 
 /* the dialog slides up just enough to clear the keyboard (never off the top of the screen) */
 #sheet { transition: transform .18s ease-out; }
+
+/* light theme (Settings → Look; the same Dark / Light / System choice as the Windows app) */
+:root.light { --bg: #f3f5f8; --panel: #ffffff; --panel2: #e9edf2; --line: #d3dae3; --ink: #121820; --muted: #5b6878;
+  --accent: #0d9488; --accent-ink: #ffffff; }
+:root.light #update { background: #dbeafe; }
+
+/* review tabs, tags and the big compare */
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.tabs button { min-height: 48px; padding: 0 16px; border-radius: 10px; background: var(--panel2); font-weight: 600; font-size: 17px; }
+.tabs button.on { background: var(--accent); color: var(--accent-ink); }
+.tags button { min-height: 44px; padding: 0 14px; border-radius: 10px; background: var(--panel2); font-size: 16px; font-weight: 600; }
+.tags button.on { background: var(--warn); color: #261800; }
+.rvlist { display: flex; flex-direction: column; gap: 8px; }
+.rvrow { display: flex; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px; cursor: pointer; }
+.rvrow .th { width: 54px; aspect-ratio: 3/4; border-radius: 6px; background: #000 center/cover no-repeat; flex: none; }
+#compare { position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 60; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr) auto; gap: 16px; padding: 16px; }
+#compare .side { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+#compare .pic { flex: 1; background: #000 center/contain no-repeat; border-radius: 12px; }
+#compare .cap { color: #e8edf2; font-weight: 700; text-align: center; }
+#compare.bottoms .pic { background-size: 100% auto; background-position: center bottom; }
+.drop { display: block; cursor: pointer; border: 2px dashed var(--line); border-radius: 14px; padding: 26px; text-align: center; }
+.drop.over { border-color: var(--accent); }
+.checks { display: flex; flex-direction: column; gap: 8px; }
+.checks label { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; background: var(--panel2); border-radius: 10px; cursor: pointer; }
+.checks input { width: 26px; height: 26px; flex: none; margin-top: 2px; }

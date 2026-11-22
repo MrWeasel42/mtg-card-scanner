@@ -170,6 +170,8 @@ public partial class IdentifyViewModel
     }
 
     internal static string ExportFolder => ExportRoot;
+    /// <summary>The open session's folder (null when none is open).</summary>
+    internal string? SessionFolder => _sessionDir.Length > 0 ? _sessionDir : null;
 
     private static string ExportRoot => Log.Paths.SessionsDir;
 

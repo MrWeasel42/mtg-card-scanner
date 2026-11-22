@@ -71,6 +71,24 @@
         </StackPanel>
       </Border>
 
+      <!-- Export formats -->
+      <Border Classes="card">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="section" Text="Export formats" />
+          <TextBlock Classes="note" Text="Finish writes these for Catalog sessions (⇩ Export can write any of them again). The machine has the same list in its own Settings." />
+          <ItemsControl ItemsSource="{Binding Formats}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Margin="0,4,0,0">
+                  <CheckBox IsChecked="{Binding IsOn, Mode=TwoWay}" Content="{Binding Format.Title}" />
+                  <TextBlock Classes="note" Margin="28,0,0,0" Text="{Binding Format.Description}" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
       <!-- Default bin setup -->
       <Border Classes="card">
         <StackPanel Spacing="12">

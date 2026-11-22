@@ -30,7 +30,7 @@
     <StackPanel Margin="28,22" MaxWidth="1100" HorizontalAlignment="Stretch" Spacing="18">
       <TextBlock Classes="h1" Text="Home" />
 
-      <UniformGrid Columns="4" Margin="0,0,-14,0">
+      <UniformGrid Columns="5" Margin="0,0,-14,0">
         <Button Classes="tile" Command="{Binding StartSessionCommand}">
           <StackPanel Spacing="6">
             <TextBlock Text="▶" FontSize="26" Classes="teal" />
@@ -54,6 +54,14 @@
                        Text="Identify photos (drag them in), review and verify cards, compare printings." />
           </StackPanel>
         </Button>
+        <Button Classes="tile" Command="{Binding OpenMachineCommand}">
+          <StackPanel Spacing="6">
+            <TextBlock Text="🗂" FontSize="26" />
+            <TextBlock Text="Card sorter" FontSize="17" FontWeight="SemiBold" />
+            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                       Text="The machine from here: its run, pause / stop, tools, identify on, updates, its sessions." />
+          </StackPanel>
+        </Button>
         <Button Classes="tile" Command="{Binding OpenSettingsCommand}">
           <StackPanel Spacing="6">
             <TextBlock Text="⚙" FontSize="26" Classes="teal" />
@@ -69,6 +77,13 @@
           <StackPanel Spacing="10">
             <TextBlock Text="Recent sessions" FontSize="16" FontWeight="SemiBold" />
             <TextBlock Classes="muted" FontSize="12" Text="No sessions yet." IsVisible="{Binding !HasRecent}" />
+            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsRenaming}">
+              <TextBox Text="{Binding RenameText}" Width="280" Watermark="New name" />
+              <Button Classes="accent" Content="Save" Command="{Binding SaveRenameCommand}" />
+              <Button Content="Cancel" Command="{Binding CancelRenameCommand}" />
+            </StackPanel>
+            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding RecentNote}"
+                       IsVisible="{Binding RecentNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <ItemsControl ItemsSource="{Binding Recent}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
@@ -82,9 +97,14 @@
                         <Run Text="{Binding When}" /><Run Text="  ·  " /><Run Text="{Binding Summary}" />
                       </TextBlock>
                     </StackPanel>
-                    <Button Grid.Column="1" Content="📁 Open" FontSize="12" VerticalAlignment="Center"
-                            Command="{Binding $parent[ItemsControl].DataContext.OpenRecentCommand}"
-                            CommandParameter="{Binding}" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                      <Button Content="📁 Open" FontSize="12"
+                              Command="{Binding $parent[ItemsControl].DataContext.OpenRecentCommand}" CommandParameter="{Binding}" />
+                      <Button Content="✎" FontSize="12" ToolTip.Tip="Rename"
+                              Command="{Binding $parent[ItemsControl].DataContext.StartRenameCommand}" CommandParameter="{Binding}" />
+                      <Button Content="🗑" FontSize="12" ToolTip.Tip="Delete (to the Recycle Bin)"
+                              Command="{Binding $parent[ItemsControl].DataContext.DeleteRecentCommand}" CommandParameter="{Binding}" />
+                    </StackPanel>
                   </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>

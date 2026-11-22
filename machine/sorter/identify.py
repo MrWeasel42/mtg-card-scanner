@@ -97,16 +97,19 @@ class PcIdentifier:
                 body = r.read()
                 return json.loads(body) if r.headers.get_content_type() == "application/json" or body[:1] in b"{[" else body
         except urllib.error.HTTPError as e:
-            if e.code == 404 and path == "/api/identify":
+            if e.code == 404 and path.startswith("/api/identify"):
                 self.supports_identify = False
             try:
                 return json.load(e)
             except ValueError:
                 return {"ok": False, "error": f"PC answered {e.code}"}
 
-    def identify(self, jpeg: bytes) -> dict:
+    def identify(self, jpeg: bytes, sets=None, turn: bool = False) -> dict:
+        """sets: the session's set lock; turn: identify it turned around (older PC apps ignore both: the session
+        then flags any card outside the locked sets)."""
+        q = "&".join(x for x in (f"sets={','.join(sets)}" if sets else "", "turn=1" if turn else "") if x)
         try:
-            r = self._call("/api/identify", jpeg, "image/jpeg", timeout=90)
+            r = self._call("/api/identify" + ("?" + q if q else ""), jpeg, "image/jpeg", timeout=90)
         except OSError as e:
             self.online = False
             return {"ok": False, "error": f"PC not reachable ({e})", "offline": True}
@@ -190,7 +193,7 @@ class SimIdentifier:
                                                              "foil": round(self.rng.uniform(1, 80), 2), "etched": None},
                 "imageUrl": ""}
 
-    def identify(self, jpeg: bytes) -> dict:
+    def identify(self, jpeg: bytes, sets=None, turn: bool = False) -> dict:
         if self.hang_s > 0:
             time.sleep(self.hang_s)
             if self.hang_s > 0:

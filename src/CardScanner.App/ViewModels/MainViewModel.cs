@@ -27,6 +27,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public IdentifyViewModel? Scan { get; private set; }
     public HomeViewModel? Home { get; private set; }
     public SettingsViewModel? SettingsPage { get; private set; }
+    public MachineViewModel? MachinePage { get; private set; }
     private object? _beforeSettings;
 
     /// <summary>The pages can be switched once the card database is loaded.</summary>
@@ -51,6 +52,20 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     public void ShowScan() { if (Scan is not null) CurrentPage = Scan; }
+
+    /// <summary>The card sorter: the same controls as its touchscreen.</summary>
+    public void ShowMachine()
+    {
+        if (MachinePage is null) return;
+        if (CurrentPage is not MachineViewModel) _beforeSettings = CurrentPage;
+        MachinePage.Show();
+        CurrentPage = MachinePage;
+    }
+
+    partial void OnCurrentPageChanged(object? oldValue, object? newValue)
+    {
+        if (oldValue is MachineViewModel m && newValue is not MachineViewModel) m.Hide();
+    }
 
     public void ShowSettings()
     {
@@ -121,6 +136,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Scan = new IdentifyViewModel(_recognizer, Paths) { RequestSettings = ShowSettings };
             Home = new HomeViewModel(this, Scan);
             SettingsPage = new SettingsViewModel(this, Scan);
+            MachinePage = new MachineViewModel(this, Scan);
             Ready = true;
             if (wasHome) GoHome(); else ShowScan();
         }

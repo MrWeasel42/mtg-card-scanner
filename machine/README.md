@@ -30,6 +30,9 @@ PC app (Windows) <--Wi-Fi--  sorter.py (Pi) --Moonraker--> Klipper --UART--> SKR
 
 ## 1b. Touchscreen app (once)
 
+The touchscreen has the same features as the Windows app (see [docs/apps.md](../docs/apps.md)); the PC app has a
+**Card sorter** page with the machine's run, controls, tools and settings.
+
 `bash ~/mtg-card-scanner/machine/install.sh` then `sudo reboot`. It installs two services:
 
 * `card-sorter` runs `sorter/app.py` (the machine + the web app on port 8080), restarted if it ever stops.

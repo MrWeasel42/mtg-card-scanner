@@ -19,7 +19,22 @@ public sealed class PhoneLink
     public static PhoneLink Instance { get; } = new();
 
     /// <summary>One request from the phone (or the machine's Pi).</summary>
-    public sealed record Request(string Method, string Path, IReadOnlyDictionary<string, string> Headers, byte[] Body, string Peer);
+    public sealed record Request(string Method, string Path, IReadOnlyDictionary<string, string> Headers, byte[] Body, string Peer,
+                                 string Query = "")
+    {
+        /// <summary>One query-string value ("" when it isn't there).</summary>
+        public string Arg(string name)
+        {
+            foreach (var part in Query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                int i = part.IndexOf('=');
+                var k = Uri.UnescapeDataString(i < 0 ? part : part[..i]);
+                if (string.Equals(k, name, StringComparison.OrdinalIgnoreCase))
+                    return i < 0 ? "1" : Uri.UnescapeDataString(part[(i + 1)..].Replace('+', ' '));
+            }
+            return "";
+        }
+    }
 
     /// <summary>Set by the identify page: answers /api/scan, /api/session/*, /api/undo and /api/status.
     /// Returns the HTTP status and a reply object (serialized to JSON).</summary>
@@ -151,7 +166,7 @@ public sealed class PhoneLink
         var stream = client.GetStream();
         try
         {
-            var (method, path, headers, body) = await ReadRequest(stream, ct);
+            var (method, path, query, headers, body) = await ReadRequest(stream, ct);
             string peer = (client.Client.RemoteEndPoint as IPEndPoint)?.Address.ToString() ?? "phone";
             if (method == "GET" && path == "/api/hello")
             {
@@ -163,7 +178,7 @@ public sealed class PhoneLink
             {
                 if (Handler is null) { await Reply(stream, 503, new { ok = false, error = "The PC app is still loading the card database." }); return; }
                 if (path == "/api/scan" && body.Length < 1000) { await Reply(stream, 400, new { ok = false, error = "No photo in the request." }); return; }
-                var (code, result) = await Handler(new Request(method, path, headers, body, peer));
+                var (code, result) = await Handler(new Request(method, path, headers, body, peer, query));
                 if (path == "/api/scan")
                 {
                     _scans++;
@@ -182,7 +197,7 @@ public sealed class PhoneLink
 
     private const int MaxBody = 40 * 1024 * 1024;
 
-    private static async Task<(string Method, string Path, Dictionary<string, string> Headers, byte[] Body)> ReadRequest(
+    private static async Task<(string Method, string Path, string Query, Dictionary<string, string> Headers, byte[] Body)> ReadRequest(
         NetworkStream s, CancellationToken ct)
     {
         // headers: read until CRLFCRLF
@@ -215,7 +230,9 @@ public sealed class PhoneLink
             if (n == 0) throw new IOException("Connection closed early");
             read += n;
         }
-        return (first[0].ToUpperInvariant(), first.Length > 1 ? first[1].Split('?')[0] : "/", headers, body);
+        var target = first.Length > 1 ? first[1] : "/";
+        int q = target.IndexOf('?');
+        return (first[0].ToUpperInvariant(), q < 0 ? target : target[..q], q < 0 ? "" : target[(q + 1)..], headers, body);
     }
 
     /// <summary>A reply that isn't JSON (a card image for the machine's review screen).</summary>

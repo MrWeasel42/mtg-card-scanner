@@ -23,6 +23,8 @@ public partial class IdentifyViewModel
     private readonly Queue<string> _machineOrder = new();
     private int _machineSeq;
     private string? _machineHost;
+    /// <summary>The machine's address: where it last called from, else sorter.local.</summary>
+    internal string MachineHost => string.IsNullOrEmpty(_machineHost) ? "sorter.local" : _machineHost;
     private static readonly HttpClient MachineHttp = new() { Timeout = TimeSpan.FromSeconds(60) };
 
     private static object CardJson(CardInfo c) => new
@@ -31,7 +33,7 @@ public partial class IdentifyViewModel
         colors = c.Colors, typeLine = c.TypeLine, lang = c.Lang,
         finishes = c.Finishes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
         prices = new { nonfoil = c.PriceUsd, foil = c.PriceUsdFoil, etched = c.PriceUsdEtched },
-        imageUrl = c.ImageUrl,
+        imageUrl = c.ImageUrl, tcgplayerId = c.TcgplayerId, tcgplayerEtchedId = c.TcgplayerEtchedId,
     };
 
     private static JsonElement? BodyJson(PhoneLink.Request req)
@@ -52,7 +54,7 @@ public partial class IdentifyViewModel
             case "/api/identify":
                 if (req.Body.Length < 1000) return (400, new { ok = false, error = "No photo in the request." });
                 _machineHost = req.Peer;
-                return await MachineIdentifyAsync(req.Body);
+                return await MachineIdentifyAsync(req.Body, req.Arg("sets"), req.Arg("turn") == "1");
             case "/api/feedback":
                 return await ui.InvokeAsync(() => MachineFeedback(BodyJson(req)));
             case "/api/printings":
@@ -69,7 +71,11 @@ public partial class IdentifyViewModel
                 return (200, new { ok = true, cards = list.Select(CardJson).ToList() });
             }
             case "/api/setup":
-                return (200, await ui.InvokeAsync(() => (object)new { ok = true, bins = _settings.Bins, catalog = _settings.CatalogMode }));
+                return (200, await ui.InvokeAsync(() => (object)new
+                {
+                    ok = true, bins = _settings.Bins, catalog = _settings.CatalogMode,
+                    saved = _settings.SavedSetups.Select(x => new { name = x.Name, setup = x.Setup }).ToList(),
+                }));
         }
         if (req.Path.StartsWith("/api/card-image/"))
         {
@@ -83,7 +89,9 @@ public partial class IdentifyViewModel
         return null;
     }
 
-    private async Task<(int, object)> MachineIdentifyAsync(byte[] jpeg)
+    /// <param name="sets">The machine session's set lock ("hob,hoc"; blank = every set).</param>
+    /// <param name="turn">Identify it turned around (the card was upside down).</param>
+    private async Task<(int, object)> MachineIdentifyAsync(byte[] jpeg, string sets = "", bool turn = false)
     {
         var dir = Path.Combine(_paths.PhonePhotosDir, "Machine", DateTime.Now.ToString("yyyy-MM-dd"));
         Directory.CreateDirectory(dir);
@@ -92,7 +100,7 @@ public partial class IdentifyViewModel
         var ui = Avalonia.Threading.Dispatcher.UIThread;
         return await ui.InvokeAsync(async () =>
         {
-            var item = await IdentifyPhonePhotoAsync(file);
+            var item = await IdentifyPhonePhotoAsync(file, sets, turn);
             var card = item.ShownCard;
             var r = item.Result;
             bool noCard = card is null || r is null ||

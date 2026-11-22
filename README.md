@@ -14,6 +14,8 @@ Download the latest `MTGCardScanner_Setup_x.y.z.exe` from [Releases](https://git
 | Desktop app | `src/` | Downloads the catalog, identifies cards, runs scan sessions, review, and CSV export. |
 | Machine | `hardware/`, `machine/` | 9-bin card sorter: feeder, camera hood, trapdoor bins. The Pi 5 runs the touchscreen app and sessions, and identifies cards itself whenever the PC app isn't connected. |
 
+The Windows app and the machine's touchscreen are one app on two screens: same features, same review, same exports. See [docs/apps.md](docs/apps.md).
+
 The full design is in [docs/blueprint.md](docs/blueprint.md).
 
 ## License

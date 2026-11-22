@@ -7,12 +7,12 @@ card the machine scans is saved with its photo. Stop ends the scanning; then the
 On disk (~/sorter_data/sessions/<date time> <name>/):
     session.json      the session, every card and its review
     photos/0001.jpg   each card's photo
-    <name> - ManaBox.csv, <name> - Moxfield.csv   written at Finish (Catalog sessions)
+    <name> - ManaBox.csv, <name> - Moxfield.csv, ...   written at Finish (Catalog sessions), in the export
+                      formats picked in Settings (the same six as the Windows app: exports.py)
 The Windows app copies finished sessions to the PC whenever it's running (its "Machine sessions" backup).
 """
 from __future__ import annotations
 
-import csv
 import datetime as dt
 import io
 import json
@@ -22,6 +22,7 @@ import shutil
 import threading
 import zipfile
 
+import exports
 import rules
 from identify import price_for
 
@@ -80,7 +81,8 @@ class Session:
                  "pinned": bool(ident.get("pinned")), "candidates": ident.get("candidates") or [],
                  "finishes": ident.get("finishes") or [], "finish": ident.get("finish") or "nonfoil",
                  "finishUnsure": bool(ident.get("finishUnsure")), "card": ident.get("card"),
-                 "verdict": "", "note": "", "condition": "Near Mint", "bin": None, "dropped": None}
+                 "verdict": "", "note": "", "condition": "Near Mint", "altered": False, "misprint": False,
+                 "bin": None, "dropped": None}
             self._decide(c, ident.get("flagReason"))
             self.cards.append(c)
             self.save()
@@ -99,12 +101,16 @@ class Session:
             why = c["ident"].get("error") or "not identified"
         elif not c["pinned"]:
             why = pc_flag or "not sure of the printing"
-        elif self.catalog and c["finishUnsure"]:
+        elif self.catalog and c["finishUnsure"] and not self.d.get("assumeNonFoil"):
             why = "foil or not?"
+        elif self.d.get("setLock") and (card.get("setCode") or "").lower() not in self.d["setLock"]:
+            why = "not from the locked sets"
         elif (card.get("setCode") or "").lower() in ("plst", "ulst") and c["price"] is None:
             why = "List card with no price"
         if c["verdict"] == "wrong":
             why = "marked wrong"
+        elif c["verdict"] == "notlisted":
+            why = "right card, printing not listed"
         c["flagged"] = why is not None
         c["flagReason"] = why
         facts = {"name": (card or {}).get("name", ""), "price": c["price"], "colors": (card or {}).get("colors", ""),
@@ -124,11 +130,15 @@ class Session:
             self.save()
 
     def review(self, n: int, verdict: str, card: dict | None = None, finish: str | None = None,
-               note: str | None = None, condition: str | None = None) -> dict:
-        """verdict: ok (top match right), picked (chose another printing), wrong (not the card / not listed)."""
+               note: str | None = None, condition: str | None = None, altered: bool | None = None,
+               misprint: bool | None = None) -> dict:
+        """verdict: ok (top match right), picked (chose another printing), notlisted (right card, its printing
+        isn't in the list), wrong (not the card). "" takes the answer back (the card waits for review again).
+        Condition, altered and misprint can be set on their own: that doesn't count as reviewing."""
         with self.lock:
             c = self.cards[n - 1]
-            c["verdict"] = verdict
+            if verdict is not None:
+                c["verdict"] = verdict
             if card is not None:
                 c["card"] = card
             if finish:
@@ -138,7 +148,12 @@ class Session:
                 c["note"] = note
             if condition:
                 c["condition"] = condition
-            c["reviewedAt"] = now()
+            if altered is not None:
+                c["altered"] = bool(altered)
+            if misprint is not None:
+                c["misprint"] = bool(misprint)
+            if verdict:
+                c["reviewedAt"] = now()
             self._decide(c)
             self.save()
             return c
@@ -160,6 +175,31 @@ class Session:
     def to_review(self) -> list[dict]:
         return [c for c in self.cards if c["flagged"] and not c["verdict"]]
 
+    def cards_for(self, show: str) -> list[dict]:
+        """The review tabs (the same as the Windows app's): review = flagged and not answered yet, pinned = sure
+        cards nobody has checked, reviewed = answered (change an answer here), all = everything, newest first."""
+        cs = self.cards
+        if show == "review":
+            return self.to_review()
+        if show == "pinned":
+            return [c for c in cs if not c["flagged"] and not c["verdict"] and c.get("card") and not c["noCard"]]
+        if show == "reviewed":
+            return [c for c in cs if c["verdict"]][::-1]
+        if show == "flagged":
+            return [c for c in cs if c["flagged"]]
+        return cs[::-1]
+
+    def confirm_pinned(self) -> int:
+        """Marks every pinned, unchecked card as the right printing (Windows: "Mark all pinned correct")."""
+        with self.lock:
+            k = 0
+            for c in self.cards_for("pinned"):
+                c["verdict"], c["reviewedAt"] = "ok", now()
+                self._decide(c)
+                k += 1
+            self.save()
+            return k
+
     def summary(self) -> dict:
         cards = self.cards
         prices = [c["price"] for c in cards if c.get("price") is not None and c.get("card") and not c["noCard"]]
@@ -175,56 +215,28 @@ class Session:
                 "noCard": sum(1 for c in cards if c["noCard"]), "binCounts": counts,
                 "total": round(sum(prices), 2), "top": card_brief(top) if top else None,
                 "binLabels": rules.bin_labels(self.setup), "binsInUse": self.setup["binsInUse"],
-                "exports": self.d.get("exports", []), "folder": os.path.basename(self.folder)}
+                "exports": self.d.get("exports", []), "folder": os.path.basename(self.folder),
+                "pinned": sum(1 for c in cards if not c["flagged"] and not c["verdict"] and c.get("card") and not c["noCard"]),
+                "reviewed": sum(1 for c in cards if c["verdict"]), "setLock": self.d.get("setLock", []),
+                "source": self.d.get("source", "machine")}
 
     # ------------------------------------------------------------ export
-    def export(self) -> list[str]:
-        """ManaBox + Moxfield CSVs. Cards marked wrong with no printing picked, and photos with no card, are left
-        out; flagged cards nobody reviewed go in as their best guess."""
-        rows: dict[tuple, int] = {}
-        keep: dict[tuple, dict] = {}
-        for c in self.cards:
-            card = c.get("card")
-            if c["noCard"] or not card or c["verdict"] == "wrong":
-                continue
-            k = (card["id"], c["finish"], c["condition"])
-            rows[k] = rows.get(k, 0) + 1
-            keep[k] = c
+    def export(self, formats: list[str] | None = None) -> list[str]:
+        """Writes the chosen export formats (exports.py, same as the Windows app). Returns the file names."""
         base = safe_name(self.name)
         files = []
-        mb = io.StringIO()
-        w = csv.writer(mb, lineterminator="\n")
-        w.writerow(["Name", "Set code", "Set name", "Collector number", "Foil", "Rarity", "Quantity", "ManaBox ID",
-                    "Scryfall ID", "Purchase price", "Misprint", "Altered", "Signed", "Condition", "Language", "Proxy",
-                    "Purchase price currency"])
-        for k, q in sorted(rows.items(), key=lambda kv: keep[kv[0]]["card"]["name"]):
-            c = keep[k]; card = c["card"]
-            cond = c["condition"].lower().replace(" ", "_")
-            w.writerow([card["name"], card["setCode"].upper(), card.get("setName", ""), card["number"],
-                        "normal" if c["finish"] == "nonfoil" else c["finish"], card.get("rarity", ""), q, "", card["id"],
-                        "", "false", "false", "false", cond, card.get("lang") or "en", "false", ""])
-        mx = io.StringIO()
-        w = csv.writer(mx, lineterminator="\n", quoting=csv.QUOTE_ALL)
-        w.writerow(["Count", "Tradelist Count", "Name", "Edition", "Condition", "Language", "Foil", "Tags",
-                    "Last Modified", "Collector Number", "Alter", "Proxy", "Purchase Price"])
-        for k, q in sorted(rows.items(), key=lambda kv: keep[kv[0]]["card"]["name"]):
-            c = keep[k]; card = c["card"]
-            foil = {"foil": "foil", "etched": "etched"}.get(c["finish"], "")
-            tag = "needs-check" if c["flagged"] and not c["verdict"] else ""
-            w.writerow([q, 0, card["name"], card["setCode"].lower(), c["condition"],
-                        LANG_NAMES.get(card.get("lang") or "en", "English"), foil, tag, "", card["number"], "False", "False", ""])
-        for suffix, text in (("ManaBox.csv", mb.getvalue()), ("Moxfield.csv", mx.getvalue())):
+        for suffix, text in exports.write(self.cards, formats or exports.DEFAULT):
             p = os.path.join(self.folder, f"{base} - {suffix}")
             with open(p, "w", encoding="utf-8", newline="") as f:
                 f.write(text)
             files.append(os.path.basename(p))
         return files
 
-    def finish(self) -> list[str]:
+    def finish(self, formats: list[str] | None = None) -> list[str]:
         with self.lock:
             self.d["state"] = "finished"
             self.d["ended"] = self.d.get("ended") or now()
-            self.d["exports"] = self.export() if self.catalog else []
+            self.d["exports"] = self.export(formats) if self.catalog else []
             self.save()
             return self.d["exports"]
 
@@ -249,6 +261,7 @@ def card_brief(c: dict | None) -> dict | None:
             "rarity": card.get("rarity", ""), "finish": c.get("finish"), "price": c.get("price"),
             "bin": c.get("dropped") or c.get("bin"), "binLabel": c.get("binLabel"), "binReason": c.get("binReason"),
             "flagged": c.get("flagged"), "flagReason": c.get("flagReason"), "verdict": c.get("verdict"),
+            "altered": bool(c.get("altered")), "misprint": bool(c.get("misprint")),
             "cardId": card.get("id"), "imageUrl": card.get("imageUrl", "")}
 
 
@@ -258,13 +271,16 @@ class Store:
         os.makedirs(root, exist_ok=True)
         self._cache: dict[str, Session] = {}
 
-    def new(self, name: str, mode: str, setup: dict) -> Session:
+    def new(self, name: str, mode: str, setup: dict, set_lock: list[str] | None = None, assume_nonfoil: bool = False,
+            source: str = "machine") -> Session:
         t = dt.datetime.now()
         sid = t.strftime("%Y%m%d_%H%M%S")
         folder = os.path.join(self.root, f"{t:%Y-%m-%d %H%M} {safe_name(name)}")
         os.makedirs(os.path.join(folder, "photos"), exist_ok=True)
         s = Session(folder, {"id": sid, "name": name, "mode": mode, "state": "running", "started": now(), "ended": None,
-                             "bins": rules.normalize(setup), "cards": [], "exports": []})
+                             "bins": rules.normalize(setup), "cards": [], "exports": [],
+                             "setLock": [x.lower() for x in (set_lock or []) if x], "assumeNonFoil": bool(assume_nonfoil),
+                             "source": source})
         s.save()
         self._cache[sid] = s
         return s

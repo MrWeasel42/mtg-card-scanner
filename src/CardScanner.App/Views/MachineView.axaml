@@ -1,0 +1,200 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CardScanner.App.ViewModels"
+             x:Class="CardScanner.App.Views.MachineView">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.section">
+      <Setter Property="FontSize" Value="16" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.note">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+    </Style>
+    <Style Selector="Button.tool">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Margin" Value="0,0,8,8" />
+      <Setter Property="Padding" Value="12,10" />
+    </Style>
+    <Style Selector="Button.danger">
+      <Setter Property="Background" Value="#DC2626" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+  </UserControl.Styles>
+
+  <ScrollViewer>
+    <StackPanel Margin="28,22" MaxWidth="1100" HorizontalAlignment="Stretch" Spacing="16">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="14">
+          <Button Content="← Back" Command="{Binding BackCommand}" />
+          <TextBlock Classes="h1" Text="Card sorter" VerticalAlignment="Center" />
+        </StackPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button Content="🌐 Open its page" Command="{Binding OpenWebCommand}"
+                  ToolTip.Tip="The machine's own screen in your browser: review cards, download CSVs, start sessions" />
+          <Button Classes="danger" Content="⛔ STOP" Command="{Binding EStopCommand}" IsVisible="{Binding Online}"
+                  ToolTip.Tip="Emergency stop: motors off now, doors shut" />
+        </StackPanel>
+      </Grid>
+
+      <!-- status -->
+      <Border Classes="card">
+        <StackPanel Spacing="6">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="{Binding StatusText}" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock Classes="muted" FontSize="12" VerticalAlignment="Center" Text="{Binding WebAddress}" />
+          </StackPanel>
+          <TextBlock Classes="note" Text="{Binding ChipsText}" />
+          <Border Background="#F59E0B" CornerRadius="8" Padding="12,8" IsVisible="{Binding HasAlert}">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="{Binding AlertText}" Foreground="#261800" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Content="Cleared: carry on" Command="{Binding CarryOnCommand}" IsVisible="{Binding IsJam}" />
+                <Button Content="End session" Command="{Binding EndSessionCommand}" IsVisible="{Binding IsJam}" />
+                <Button Content="Reset motor board" Command="{Binding ResetMotorsCommand}" IsVisible="{Binding IsEStop}" />
+                <Button Content="Resume" Command="{Binding ResumeCommand}" IsVisible="{Binding IsPaused}" />
+              </StackPanel>
+            </Grid>
+          </Border>
+          <TextBlock Classes="note" Foreground="{DynamicResource WarnTextBrush}" Text="{Binding ConfirmText}"
+                     IsVisible="{Binding ConfirmText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+      </Border>
+
+      <!-- the run -->
+      <Border Classes="card" IsVisible="{Binding HasSession}">
+        <Grid ColumnDefinitions="300,18,*">
+          <StackPanel Spacing="6">
+            <Border CornerRadius="10" Background="Black" Height="225" ClipToBounds="True">
+              <Image Source="{Binding LastPhoto}" Stretch="Uniform" />
+            </Border>
+            <TextBlock Text="{Binding LastCardName}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" />
+            <TextBlock Classes="note" Text="{Binding LastCardLine}" />
+          </StackPanel>
+          <StackPanel Grid.Column="2" Spacing="10">
+            <TextBlock Text="{Binding SessionName}" FontSize="20" FontWeight="Bold" />
+            <TextBlock Classes="note" Text="{Binding SessionLine}" />
+            <TextBlock Text="{Binding StatsText}" TextWrapping="Wrap" />
+            <ItemsControl ItemsSource="{Binding Bins}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Margin="0,0,6,0" Padding="8" CornerRadius="10" BorderThickness="2"
+                          Background="{DynamicResource InsetBrush}"
+                          BorderBrush="{Binding IsHit, Converter={x:Static vm:MachineBrushes.Hit}}">
+                    <StackPanel Spacing="2">
+                      <TextBlock Classes="muted" FontSize="10" Text="{Binding Title}" />
+                      <TextBlock FontSize="20" FontWeight="Bold" Text="{Binding Count}" />
+                      <TextBlock FontSize="11" TextWrapping="Wrap" Text="{Binding Label}" />
+                      <ProgressBar Minimum="0" Maximum="100" Value="{Binding Level}" Height="5" MinWidth="0" IsVisible="{Binding HasLevel}" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <WrapPanel>
+              <Button Content="⏸ Pause" Command="{Binding PauseCommand}" Margin="0,0,8,8" IsVisible="{Binding IsRunning}" />
+              <Button Content="▶ Resume" Command="{Binding ResumeCommand}" Margin="0,0,8,8" IsVisible="{Binding IsPaused}" />
+              <Button Content="■ Stop session" Command="{Binding StopCommand}" Margin="0,0,8,8" IsVisible="{Binding IsRunning}" />
+              <Button Content="{Binding ToReview, StringFormat='⚑ Review flagged ({0})'}" Command="{Binding OpenWebCommand}" Margin="0,0,8,8"
+                      IsVisible="{Binding IsStopped}" ToolTip.Tip="Opens the machine's review screen in your browser" />
+              <Button Classes="accent" Content="✓ Finish &amp; save CSVs" Command="{Binding FinishCommand}" Margin="0,0,8,8" IsVisible="{Binding IsStopped}" />
+            </WrapPanel>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Border Classes="card" IsVisible="{Binding CanStart}">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="section" Text="Start sorting" />
+          <TextBlock Classes="note" Text="Starts a session on the machine with this PC's default setup (Settings → Default session setup). To pick other bins, a set lock or one of your saved setups, start it on the machine's screen or its page." />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="accent" Content="▶ Start with my default setup" Command="{Binding StartWithMySetupCommand}" />
+            <Button Content="🌐 Start on its page…" Command="{Binding OpenWebCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Grid ColumnDefinitions="*,16,*">
+        <!-- tools -->
+        <Border Classes="card" VerticalAlignment="Top">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="section" Text="Tools" />
+            <UniformGrid Columns="2">
+              <Button Classes="tool" Content="⌂ Home the belt" Command="{Binding ToolCommand}" CommandParameter="home" />
+              <Button Classes="tool" Content="→ Move one station" Command="{Binding ToolCommand}" CommandParameter="index" />
+              <Button Classes="tool" Content="⤓ Feed 50 mm (2 in)" Command="{Binding ToolCommand}" CommandParameter="feed" />
+              <Button Classes="tool" Content="🚪 Test doors" Command="{Binding ToolCommand}" CommandParameter="doors" />
+              <Button Classes="tool" Content="📏 Bin levels" Command="{Binding ToolCommand}" CommandParameter="levels" />
+              <Button Classes="tool" Content="🗼 Which tower?" Command="{Binding ToolCommand}" CommandParameter="tower" />
+              <Button Classes="tool" Content="🔌 Motors off" Command="{Binding ToolCommand}" CommandParameter="motors-off" />
+              <Button Classes="tool" Content="💡 Lights on / off" Command="{Binding LightsCommand}" />
+            </UniformGrid>
+            <TextBlock Classes="note" Text="Lens calibration and the live camera view are on the machine's screen (they need the checkerboard under the camera)." />
+            <Border Background="{DynamicResource InsetBrush}" CornerRadius="8" Padding="10,8">
+              <TextBlock Text="{Binding ToolOutput}" TextWrapping="Wrap" />
+            </Border>
+          </StackPanel>
+        </Border>
+
+        <!-- machine settings -->
+        <Border Grid.Column="2" Classes="card" VerticalAlignment="Top">
+          <StackPanel Spacing="10">
+            <TextBlock Classes="section" Text="Machine settings" />
+            <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,8,Auto">
+              <TextBlock Text="Identify cards on" VerticalAlignment="Center" />
+              <ComboBox Grid.Column="1" Width="220" ItemsSource="{x:Static vm:MachineViewModel.IdentifyOnList}" SelectedItem="{Binding IdentifyOn}" />
+              <TextBlock Grid.Row="2" Text="Price while sorting" VerticalAlignment="Center" />
+              <ComboBox Grid.Row="2" Grid.Column="1" Width="220" ItemsSource="{x:Static vm:MachineViewModel.PriceShowList}" SelectedItem="{Binding PriceShow}" />
+            </Grid>
+            <TextBlock Classes="note" Text="{Binding MachineIdText, StringFormat='On the machine: {0}'}" />
+            <TextBlock Classes="note" Text="Export formats, the look and screen sleep are in the machine's own Settings." />
+            <TextBlock Text="{Binding VersionText, StringFormat='Software: {0}'}" FontSize="12" />
+            <TextBlock Classes="note" Text="{Binding UpdateText}" />
+            <WrapPanel>
+              <Button Content="Check for updates" Command="{Binding CheckUpdateCommand}" Margin="0,0,8,8" />
+              <Button Classes="accent" Content="Update now" Command="{Binding InstallUpdateCommand}" Margin="0,0,8,8" IsVisible="{Binding UpdateAvailable}" />
+              <Button Content="Shut down the Pi" Command="{Binding ShutdownCommand}" Margin="0,0,8,8" />
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <!-- sessions on the machine -->
+      <Border Classes="card">
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="section" Text="Sessions on the machine" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+              <Button Content="↻" Command="{Binding RefreshSessionsCommand}" ToolTip.Tip="Refresh" />
+              <Button Content="📁 Backups on this PC" Command="{Binding OpenBackupsCommand}" ToolTip.Tip="Finished machine sessions are copied here automatically" />
+            </StackPanel>
+          </Grid>
+          <ItemsControl ItemsSource="{Binding Sessions}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                  <StackPanel Spacing="1">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding Tag}" FontSize="12" Classes="muted" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding ReviewText}" FontSize="12" Foreground="{DynamicResource WarnTextBrush}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Classes="muted" FontSize="12" Text="{Binding Summary}" />
+                  </StackPanel>
+                  <Button Grid.Column="1" Content="🌐 Open" FontSize="12" VerticalAlignment="Center"
+                          Command="{Binding $parent[ItemsControl].DataContext.OpenWebCommand}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

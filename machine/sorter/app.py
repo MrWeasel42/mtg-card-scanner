@@ -34,6 +34,7 @@ import yaml
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
+import exports                # noqa: E402
 import hw                     # noqa: E402
 import identify               # noqa: E402
 import rules                  # noqa: E402
@@ -51,6 +52,10 @@ DEFAULT_SETTINGS = {
     "lastSetup": None,               # the bin setup used last time
     "savedSetups": [],               # [{"name": "...", "setup": {...}}]
     "lastName": "",
+    "lastSetLock": [],               # sets the last session was locked to (blank = every set)
+    "exportFormats": ["ManaBox", "Moxfield"],   # written at Finish (same six formats as the Windows app)
+    "assumeNonFoil": False,          # photo can't tell foil from non-foil: call it non-foil instead of flagging
+    "theme": "dark",                 # dark | light | system (same choice as the Windows app)
 }
 
 
@@ -154,32 +159,33 @@ class Machine:
     def _flag_offline(self, why: str) -> dict:
         return {"ok": False, "offline": True, "error": why + ": card kept and flagged, identify it later"}
 
-    def _identify_local(self, jpeg: bytes, why: str = "") -> dict:
+    def _identify_local(self, jpeg: bytes, why: str = "", sets=None, turn: bool = False) -> dict:
         loc = self.local
         if not loc.ready and loc.status()["state"] in ("starting", "loading"):
             loc.wait_ready(self.local_wait_s)       # the catalog is still loading: worth the wait (seconds)
         if not loc.ready:
             return self._flag_offline(f"{why or 'No PC'} and the machine's card reader isn't ready ({loc.status()['detail']})")
-        r = loc.identify(jpeg)
+        r = loc.identify(jpeg, sets=sets, turn=turn) if sets or turn else loc.identify(jpeg)
         r.setdefault("source", loc.label)
         return r
 
-    def identify_card(self, jpeg: bytes) -> dict:
+    def identify_card(self, jpeg: bytes, sets=None, turn: bool = False) -> dict:
         """One photo -> the identifier's answer. The PC is asked first while it's connected; if it drops out (an
         error, the background check loses it, or no answer within pc_give_up_s) this machine identifies the same
-        photo, and whichever answers first is used. Nothing waits for a PC that has gone."""
+        photo, and whichever answers first is used. Nothing waits for a PC that has gone.
+        sets: the session's set lock (only those printings are considered); turn: identify it turned around."""
         mode = self.settings.get("identifyOn", "auto")
         pc, loc = self.pc, self.local
         if mode == "machine":
-            return self._identify_local(jpeg, "Set to identify on this machine")
+            return self._identify_local(jpeg, "Set to identify on this machine", sets, turn)
         if not pc.online:
             if mode == "pc":
                 return self._flag_offline("No PC found")
-            return self._identify_local(jpeg, "No PC")
+            return self._identify_local(jpeg, "No PC", sets, turn)
         fallback = mode == "auto"
         if fallback and time.monotonic() < self.pc_rest_until and loc.ready:
-            return self._identify_local(jpeg, "PC not answering")
-        pc_job = self.pc_pool.submit(pc.identify, jpeg)
+            return self._identify_local(jpeg, "PC not answering", sets, turn)
+        pc_job = self.pc_pool.submit(pc.identify, jpeg, sets, turn) if sets or turn else self.pc_pool.submit(pc.identify, jpeg)
         t0 = time.monotonic()
         why = ""
         while True:
@@ -204,7 +210,7 @@ class Machine:
                 self.pc_rest_until = time.monotonic() + 60      # try it again in a minute
                 break
         self.say(f"{why}: this card is identified on the machine.", "warn")
-        local_job = self.local_pool.submit(self._identify_local, jpeg, why)
+        local_job = self.local_pool.submit(self._identify_local, jpeg, why, sets, turn)
         done, _ = cf.wait([pc_job, local_job], return_when=cf.FIRST_COMPLETED)
         if pc_job in done and not pc_job.exception() and (pc_job.result().get("ok") or pc_job.result().get("noCard")):
             return pc_job.result()                   # the slow PC got there first after all
@@ -341,17 +347,31 @@ class Machine:
         return sorter_mod.Sorter(cfg, m, doors, beams, levels, cam, brain, logs)
 
     # ------------------------------------------------------------------ sessions
-    def start(self, name: str, mode: str, setup: dict) -> dict:
+    def start(self, name: str, mode: str, setup: dict, sets=None, keep_going: str = "") -> dict:
+        """A new session, or keep_going = an unfinished session's id: carry on scanning into it (Windows: Continue
+        session). sets = the set lock: only those printings are considered, anything else is flagged."""
         with self.lock:
             if self.state in ("starting", "running", "stopping"):
                 return {"ok": False, "error": "A session is already running."}
             if self.state == "estop":
                 return {"ok": False, "error": "Reset the emergency stop first."}
-            setup = rules.normalize(setup, self.bins_in_use)
-            name = (name or "").strip() or f"Scan {dt.datetime.now():%b %-d, %-I:%M %p}"
-            self.settings.update({"lastMode": mode, "lastSetup": setup, "lastName": name})
-            self.save_settings()
-            self.session = self.store.new(name, mode, setup)
+            if keep_going:
+                old = self.store.get(keep_going)
+                if not old:
+                    return {"ok": False, "error": "No such session."}
+                if old.d["state"] == "finished":
+                    return {"ok": False, "error": "That session is finished: start a new one."}
+                old.d["state"] = "running"
+                old.save()
+                self.session = old
+                name, mode = old.name, old.d["mode"]
+            else:
+                setup = rules.normalize(setup, self.bins_in_use)
+                name = (name or "").strip() or f"Scan {dt.datetime.now():%b %-d, %-I:%M %p}"
+                sets = rules.parse_sets(sets)
+                self.settings.update({"lastMode": mode, "lastSetup": setup, "lastName": name, "lastSetLock": sets})
+                self.save_settings()
+                self.session = self.store.new(name, mode, setup, sets, self.settings.get("assumeNonFoil", False))
             self.paused = False
             self.stop_requested = False
             self.error = ""
@@ -359,7 +379,7 @@ class Machine:
             self.messages.clear()
             self.state = "starting"
             self.started_at = time.time()
-        self.say(f"Session started: {name} ({mode}).")
+        self.say(f"Session {'continued' if keep_going else 'started'}: {name} ({mode}).")
         self._launch(resume=False)
         return {"ok": True, "session": self.session.summary()}
 
@@ -495,7 +515,7 @@ class Machine:
             return {"ok": False, "error": "No session."}
         if s is self.session and self.state in ("running", "starting", "stopping"):
             return {"ok": False, "error": "Stop the session first."}
-        files = s.finish()
+        files = s.finish(self.settings.get("exportFormats"))
         if s is self.session:
             with self.lock:
                 self.session = None
@@ -547,7 +567,8 @@ class Machine:
         }
 
     def settings_public(self) -> dict:
-        return {k: self.settings[k] for k in ("identifyOn", "priceShow", "sleepMinutes", "brightness", "lastMode", "lastName")}
+        return {k: self.settings[k] for k in ("identifyOn", "priceShow", "sleepMinutes", "brightness", "lastMode", "lastName",
+                                              "exportFormats", "assumeNonFoil", "theme", "lastSetLock")}
 
     # ------------------------------------------------------------------ updates
     def _git(self, *args, timeout=60) -> str:
@@ -624,7 +645,7 @@ class Brain:
             return {"ok": False, "stop": True, "error": "session stopped before this card was read"}
         if m.paused:
             return {"paused": True}
-        ident = m.identify_card(jpeg)
+        ident = m.identify_card(jpeg, m.session.d.get("setLock"))
         c = m.session.add_card(jpeg, ident)
         m.last_card = c
         return {"ok": bool(c.get("card")) and not c["noCard"], "n": c["n"],
@@ -739,9 +760,13 @@ class Handler(BaseHTTPRequestHandler):
             opts = {"ok": True, "binsInUse": m.bins_in_use, "last": last, "lastMode": m.settings["lastMode"],
                     "lastName": m.settings.get("lastName", ""), "saved": m.settings["savedSetups"],
                     "pc": rules.normalize(pc.get("bins"), m.bins_in_use) if pc and pc.get("bins") else None,
+                    "pcSaved": [{"name": x.get("name", ""), "setup": rules.normalize(x.get("setup"), m.bins_in_use)}
+                                for x in (pc or {}).get("saved") or [] if x.get("setup")],
                     "presets": {by: rules.apply_preset(last, by, m.letter_counts()) for by in rules.SORT_BY},
                     "kinds": rules.KINDS, "colors": list(zip(rules.COLOR_CODES, rules.COLOR_NAMES)),
                     "rarities": rules.RARITY_CODES, "types": rules.TYPE_NAMES,
+                    "lastSetLock": m.settings.get("lastSetLock", []),
+                    "unfinished": [x.summary() for x in m.store.all() if x.d["state"] == "stopped"][:6],
                     "defaultName": f"Scan {dt.datetime.now():%b %-d, %-I:%M %p}"}
             return self.json(opts)
         if method == "POST" and a == ["labels"]:          # live preview while editing bins
@@ -768,7 +793,8 @@ class Handler(BaseHTTPRequestHandler):
         # ---- running a session
         if method == "POST" and a == ["session", "start"]:
             b = self.body()
-            return self.json(m.start(b.get("name", ""), b.get("mode", "Catalog"), b.get("setup") or {}))
+            return self.json(m.start(b.get("name", ""), b.get("mode", "Catalog"), b.get("setup") or {},
+                                     b.get("sets"), b.get("keepGoing", "")))
         if method == "POST" and a == ["session", "pause"]:
             return self.json(m.pause(True))
         if method == "POST" and a == ["session", "resume"]:
@@ -797,10 +823,7 @@ class Handler(BaseHTTPRequestHandler):
             if method == "GET" and not rest:
                 return self.json({"ok": True, "session": s.summary()})
             if method == "GET" and rest == ["cards"]:
-                which = (q.get("show") or ["review"])[0]
-                cards = s.to_review() if which == "review" else (
-                    [c for c in s.cards if c["flagged"]] if which == "flagged" else s.cards)
-                return self.json({"ok": True, "cards": cards[::-1] if which == "all" else cards})
+                return self.json({"ok": True, "cards": s.cards_for((q.get("show") or ["review"])[0])})
             if method == "GET" and len(rest) == 2 and rest[0] == "photo":
                 return self.file(s.photo_path(int(rest[1])))
             if method == "GET" and len(rest) == 2 and rest[0] == "file":
@@ -811,22 +834,43 @@ class Handler(BaseHTTPRequestHandler):
                                   {"Content-Disposition": f'attachment; filename="{os.path.basename(s.folder)}.zip"'})
             if method == "POST" and rest == ["review"]:
                 b = self.body()
-                c = s.review(int(b["n"]), b.get("verdict", "ok"), b.get("card"), b.get("finish"), b.get("note"),
-                             b.get("condition"))
+                c = s.review(int(b["n"]), b.get("verdict"), b.get("card"), b.get("finish"), b.get("note"),
+                             b.get("condition"), b.get("altered"), b.get("misprint"))
                 src = c.get("ident", {}).get("source") or ""
                 ident = m.local if src.startswith(m.local.label) else m.pc
-                if ident and c.get("ident", {}).get("id"):
+                if ident and c.get("ident", {}).get("id") and b.get("verdict"):
                     threading.Thread(target=ident.feedback, args=({
                         "id": c["ident"]["id"], "verdict": c["verdict"], "cardId": (c.get("card") or {}).get("id"),
                         "finish": c["finish"], "note": c.get("note", ""), "session": s.name},), daemon=True).start()
                 return self.json({"ok": True, "card": c, "session": s.summary()})
             if method == "POST" and rest == ["reidentify"]:
-                n = int(self.body()["n"])
+                b = self.body()
+                n = int(b["n"])
                 if m.identifier() is None:
                     return self.json({"ok": False, "error": m.identifier_label()})
                 jpeg = open(s.photo_path(n), "rb").read()
-                c = s.replace_ident(n, m.identify_card(jpeg))
+                c = s.replace_ident(n, m.identify_card(jpeg, s.d.get("setLock"), bool(b.get("turn"))))
                 return self.json({"ok": True, "card": c, "session": s.summary()})
+            if method == "POST" and rest == ["confirm-pinned"]:
+                k = s.confirm_pinned()
+                return self.json({"ok": True, "marked": k, "session": s.summary()})
+            if method == "POST" and rest == ["export"]:
+                fm = [f for f in (self.body().get("formats") or m.settings["exportFormats"]) if f in exports.KEYS]
+                files = s.export(fm)
+                s.d["exports"] = sorted(set(s.d.get("exports", [])) | set(files))
+                s.save()
+                return self.json({"ok": True, "files": files, "session": s.summary()})
+            if method == "POST" and rest == ["photo"]:          # identify an uploaded photo into this session
+                if s is m.session and m.state in ("running", "starting", "stopping"):
+                    return self.json({"ok": False, "error": "The machine is sorting into this session."})
+                if s.d["state"] == "finished":
+                    return self.json({"ok": False, "error": "That session is finished."})
+                jpeg = getattr(self, "_raw", b"")
+                if len(jpeg) < 1000:
+                    return self.json({"ok": False, "error": "No photo in the request."})
+                jpeg = to_jpeg(jpeg)
+                c = s.add_card(jpeg, m.identify_card(jpeg, s.d.get("setLock")))
+                return self.json({"ok": True, "card": sessions.card_brief(c), "session": s.summary()})
             if method == "POST" and rest == ["finish"]:
                 return self.json(m.finish(s.id))
             if method == "POST" and rest == ["rename"]:
@@ -837,6 +881,19 @@ class Handler(BaseHTTPRequestHandler):
                 if s is m.session:
                     return self.json({"ok": False, "error": "That session is open."})
                 return self.json({"ok": m.store.delete(s.id)})
+
+        # ---- identify photos without the machine (from a phone or PC browser): a session of uploaded photos
+        if method == "POST" and a == ["photos", "session"]:
+            b = self.body()
+            name = (b.get("name") or "").strip() or f"Photos {dt.datetime.now():%b %-d, %-I:%M %p}"
+            s = m.store.new(name, "Catalog", rules.normalize(m.settings.get("lastSetup") or rules.default_setup(m.bins_in_use),
+                                                              m.bins_in_use),
+                            rules.parse_sets(b.get("sets")), m.settings.get("assumeNonFoil", False), source="photos")
+            s.d["state"] = "stopped"
+            s.save()
+            return self.json({"ok": True, "session": s.summary()})
+        if method == "GET" and a == ["export-formats"]:
+            return self.json({"ok": True, "formats": [{"key": k, "title": t, "about": d} for k, t, d, _ in exports.FORMATS]})
 
         # ---- card lookups for review
         if method == "POST" and a == ["printings"]:
@@ -868,10 +925,16 @@ class Handler(BaseHTTPRequestHandler):
         # ---- settings, screen, updates
         if method == "POST" and a == ["settings"]:
             b = self.body()
-            for k in ("identifyOn", "priceShow", "sleepMinutes", "brightness"):
+            for k in ("identifyOn", "priceShow", "sleepMinutes", "brightness", "exportFormats", "assumeNonFoil", "theme"):
                 if k in b:
                     if k == "identifyOn" and b[k] not in ("auto", "pc", "machine"):
                         continue
+                    if k == "theme" and b[k] not in ("dark", "light", "system"):
+                        continue
+                    if k == "exportFormats":
+                        b[k] = [f for f in b[k] if f in exports.KEYS] or list(exports.DEFAULT)
+                    if k == "assumeNonFoil":
+                        b[k] = bool(b[k])
                     m.settings[k] = b[k]
             m.save_settings()
             if "brightness" in b:
@@ -965,6 +1028,23 @@ def tool(m: Machine, name: str, b: dict) -> dict:
     except Exception as e:
         return {"ok": False, "error": str(e)}
     return {"ok": False, "error": f"Unknown tool {name}"}
+
+
+def to_jpeg(data: bytes) -> bytes:
+    """Uploaded photos can be PNG/WebP/HEIC-as-JPEG from a phone: stored as JPEG like the machine's own photos."""
+    if data[:3] == b"\xff\xd8\xff":
+        return data
+    try:
+        import cv2
+        import numpy as np
+        img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+        if img is not None:
+            ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 92])
+            if ok:
+                return buf.tobytes()
+    except ImportError:
+        pass
+    return data
 
 
 def set_backlight(level: int) -> None:
