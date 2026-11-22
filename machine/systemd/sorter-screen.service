@@ -12,7 +12,7 @@ StandardInput=tty
 UtmpIdentifier=tty1
 UtmpMode=user
 ExecStartPre=/usr/bin/python3 /home/pi/mtg-card-scanner/machine/systemd/wait-for-app.py
-ExecStart=/usr/bin/cage -d -- /usr/bin/chromium --kiosk --noerrdialogs --disable-infobars --no-first-run --disable-session-crashed-bubble --disable-features=Translate --overscroll-history-navigation=0 --disable-pinch --password-store=basic --ozone-platform=wayland http://localhost:8080/?kiosk=1
+ExecStart=/usr/bin/cage -d -- /home/pi/mtg-card-scanner/machine/systemd/kiosk.sh
 Restart=always
 RestartSec=3
 
