@@ -16,13 +16,14 @@ First design pass: nothing printed yet. Test-print the gate plate and an exit ro
 * The touchscreen sits in front of the gap between the hopper tower and the hood, on `mount_wall` (bolted across
   the front walls), tilted back 15°, M5 thumbscrew through the GoPro-style prongs.
 * `screen_cradle` (lips round the glass) + `pod_cover` (black) hide the Pi 5. Vents over the Pi's fan.
-* Pi's port edge UP. The camera ribbon leaves the back of the pod just above the Pi, crosses the gap behind the
-  screen (one soft 45° fold, out of sight) and goes in through a slot low in the hood's LEFT wall, just above the
-  conveyor. Inside it runs up the wall under pairs of opposing L-rails (slide it in under them before plugging it
-  in), across at camera height beside the camera plate, and into the camera's connector (connector facing the
-  front). Run ~445 mm: use a **500 mm (20 in) Pi 5 camera cable**.
-* The 5 V USB-C converter stays in the electronics bay; its 12 in USB-C cable hangs free from the bottom of the pod
-  straight up to the Pi (~270 mm), in through the hole in the bay cover.
+* Pi's port edge UP. The camera ribbon only ever bends across its width (never sideways, never folded): out of
+  the pod's back, straight back across the gap above the conveyor, a soft bend upward, then up beside the hood's
+  left wall, twisting 90 degrees gently over ~60 mm until it lies flat on the wall under two pairs of L-rails, and
+  over through the slot at camera height straight into the camera. The camera is turned so its connector faces
+  left; the hanger ribs are on the front and back so nothing is in the way. Run ~325 mm: 500 mm (20 in) cable.
+  ![ribbon route](renders/ribbon_route.png)
+* The 5 V USB-C converter sits in the pod beside the Pi; only its 24 V pair, bundled with the Pi's jumper loom in a
+  braided sleeve, hangs free from the pod's bottom notch into the bay-cover slot.
 * Picture the right way up: `bash ~/mtg-card-scanner/machine/screen-rotate.sh 90` (or 270).
 
 ## Hood and lid

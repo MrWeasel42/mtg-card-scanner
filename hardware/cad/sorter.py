@@ -465,8 +465,10 @@ SHEEN_Z = WALL_TOP + 6.0            # sheen LED port in the back wall, under the
 LED_H = 55.0                        # LED strips this far above the card
 LID_Z = PATH + HOOD_H - 12.0        # the hood's removable lid starts here
 LID_KEY_X = SCAN_X + 40.0           # lid key on the back side, off-centre: the lid only goes on one way
-RIB_Y = -46.0                       # camera ribbon's line along the hood's left wall and roof (clear of the camera ribs)
-RIB_SLOT_Z = WALL_TOP + 15.0        # ribbon slot low in the hood's left wall, just above the conveyor
+RIB_CONN_Z = PATH + CAM_D + 44 + 2.0   # camera connector height (default lens height)
+RIB_X = HOOD_X0 - 8.5               # the ribbon rises here, flat, just outside the hood's left wall (in the gap)
+RIB_RAIL_Z0 = RIB_CONN_Z - 60.0     # L-rails on the outside of the left wall hold the twisted, flat top part
+RIB_RUN_Z = WALL_TOP + 27.0         # height of the run back across the gap (above the conveyor) from the pod
 SCREEN_TILT = 15.0                  # screen leans back this many degrees
 
 def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True, bay=False):
@@ -582,18 +584,18 @@ def hood():
             y0p, y1p = sorted((sg * WALL_IN_UP, sg * 72.5))
             h = h.union(box(xa, xb, y0p, y1p, WALL_TOP, WALL_TOP + 5))
     # (the camera hangs from the removable lid: hood_lid)
-    # Camera ribbon: in through a slot low in the LEFT (hopper-side) wall, just above the conveyor and hidden behind
-    # the screen, then up the inside of the wall under pairs of opposing L-rails (slide the ribbon in under them
-    # before plugging it in), then across at camera height (beside the camera plate) to the camera's front edge.
-    c = RIB_Y
-    h = h.cut(box(x0 - 1, x0 + 4, c - 12, c + 12, RIB_SLOT_Z - 2.5, RIB_SLOT_Z + 2.5))
-    for z in range(int(RIB_SLOT_Z + 14), int(PATH + CAM_D_MIN + 44 - 20), 36):   # rail pairs, 18 mm long, up the wall
+    # Camera ribbon: it rises up the OUTSIDE of the left (hopper-side) wall in the gap, flat against the wall under
+    # pairs of opposing L-rails, rolls over through this slot at camera height and goes straight into the camera
+    # (connector facing the wall). No sideways turns or folds anywhere.
+    h = h.cut(box(x0 - 1, x0 + 4, -12, 12, RIB_CONN_Z - 16, RIB_CONN_Z + 3))
+    h = h.union(box(x0 + 3, x0 + 9, -14, 14, RIB_CONN_Z + 3, RIB_CONN_Z + 5))            # light lip over the slot
+    for z in (RIB_RAIL_Z0, RIB_RAIL_Z0 + 22):                                          # rail pairs on the outside face
         for sg in (-1, 1):
-            e = c + sg * 8.75
+            e = sg * 8.75
             y0r, y1r = sorted((e, e + sg * 2))
-            h = h.union(box(x0 + 3 - 0.1, x0 + 3 + 2.4, y0r, y1r, z, z + 18))                 # stem off the wall
+            h = h.union(box(RIB_X - 1.3, x0 + 0.1, y0r, y1r, z, z + 14))                  # stem off the wall
             y0l, y1l = sorted((e + sg * 2, e - sg * 3))
-            h = h.union(box(x0 + 3 + 1.4, x0 + 3 + 2.4, y0l, y1l, z, z + 18))                # lip over the ribbon edge
+            h = h.union(box(RIB_X - 1.3, RIB_X - 0.5, y0l, y1l, z, z + 14))              # lip over the ribbon edge
     # LED channel ledges (aluminium channel 17 x 8 mm) on the front and back walls, LED_H above the card: low enough
     # that a glossy card or sleeve reflects them away from the lens (mirror point lands outside the card)
     zled = PATH + LED_H
@@ -636,12 +638,12 @@ def hood_lid():
     for xg in (x0 + 25, x1 - 25):                                          # finger grips on the roof
         l = l.cut(box(xg - 12, xg + 12, -30, 30, top - 1, top + 1))
     zr = top - 3
-    for sx in (-1, 1):
-        xa, xb = sorted((SCAN_X + sx * CAM_RIB_X0, SCAN_X + sx * (CAM_RIB_X0 + 4)))
-        l = l.union(box(xa, xb, -10, 10, CAM_SLOT_Z0 - 4.5, zr + 0.5))
-        l = l.cut(box(xa - 1, xb + 1, -1.7, 1.7, CAM_SLOT_Z0, CAM_SLOT_Z1))
+    for sy in (-1, 1):                                   # ribs front and back (the ribbon comes in from the left)
+        ya, yb = sorted((sy * CAM_RIB_X0, sy * (CAM_RIB_X0 + 4)))
+        l = l.union(box(SCAN_X - 10, SCAN_X + 10, ya, yb, CAM_SLOT_Z0 - 4.5, zr + 0.5))
+        l = l.cut(box(SCAN_X - 1.7, SCAN_X + 1.7, ya - 1, yb + 1, CAM_SLOT_Z0, CAM_SLOT_Z1))
         for zz in (CAM_SLOT_Z0, CAM_SLOT_Z1):
-            l = l.cut(cyl_x(0, zz, 1.7, xa - 1, xb + 1))
+            l = l.cut(cyl_y(SCAN_X, zz, 1.7, ya - 1, yb + 1))
     return l
 
 def sheen_cap():
@@ -659,11 +661,11 @@ def camera_plate():
     Two tabs with M3 heat-set inserts clamp to the slotted ribs on the hood lid (M3 x 10, lid off).
     Local frame: plate z 0..4, top face against the camera PCB."""
     p = box(-31, 31, -31, 31, 0, 4)
-    for sx in (-1, 1):
-        xa, xb = sorted((sx * (CAM_RIB_X0 - 6.3), sx * (CAM_RIB_X0 - 0.3)))
-        p = p.union(box(xa, xb, -8, 8, 0, 14))
-        xi0, xi1 = sorted((sx * (CAM_RIB_X0 - 0.3 + 1), sx * (CAM_RIB_X0 - 6.3 - 1)))
-        p = p.cut(cyl_x(0, CAM_HOLE_DZ + 4, M3_INSERT / 2, xi0, xi1))
+    for sy in (-1, 1):                                   # tabs front and back; the camera's connector faces -X (left)
+        ya, yb = sorted((sy * (CAM_RIB_X0 - 6.3), sy * (CAM_RIB_X0 - 0.3)))
+        p = p.union(box(-8, 8, ya, yb, 0, 14))
+        yi0, yi1 = sorted((sy * (CAM_RIB_X0 - 0.3 + 1), sy * (CAM_RIB_X0 - 6.3 - 1)))
+        p = p.cut(cyl_y(0, CAM_HOLE_DZ + 4, M3_INSERT / 2, yi0, yi1))
     p = p.cut(cyl_z(0, 0, 18.5, -1, 5))
     for dx in (-15, 15):
         for dy in (-15, 15):
@@ -939,17 +941,19 @@ CONV_X, CONV_Z = -68.0, 60.0   # 5 V USB-C converter in the pod, beside the Pi's
 USBC_X = -31.0                 # Pi's USB-C port, from the screen centre (port edge up, at the GPIO end)
 RIB_EXIT_Z = PI_ON_SCREEN_Z + 56 + 10   # camera ribbon leaves the pod's back just above the Pi
 
+POD_DX = RIB_X - POD_PIV_W[0] - CAM_PORT_X   # pod sits this far right of its mount so the camera port lines up
+
 def screen_xf(x, y, z):
     """A point in the cradle frame -> machine coordinates (pivot on mount_wall_gap's prongs, tilted back)."""
     t = math.radians(-SCREEN_TILT)
     yr, zr = y - SCR_PIV[1], z - SCR_PIV[2]
-    return (POD_PIV_W[0] + x, POD_PIV_W[1] + yr * math.cos(t) - zr * math.sin(t), POD_PIV_W[2] + yr * math.sin(t) + zr * math.cos(t))
+    return (POD_PIV_W[0] + POD_DX + x, POD_PIV_W[1] + yr * math.cos(t) - zr * math.sin(t), POD_PIV_W[2] + yr * math.sin(t) + zr * math.cos(t))
 
 def screen_placed(shape):
     """Puts a shape from the cradle frame into the machine: the pod sits in front of the gap between the hopper
     tower and the hood, on the wall mount, tilted back."""
     return (shape.translate((0, -SCR_PIV[1], -SCR_PIV[2])).rotate((0, 0, 0), (1, 0, 0), -SCREEN_TILT)
-            .translate(POD_PIV_W))
+            .translate((POD_PIV_W[0] + POD_DX, POD_PIV_W[1], POD_PIV_W[2])))
 
 def screen_block():
     """Display + Pi 5 + Active Cooler envelope, cradle frame (render and fit check)."""
@@ -1032,8 +1036,8 @@ def pod_cover():
     for dz in (-CONV_EARS / 2, CONV_EARS / 2):                               # 5 V converter bosses (M3 inserts)
         c = c.union(cyl_y(CONV_X, CONV_Z + dz, 4.5, POD_D - w - 6, POD_D - w + 0.1))
         c = c.cut(cyl_y(CONV_X, CONV_Z + dz, M3_INSERT / 2, POD_D - w - 7, POD_D - w - 1))
-    c = c.union(box(-17, 17, POD_D - 0.5, POD_D + POD_STANDOFF, SCR_PIV[2] - 9.5, SCR_PIV[2] + 9.5))   # standoff
-    tab = gopro(2, 12, base_w=30, base_t=0.01).rotate((0, 0, 0), (1, 0, 0), -90).translate((0, POD_D + POD_STANDOFF, SCR_PIV[2]))
+    c = c.union(box(-POD_DX - 17, -POD_DX + 17, POD_D - 0.5, POD_D + POD_STANDOFF, SCR_PIV[2] - 9.5, SCR_PIV[2] + 9.5))   # standoff
+    tab = gopro(2, 12, base_w=30, base_t=0.01).rotate((0, 0, 0), (1, 0, 0), -90).translate((-POD_DX, POD_D + POD_STANDOFF, SCR_PIV[2]))
     return c.union(tab)
 
 def converter_block():
@@ -1043,19 +1047,19 @@ def converter_block():
     return b.union(box(CONV_X - 6, CONV_X + 6, yb - 2, yb, CONV_Z - CONV_L / 2 - 7, CONV_Z + CONV_L / 2 + 7))
 
 def camera_ribbon():
-    """The camera ribbon's path (picture + length check): Pi port -> out the pod's back -> across the hidden gap behind
-    the screen (one soft 45 deg fold turns it toward the hood) -> slot low in the hood's left wall -> up the wall
-    under the rails -> along under the roof -> soft fold -> down to the camera's front-edge connector."""
-    xw = HOOD_X0 + 3 + 0.75                                                  # between the wall and the rail lips
-    zt = PATH + CAM_D + 44 + 3                                               # camera connector height (default lens height)
+    """The camera ribbon's path (picture + length check). Only bends across its width and one long, gentle twist:
+    Pi port -> up inside the pod -> out the pod's back -> straight back across the gap above the conveyor ->
+    soft bend upward -> rises in the gap beside the hood, twisting 90 deg over ~60 mm until it lies flat against the
+    hood's left wall -> under the L-rails -> rolls over through the slot -> straight into the camera's connector
+    (camera turned so the connector faces left)."""
+    x = RIB_X
+    zt = RIB_CONN_Z
     pts = [screen_xf(CAM_PORT_X, 12.5, PI_ON_SCREEN_Z + 56), screen_xf(CAM_PORT_X, 12.5, RIB_EXIT_Z),
            screen_xf(CAM_PORT_X, POD_D + 2, RIB_EXIT_Z)]
-    e = pts[-1]
-    pts += [(e[0], RIB_Y, RIB_SLOT_Z), (HOOD_X0 + 8, RIB_Y, RIB_SLOT_Z), (xw, RIB_Y, RIB_SLOT_Z + 12),
-            (xw, RIB_Y, zt - 12), (HOOD_X0 + 16, RIB_Y, zt), (SCAN_X, RIB_Y, zt),
-            (SCAN_X, -26.0, zt), (SCAN_X, -19.0, zt)]
-    X, Y = cq.Vector(1, 0, 0), cq.Vector(0, 1, 0)
-    widths = [X, X, X, Y, Y, Y, Y, Y, X, X]                               # ribbon width direction, segment by segment
+    pts += [(x, -16.0, RIB_RUN_Z), (x, 0.0, RIB_RUN_Z + 16), (x, 0.0, RIB_RUN_Z + 40), (x, 0.0, RIB_RAIL_Z0),
+            (x, 0.0, zt - 14), (x + 14, 0.0, zt), (SCAN_X - 19, 0.0, zt)]
+    X, Y, XY = cq.Vector(1, 0, 0), cq.Vector(0, 1, 0), cq.Vector(1, 1, 0)
+    widths = [X, X, X, X, X, XY, Y, Y, Y, Y]                               # ribbon width direction, segment by segment
     shp, total = None, 0.0
     for (a, b), wd in zip(zip(pts, pts[1:]), widths):
         d = cq.Vector(b) - cq.Vector(a); L = d.Length; total += L; d = d.normalized()
@@ -1114,7 +1118,7 @@ PRINTED = {
     "hood":            (hood, 1, "PLA matte black", "Upright, tongue on top. Tree supports under the tunnel, pads and LED ledges."),
     "hood_lid":        (hood_lid, 1, "PLA matte black", "Roof down, no supports. Camera plate clamps to its ribs."),
     "sheen_cap":       (sheen_cap, 1, "PLA matte black", "Back face down. 20 mm of COB strip inside; 2 x M3 x 8 to the hood."),
-    "camera_plate":    (camera_plate, 1, "PETG", "Tabs up. 2 M3 inserts in the tabs; clamps to the hood ribs with 2 x M3 x 10. Camera ribbon connector toward the FRONT."),
+    "camera_plate":    (camera_plate, 1, "PETG", "Tabs up. 2 M3 inserts in the tabs; clamps to the hood ribs with 2 x M3 x 10. Turn the camera so its ribbon connector faces LEFT (the hopper side)."),
     "polarizer_cap":   (polarizer_cap, 1, "PETG", ""),
     "bin_side_back":   (lambda: bin_module_side(1), 2, "PETG", "On its outer face; one per bin module."),
     "bin_side_front":  (lambda: bin_module_side(-1), 2, "PETG", "On its outer face; one per bin module."),

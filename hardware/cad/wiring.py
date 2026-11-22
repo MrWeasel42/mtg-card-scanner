@@ -44,7 +44,7 @@ def runs():
     add("USB-C power (Pi)", "5 V USB-C converter (in the pod)", "Pi 5 USB-C", "inside the pod (coil the spare beside the converter)",
         [CONV5, screen_xf(CONV_X + 10, 20, PI_ON_SCREEN_Z + 70), port], 305 - 25, "the converter's own 12 in (305 mm) lead")
     # --- Pi (in the screen pod): ribbons + one jumper loom down to the bay
-    add("Camera ribbon", "Pi 5 CAM/DISP 0", "HQ camera (connector facing front)", "out the pod's back -> soft fold -> hood's left-wall slot -> up under the L-rails -> across to the camera",
+    add("Camera ribbon", "Pi 5 CAM/DISP 0", "HQ camera (connector facing left)", "out the pod's back -> back across the gap above the conveyor -> up beside the hood (one long twist) -> under the L-rails -> through the slot straight into the camera (connector facing left)",
         None, 500, "Pi 5 camera cable, 500 mm (22-pin mini -> 15-pin standard)")
     out[-1]["run"] = camera_ribbon()[1]
     add("Display ribbon + power", "Pi 5 CAM/DISP 1 + pins 2/6", "Touch Display 2", "inside the pod", [(0, 0, 0), (0, 0, 60)], 100,

@@ -656,9 +656,9 @@
   "note": "2 prongs between 3, M5 thumbscrew"
  },
  {
-  "label": "Camera ribbon vs hood (through the slot, under the rails)",
+  "label": "Camera ribbon vs hood (up the outside under the rails, through the slot)",
   "overlap": 0.0,
-  "gap": 0.35,
+  "gap": 0.5,
   "need": 0.1,
   "ok": true,
   "note": ""
@@ -666,7 +666,7 @@
  {
   "label": "Camera ribbon vs hood lid",
   "overlap": 0.0,
-  "gap": 27.19,
+  "gap": 25.24,
   "need": 1.0,
   "ok": true,
   "note": ""
@@ -698,7 +698,7 @@
  {
   "label": "Camera ribbon vs everything else (track, fins, hopper)",
   "overlap": 0.0,
-  "gap": 14.7,
+  "gap": 28.37,
   "need": 2.0,
   "ok": true,
   "note": ""
@@ -706,26 +706,26 @@
  {
   "label": "Ribbon run beside the camera vs camera + plate at 100 mm",
   "overlap": 0.0,
-  "gap": 19.03,
+  "gap": 6.86,
   "need": 0.5,
   "ok": true,
-  "note": "up to the fold; the last bit follows the camera when you set its height"
+  "note": "up to the connector; the last few cm follow the camera when you set its height"
  },
  {
   "label": "Ribbon run beside the camera vs camera + plate at 135 mm",
   "overlap": 0.0,
-  "gap": 14.5,
+  "gap": 9.0,
   "need": 0.5,
   "ok": true,
-  "note": "up to the fold; the last bit follows the camera when you set its height"
+  "note": "up to the connector; the last few cm follow the camera when you set its height"
  },
  {
   "label": "Camera ribbon run (Pi -> behind screen -> up inside the hood -> camera)",
   "overlap": 0,
-  "gap": 140.5,
+  "gap": 174.9,
   "need": 40,
   "ok": true,
-  "note": "~360 mm on a 500 mm cable"
+  "note": "~325 mm on a 500 mm cable"
  },
  {
   "label": "Cable: Mains (IEC inlet -> PSU) (92 mm run +15%)",
@@ -744,9 +744,9 @@
   "note": "the converter's own 12 in (305 mm) lead"
  },
  {
-  "label": "Cable: Camera ribbon (360 mm run +15%)",
+  "label": "Cable: Camera ribbon (325 mm run +15%)",
   "overlap": 0,
-  "gap": 86.5,
+  "gap": 126.2,
   "need": 0,
   "ok": true,
   "note": "Pi 5 camera cable, 500 mm (22-pin mini -> 15-pin standard)"
@@ -760,25 +760,25 @@
   "note": "the cables in the display box"
  },
  {
-  "label": "Cable: UART to the motor board (TX, RX, GND) (261 mm run +15%)",
+  "label": "Cable: UART to the motor board (TX, RX, GND) (264 mm run +15%)",
   "overlap": 0,
-  "gap": 100.1,
+  "gap": 96.0,
   "need": 0,
   "ok": true,
   "note": "female-female jumpers, 40 cm (in one black braided sleeve with the rest of the loom)"
  },
  {
-  "label": "Cable: I2C + 3.3 V (servo board, bin sensors) (299 mm run +15%)",
+  "label": "Cable: I2C + 3.3 V (servo board, bin sensors) (302 mm run +15%)",
   "overlap": 0,
-  "gap": 56.4,
+  "gap": 52.4,
   "need": 0,
   "ok": true,
   "note": "female-female jumpers, 40 cm"
  },
  {
-  "label": "Cable: Bin-sensor XSHUT x3 + beam signals x2 (201 mm run +15%)",
+  "label": "Cable: Bin-sensor XSHUT x3 + beam signals x2 (204 mm run +15%)",
   "overlap": 0,
-  "gap": 168.9,
+  "gap": 164.9,
   "need": 0,
   "ok": true,
   "note": "female-female jumpers, 40 cm, joined in the bay"

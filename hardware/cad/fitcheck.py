@@ -221,7 +221,7 @@ others = pr(*[k for k in P if k not in ("mount_wall_gap", "screen_cradle", "pod_
 check("Screen pod vs everything else (hopper, hood, walls)", pod, others, 3.0)
 check("Pod's GoPro tab vs the wall mount's prongs", P["pod_cover"], P["mount_wall_gap"], 0.0, "2 prongs between 3, M5 thumbscrew")
 rib, rib_len = camera_ribbon()
-check("Camera ribbon vs hood (through the slot, under the rails)", rib, P["hood"], 0.1)
+check("Camera ribbon vs hood (up the outside under the rails, through the slot)", rib, P["hood"], 0.1)
 check("Camera ribbon vs hood lid", rib, P["hood_lid"], 1.0)
 check("Hood lid vs hood (light trap clearance)", P["hood_lid"], P["hood"], 0.15, "tongue in the groove, 0.2 mm all round")
 check("Sheen cap vs everything but the hood", P["sheen_cap"], pr(*[k for k in P if k not in ("hood", "sheen_cap")]), 2.0)
@@ -229,9 +229,9 @@ check("Camera ribbon vs pod", rib, pod, 0.3)
 check("Camera ribbon vs everything else (track, fins, hopper)", rib, pr(*[k for k in P if k not in ("hood", "hood_lid", "screen_cradle", "pod_cover")]), 2.0)
 for d in (CAM_D_MIN, CAM_D_MAX):
     cp = camera_plate().translate((SCAN_X, 0, PATH + d + 44 - 4)).union(B.hq_camera().translate((SCAN_X, 0, PATH + d + 44)))
-    check(f"Ribbon run beside the camera vs camera + plate at {d:.0f} mm", rib.cut(box(SCAN_X - 12, 1e3, -1e3, 1e3, -1e3, 1e3)), cp, 0.5,
-          "up to the fold; the last bit follows the camera when you set its height")
-checks.append(dict(label="Camera ribbon run (Pi -> behind screen -> up inside the hood -> camera)", overlap=0, gap=round(500 - rib_len, 1), need=40,
+    check(f"Ribbon run beside the camera vs camera + plate at {d:.0f} mm", rib.cut(box(SCAN_X - 24, 1e3, -1e3, 1e3, -1e3, 1e3)), cp, 0.5,
+          "up to the connector; the last few cm follow the camera when you set its height")
+checks.append(dict(label="Camera ribbon run (Pi -> across the gap -> up beside the hood -> straight into the camera)", overlap=0, gap=round(500 - rib_len, 1), need=40,
                    ok=500 - rib_len >= 40, note=f"~{rib_len:.0f} mm on a 500 mm cable"))
 import wiring
 for r in wiring.runs():
