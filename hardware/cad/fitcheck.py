@@ -160,7 +160,7 @@ stack = stack.rotate((0, 0, PATH), (1, 0, PATH), -TOWER_LEAN).rotate((xi1, 0, PA
 check("Full card stack (550 raw) vs hopper walls", stack, P["raw_tower"], 0.5, "nothing inside the L: braces are on the outside")
 # --- electronics bay
 tray_z = RAIL_Z + 17.2 + 3
-skr = B.skr_pico().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, tray_z + 8))
+skr = B.skr_pico().translate((8.5 + 12 - 3.5, SKR_Y0 + 3.5 - 3.5, tray_z + 8))
 shafts = cyl_y(FEED_X, FEED_Z, 9.5, -60, 60).union(cyl_y(EXIT_X, EXIT_Z, 9.5, -60, 60))
 check("SKR Pico + plugs (on 8 mm tray bosses) vs base", skr, base, 1.0, "the Pi (in the screen pod) talks to it over UART")
 # --- the rest of the electronics bay: 5 V USB-C converter on the tray beside the SKR, 6 V servo step-down on the left

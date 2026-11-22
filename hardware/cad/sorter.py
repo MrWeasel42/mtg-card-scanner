@@ -959,23 +959,26 @@ def end_cap():
     return c
 
 # ============================================================================ ELECTRONICS, POWER, SCREEN
+SKR_Y0 = -28.0   # SKR Pico board's front edge on the tray (plugs reach 25 mm past it: -53, inside the -56 wall)
+
 def electronics_tray():
     """Slides into the feeder base under the hopper. SKR Pico (same 58 x 49 mm M2.5 pattern as a Pi) at the front
-    on 8 mm bosses; servo driver, 6 V step-down and LED MOSFET on a 10 mm grid of M3 holes behind it. Zip-tie
+    on 8 mm bosses, set 22 mm back from the bay window so its front plugs and their cable bends (25 mm) stay
+    inside the base instead of hitting the bay cover; 6 V step-down and LED MOSFET on a 10 mm grid of M3 holes. Zip-tie
     slots along both edges for the looms. (The Pi 5 lives in the screen pod; the 6 V step-down and the servo board
     sit on the bay's inner walls. hardware/WIRING.md has every cable.)"""
     T = 3.0
     t = box(0, 133, -54, 54, 0, T)
     for dx in (0, 58):
         for dy in (0, 49):
-            xh, yh = 12 + dx, -50 + 3.5 + dy
+            xh, yh = 12 + dx, SKR_Y0 + 3.5 + dy
             t = t.union(cyl_z(xh, yh, 3, T, T + 8))
             t = t.cut(cyl_z(xh, yh, PILOT_M25 / 2, T, T + 9))          # M2.5 x 6 self-tap from the top
     for x in range(80, 131, 10):
         for y in range(10, 51, 10):
             t = t.cut(cyl_z(x, y, 1.7, -1, T + 1))
     for x in range(10, 71, 10):
-        for y in (20, 30, 40, 50):
+        for y in (40, 50):                                          # (rows at 20/30 dropped: they ran into the board bosses)
             t = t.cut(cyl_z(x, y, 1.7, -1, T + 1))
     for x in range(15, 125, 20):
         for y in (-52, 52):

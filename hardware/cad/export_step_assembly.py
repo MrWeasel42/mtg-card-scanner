@@ -35,7 +35,7 @@ green = cq.Color(0.1, 0.45, 0.25); screen = cq.Color(0.05, 0.05, 0.08)
 add(screen_placed(box(-42.5, 42.5, 0, PI_STACK, PI_ON_SCREEN_Z, PI_ON_SCREEN_Z + 56)), name="Raspberry_Pi_5_with_cooler_on_screen", color=green)
 add(camera_ribbon()[0], name="camera_ribbon_500mm", color=cq.Color(0.85, 0.5, 0.1))
 
-add(B.skr_pico().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, RAIL_Z + 17.2 + 3 + 8)), name="SKR_Pico", color=green)
+add(B.skr_pico().translate((8.5 + 12 - 3.5, SKR_Y0 + 3.5 - 3.5, RAIL_Z + 17.2 + 3 + 8)), name="SKR_Pico", color=green)
 add(screen_placed(box(-SCREEN_W / 2, SCREEN_W / 2, -SCREEN_T, 0, 0, SCREEN_H)), name="Touch_Display_2", color=screen)
 yc = (BELT_Y0 + BELT_Y1) / 2
 for s in (-1, 1):
