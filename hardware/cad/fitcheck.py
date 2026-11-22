@@ -138,20 +138,7 @@ skr = B.skr_pico().translate((8.5 + 12 - 3.5, -50 + 3.5 - 3.5, tray_z + 8))
 shafts = cyl_y(FEED_X, FEED_Z, 9.5, -60, 60).union(cyl_y(EXIT_X, EXIT_Z, 9.5, -60, 60))
 check("SKR Pico + plugs (on 8 mm tray bosses) vs base", skr, base, 1.0, "the Pi talks to it over UART from the hood")
 check("SKR Pico + plugs vs roller shafts/pulleys", skr, shafts, 3.0)
-# --- Pi 5 on the back of the hood, board upright, cooler facing out
-from sorter import PI_Z, pi_mount
-pi_local = B.pi5().translate((-32.5, -28, 0))                 # hole-pattern centre at the origin
-pi = pi_local.rotate((0, 0, 0), (1, 0, 0), -90).translate((SCAN_X, 75.0 + 6 + 3 + 6, PI_Z))
-check("Pi 5 (+cooler, finger room) vs hood", pi, P["hood"], 1.0)
-check("Pi 5 vs its mount plate", pi, P["pi_mount"], 0.0, "sits on the bosses")
-others = pr(*[k for k in P if k not in ("hood", "pi_mount")])
-check("Pi 5 vs everything else", pi, others, 3.0)
-check("Pi mount vs everything but the hood", P["pi_mount"], others, 2.0)
-# camera ribbon: Pi CSI connector (near the board's top edge) out, up through the back-wall slot, to the camera
 from sorter import CAM_CABLE_Z
-cam_top = PATH + CAM_D + 44 + 2                                # camera PCB top face at the default 200 mm
-run = (CAM_CABLE_Z - (PI_Z + 18)) + 15 + 75 + abs(CAM_CABLE_Z - cam_top) + 30   # up the board, through the wall, across to centre, to the camera, +30 slack
-checks.append(dict(label="Camera ribbon run (Pi CSI -> slot -> camera) vs 300 mm cable", overlap=0, gap=round(300 - run, 1), need=40, ok=300 - run >= 40, note=f"~{run:.0f} mm with bends; cable 300 mm"))
 # --- PSU under the scanner
 psu = B.lrs100().translate((PSU_X0, 0, RAIL_Z + 5))
 scan = pr("scan_side_front", "scan_side_back", "scan_floor")
@@ -208,12 +195,15 @@ for d in (CAM_D_MIN, CAM_D_MAX):
     check(f"HQ camera at lens height {d:.0f} mm vs hood", cam, P["hood"], 2.0, "clamped to the slotted roof ribs")
 # --- screen
 check("Screen wall mount (between hopper and hood) vs front wire channel", P["mount_wall_gap"], P["scan_side_front"].cut(box(120, 230, -60, -54.9, PATH - 40, PATH)), 0.5)
-disp = screen_placed(box(-94.75, 94.75, -15, 0, -7, 113))
-check("Display in cradle vs hood", disp, P["hood"], 2.0, "screen on the hood front, tilted back")
-check("Display + cradle vs everything else", disp.union(P["screen_cradle"]), pr(*[k for k in P if k not in ("hood", "mount_front", "screen_cradle")]), 3.0)
+blk = screen_placed(screen_block())
+check("Screen + Pi block vs hood", blk, P["hood"], 2.0, "screen on the hood front, tilted back, Pi on its back")
+check("Screen + Pi block vs its cradle", blk, P["screen_cradle"], 0.0, "drops in from behind, 0.4 mm play")
+check("Screen + Pi + cradle vs everything else", blk.union(P["screen_cradle"]), pr(*[k for k in P if k not in ("hood", "mount_front", "screen_cradle")]), 3.0)
 check("Screen mount vs hood (only the pads)", P["mount_front"], P["hood"], 0.0)
-dsi = (PATH + HOOD_H - PI_Z) + 150 + 2 * 9 + (PATH + HOOD_H - (SCREEN_MZ - SCREEN_H / 2 + 20)) + 25 + 30   # Pi up to the roof, over, down the front to the cradle slot, +30 slack
-checks.append(dict(label="Display ribbon run (Pi -> over the roof -> screen) vs 500 mm cable", overlap=0, gap=round(500 - dsi, 1), need=40, ok=500 - dsi >= 40, note=f"~{dsi:.0f} mm; the short cable in the display box won't reach"))
+rib, rib_len = camera_ribbon()
+check("Camera ribbon (outside the hood) vs cradle crossbar", rib.cut(box(-1e3, 1e3, -75, 1e3, -1e3, 1e3)), P["screen_cradle"], 1.0, "runs between the screen and the crossbar")
+checks.append(dict(label="Camera ribbon run (Pi -> screen back -> hood slot -> camera) vs 305 mm", overlap=0, gap=round(305 - rib_len, 1), need=30,
+                   ok=305 - rib_len >= 30, note=f"~{rib_len:.0f} mm; flat, bends only"))
 # --- wiring
 loom_back = 8 * 3 + 8 * 2 + 9 * 3          # servo + emitter + bin-full conductors, full 9-bin build
 area = loom_back * 3.1416 * (1.1 / 2) ** 2

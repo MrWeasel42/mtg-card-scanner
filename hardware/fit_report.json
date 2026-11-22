@@ -2,7 +2,7 @@
  {
   "label": "Feed motor vs feeder base",
   "overlap": 0.0,
-  "gap": 8.17,
+  "gap": 8.24,
   "need": 1.0,
   "ok": true,
   "note": ""
@@ -42,7 +42,7 @@
  {
   "label": "Track motor vs end module, end cap, end bin",
   "overlap": 0.0,
-  "gap": 8.17,
+  "gap": 8.24,
   "need": 1.0,
   "ok": true,
   "note": "on a 30 mm standoff on the end module's back wall"
@@ -288,44 +288,20 @@
   "note": "nothing inside the L: braces are on the outside"
  },
  {
-  "label": "Pi 5 + cables vs feeder base",
-  "overlap": 0.0,
-  "gap": 1.0,
-  "need": 1.0,
-  "ok": true,
-  "note": "12 mm finger room at the USB end; the SKR talks over UART"
- },
- {
-  "label": "SKR Pico + plugs (on 40 mm standoffs) vs base",
+  "label": "SKR Pico + plugs (on 8 mm tray bosses) vs base",
   "overlap": 0.0,
   "gap": 5.0,
   "need": 1.0,
   "ok": true,
-  "note": ""
+  "note": "the Pi talks to it over UART from the hood"
  },
  {
   "label": "SKR Pico + plugs vs roller shafts/pulleys",
   "overlap": 0.0,
-  "gap": 82.7,
+  "gap": 121.3,
   "need": 3.0,
   "ok": true,
   "note": ""
- },
- {
-  "label": "Printed SKR posts vs feeder base, shafts",
-  "overlap": 0.0,
-  "gap": 9.75,
-  "need": 1.0,
-  "ok": true,
-  "note": ""
- },
- {
-  "label": "SKR Pico vs Pi 5 (airflow gap)",
-  "overlap": 0.0,
-  "gap": 21.0,
-  "need": 15.0,
-  "ok": true,
-  "note": "Pi cooler needs air"
  },
  {
   "label": "PSU (+25 mm wire space) vs scan module",
@@ -560,12 +536,52 @@
   "note": ""
  },
  {
-  "label": "Display in cradle vs bay cover / base",
+  "label": "Screen + Pi block vs hood",
   "overlap": 0.0,
-  "gap": 21.0,
+  "gap": 47.66,
+  "need": 2.0,
+  "ok": true,
+  "note": "screen on the hood front, tilted back, Pi on its back"
+ },
+ {
+  "label": "Screen + Pi block vs its cradle",
+  "overlap": 0.0,
+  "gap": 0.4,
   "need": 0.0,
   "ok": true,
-  "note": "display sits in the cradle, tilted 25 deg"
+  "note": "drops in from behind, 0.4 mm play"
+ },
+ {
+  "label": "Screen + Pi + cradle vs everything else",
+  "overlap": 0.0,
+  "gap": 116.7,
+  "need": 3.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Screen mount vs hood (only the pads)",
+  "overlap": 0.0,
+  "gap": 0.0,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Camera ribbon (outside the hood) vs cradle crossbar",
+  "overlap": 0.0,
+  "gap": 8.6,
+  "need": 1.0,
+  "ok": true,
+  "note": "runs between the screen and the crossbar"
+ },
+ {
+  "label": "Camera ribbon run (Pi -> screen back -> hood slot -> camera) vs 305 mm",
+  "overlap": 0,
+  "gap": 103.9,
+  "need": 30,
+  "ok": true,
+  "note": "~201 mm; flat, bends only"
  },
  {
   "label": "Back wire channel fill, full 9-bin build",

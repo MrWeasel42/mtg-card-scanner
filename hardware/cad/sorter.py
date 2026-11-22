@@ -459,9 +459,7 @@ CAM_D_MIN, CAM_D_MAX = 158.0, 205.0
 CAM_SLOT_Z0 = PATH + 44 + CAM_D_MIN + CAM_HOLE_DZ   # lens tip is 44 below the PCB underside
 CAM_SLOT_Z1 = PATH + 44 + CAM_D_MAX + CAM_HOLE_DZ
 HOOD_H = 266.0        # lens-to-card 160-205 mm with 2 mm over the camera at the top; prints 256 tall (Neptune 4 Pro: 265)
-PI_Z = PATH + HOOD_H - 52.0   # Pi 5 centre height on the back of the hood (board 85 x 56, long edge level)
-PI_TAB_DX, PI_TAB_DZ = 52.0, 22.0   # pi_mount's M3 tabs, from the Pi centre
-CAM_CABLE_Z = PATH + HOOD_H - 15.0  # camera ribbon slot in the back wall, just above the Pi
+CAM_CABLE_Z = PATH + HOOD_H - 15.0  # camera ribbon slot in the FRONT wall, up by the camera (ribbon comes from the screen)
 SCREEN_MZ = PATH + HOOD_H - 70.0    # screen mount (and screen centre) height on the hood front
 SCREEN_TILT = 15.0                  # screen leans back this many degrees
 
@@ -579,13 +577,11 @@ def hood():
         h = h.cut(box(xa - 1, xb + 1, -1.7, 1.7, CAM_SLOT_Z0, CAM_SLOT_Z1))
         for zz in (CAM_SLOT_Z0, CAM_SLOT_Z1):
             h = h.cut(cyl_x(0, zz, 1.7, xa - 1, xb + 1))
-    # Pi 5 rides on the outside of the back wall (pi_mount): 4 pads with M3 inserts, and a 24 x 4 mm slot above
-    # the Pi for the camera ribbon (the 300 mm cable that comes with the camera reaches with ~10 cm spare).
-    for px in (-PI_TAB_DX, PI_TAB_DX):
-        for pz in (-PI_TAB_DZ, PI_TAB_DZ):
-            h = h.union(box(SCAN_X + px - 5, SCAN_X + px + 5, y1 - 0.5, y1 + 6, PI_Z + pz - 5, PI_Z + pz + 5))
-            h = h.cut(cyl_y(SCAN_X + px, PI_Z + pz, M3_INSERT / 2, y1 - 1, y1 + 7))
-    h = h.cut(box(SCAN_X - 12, SCAN_X + 12, y1 - 4, y1 + 1, CAM_CABLE_Z - 2, CAM_CABLE_Z + 2))
+    # The Pi 5 rides on the back of the touchscreen (screen_cradle). Its camera ribbon (305 mm / 12 in) comes up the
+    # back of the screen and in through this 24 x 4 mm slot in the front wall, level with the camera: flat the whole
+    # way, bends only, no twist. A light baffle inside stops light getting past the ribbon.
+    h = h.cut(box(SCAN_X - 12, SCAN_X + 12, y0 - 1, y0 + 4, CAM_CABLE_Z - 2, CAM_CABLE_Z + 2))
+    h = h.union(box(SCAN_X - 15, SCAN_X + 15, y0 + 3, y0 + 12, CAM_CABLE_Z + 2, CAM_CABLE_Z + 4))     # baffle lip over the slot
     # screen mount pads on the outside of the front wall (mount_front, 2 x M3 inserts 116 mm apart)
     for px in (-58, 58):
         h = h.union(box(SCAN_X + px - 5, SCAN_X + px + 5, y0 - 6, y0 + 0.5, SCREEN_MZ - 8, SCREEN_MZ + 8))
@@ -617,22 +613,6 @@ def camera_plate():
     for dx in (-15, 15):
         for dy in (-15, 15):
             p = p.cut(cyl_z(dx, dy, 1.35, -1, 5))
-    return p
-
-def pi_mount():
-    """Holds the Pi 5 on the outside of the hood's back wall, board upright, cooler facing out (free air).
-    Pi on 4 x M2.5 x 6 into self-tapping bosses (58 x 49); plate on the hood's 4 pads with 4 x M3 x 8 into inserts.
-    Local frame: plate in XZ, back face on y = 0 (against the pads), Pi centre at x = z = 0."""
-    T = 3.0
-    p = box(-PI_TAB_DX - 6, PI_TAB_DX + 6, 0, T, -PI_TAB_DZ - 6, PI_TAB_DZ + 6)
-    p = p.cut(box(-30, 30, -1, T + 1, -14, 14))                  # window: less plastic, air behind the board
-    for px in (-PI_TAB_DX, PI_TAB_DX):
-        for pz in (-PI_TAB_DZ, PI_TAB_DZ):
-            p = p.cut(cyl_y(px, pz, M3 / 2, -1, T + 1))
-    for dx in (-29, 29):
-        for dz in (-24.5, 24.5):
-            p = p.union(cyl_y(dx, dz, 3, T, T + 6))
-            p = p.cut(cyl_y(dx, dz, PILOT_M25 / 2, T - 1, T + 7))   # M2.5 self-tap
     return p
 
 def polarizer_cap():
@@ -884,28 +864,67 @@ def gopro_arm(length=90.0):
     a = a.union(gopro(3, 10, base_w=16, base_t=0.01).rotate((0, 0, 0), (1, 0, 0), 180))
     return a
 
+# ---- touchscreen block: Touch Display 2 with the Pi 5 screwed to its back (the display ribbon is short, so they
+# stay together). Mounted landscape with the Pi's port edge UP: the camera ribbon leaves the Pi's CAM/DISP 0 port
+# straight up, lies flat on the back of the screen, curves over to the hood and goes in through the front-wall slot
+# to the camera. Bends only, no twist. (Turn the picture with screen-rotate.sh to suit.)
+# Cradle frame: display back face on y = 0 (front face y = -15, toward the user), bottom edge z = 0, centre x = 0.
+PI_ON_SCREEN_Z = 8.0     # Pi's GPIO (bottom) edge above the display's bottom edge, as mounted on its standoffs
+PI_STACK = 29.0          # display back to the top of the Pi's cooler
+CAM_PORT_X = 0.0         # CAM/DISP 0 port centre from the screen centre (check on the real one: the ribbon must
+                         # line up with the camera, a flat ribbon can't jog sideways)
+SCR_PIV = (0.0, 52.0, 86.0)   # GoPro pivot in the cradle frame: behind the Pi, above it
+
+def screen_xf(x, y, z):
+    """A point in the cradle frame -> machine coordinates (pivot on mount_front's prongs, tilted back)."""
+    t = math.radians(-SCREEN_TILT)
+    yr, zr = y - SCR_PIV[1], z - SCR_PIV[2]
+    return (SCAN_X + x - CAM_PORT_X, -75.0 - 6 - 4 - 14 + yr * math.cos(t) - zr * math.sin(t),
+            SCREEN_MZ + yr * math.sin(t) + zr * math.cos(t))
+
 def screen_placed(shape):
-    """Puts a shape in the screen cradle's frame (pivot on mount_front's prongs, centred, tilted back)."""
-    piv = (SCAN_X, -75.0 - 6 - 4 - 14, SCREEN_MZ)
-    return (shape.translate((0, -3 - 12, -(SCREEN_H + 4) / 2)).rotate((0, 0, 0), (1, 0, 0), -SCREEN_TILT)
+    """Puts a shape from the cradle frame into the machine (the CAM port lines up with the camera in X)."""
+    piv = (SCAN_X - CAM_PORT_X, -75.0 - 6 - 4 - 14, SCREEN_MZ)
+    return (shape.translate((0, -SCR_PIV[1], -SCR_PIV[2])).rotate((0, 0, 0), (1, 0, 0), -SCREEN_TILT)
             .translate(piv))
 
+def screen_block():
+    """Display + Pi 5 + Active Cooler envelope, cradle frame (render and fit check)."""
+    d = box(-SCREEN_W / 2, SCREEN_W / 2, -SCREEN_T, 0, 0, SCREEN_H)
+    return d.union(box(-42.5, 42.5, 0, PI_STACK, PI_ON_SCREEN_Z, PI_ON_SCREEN_Z + 56))
+
 def screen_cradle():
-    """Holds the 7 in Touch Display 2 by its edges (lips) with a slot for the ribbon cable, plus a 2-prong
-    GoPro tab on the back so it clips onto any mount point. Prints face down."""
-    W, H, T = SCREEN_W + 4, SCREEN_H + 4, 3.0
-    c = box(-W / 2 - 3, W / 2 + 3, 0, T, -10, H + 3)                    # back plate
-    c = c.union(box(-W / 2 - 3, W / 2 + 3, -SCREEN_T, T, -10, -7))      # bottom lip shelf
-    c = c.union(box(-W / 2 - 3, -W / 2, -SCREEN_T, T, -10, H + 3))      # side rails
-    c = c.union(box(W / 2, W / 2 + 3, -SCREEN_T, T, -10, H + 3))
-    c = c.union(box(-W / 2 - 3, -W / 2 + 6, -SCREEN_T - 2, -SCREEN_T, -10, H + 3))   # front lips
-    c = c.union(box(W / 2 - 6, W / 2 + 3, -SCREEN_T - 2, -SCREEN_T, -10, H + 3))
-    c = c.cut(box(-25, 25, -1, T + 1, 10, 30))                          # ribbon + USB-C slot
-    for x in range(-80, 81, 20):                                         # cooling slots
-        if abs(x) > 15:
-            c = c.cut(box(x - 3, x + 3, -1, T + 1, 60, 100))
-    tab = gopro(2, 12, base_w=30, base_t=0.01).rotate((0, 0, 0), (1, 0, 0), -90).translate((0, T, H / 2))
+    """Frame round the edges of the Touch Display 2 (front lips, side rails, back lips), open at the back so the
+    Pi and its cooler stick out with free air. Two posts carry a crossbar above the Pi with the 2-prong GoPro tab;
+    the camera ribbon runs up between the screen and the crossbar. Prints face down."""
+    W, H, T = SCREEN_W + 0.8, SCREEN_H + 0.8, 3.0
+    x0, x1, z0, z1 = -W / 2, W / 2, -0.4, H - 0.4
+    c = box(x0 - T, x1 + T, -SCREEN_T - 2, T, z0 - T, z1 + T)
+    c = c.cut(box(x0, x1, -SCREEN_T - 0.4, 0.4, z0, z1))                          # the display drops in
+    c = c.cut(box(x0 + 5, x1 - 5, -SCREEN_T - 3, -SCREEN_T, z0 + 5, z1 - 5))       # front: 5 mm lips round the glass
+    c = c.cut(box(x0 + 7, x1 - 7, -1, T + 1, z0 + 7, z1 - 7))                       # back: open (Pi, cooler, cables)
+    c = c.cut(box(-30, 30, -SCREEN_T - 3, -SCREEN_T + 2, z0 - T - 1, z0 + 1))      # USB-C / cable notch, bottom
+    zb0, zb1 = SCR_PIV[2] - 10, SCR_PIV[2] + 10
+    for sx in (-1, 1):                                                              # posts from the back lips
+        xa, xb = sorted((sx * (x1 - 1), sx * (x1 - 13)))
+        c = c.union(box(xa, xb, T - 0.5, SCR_PIV[1] - 12, zb0, zb1))
+    c = c.union(box(x0 + 1, x1 - 1, SCR_PIV[1] - 16, SCR_PIV[1] - 12, zb0, zb1))   # crossbar behind the ribbon
+    tab = gopro(2, 12, base_w=30, base_t=0.01).rotate((0, 0, 0), (1, 0, 0), -90).translate((0, SCR_PIV[1] - 12, SCR_PIV[2]))
     return c.union(tab)
+
+def camera_ribbon():
+    """The 305 mm camera ribbon's path (picture + length check): Pi port -> up the back of the screen -> over to the
+    front-wall slot -> to the camera's connector (on the camera's front edge). Returns (shape, length mm)."""
+    port_z = PI_ON_SCREEN_Z + 56
+    y_rib = 12.0                                                       # just off the Pi's connector
+    pts = [screen_xf(CAM_PORT_X, y_rib, port_z), screen_xf(CAM_PORT_X, y_rib, SCREEN_H + 8)]
+    pts += [(SCAN_X, -75.0 - 6, CAM_CABLE_Z), (SCAN_X, -75.0 + 4, CAM_CABLE_Z), (SCAN_X, -22.0, PATH + CAM_D + 44 + 3)]
+    shp, total = None, 0.0
+    for (xa, ya, za), (xb, yb, zb) in zip(pts, pts[1:]):
+        L = math.hypot(yb - ya, zb - za); total += L
+        seg = box(-8, 8, 0, L, -0.4, 0.4).rotate((0, 0, 0), (1, 0, 0), math.degrees(math.atan2(zb - za, yb - ya))).translate((xa, ya, za))
+        shp = seg if shp is None else shp.union(seg)
+    return shp, total + 4 * 8                                            # + the bends
 
 # ============================================================================ final-look shell (render / later print)
 def shell_parts(length=660.0):
@@ -955,8 +974,7 @@ PRINTED = {
     "scan_side_back":  (lambda: scan_side_back(), 1, "PETG", "On its outer face."),
     "scan_floor":      (scan_floor, 1, "PLA matte green", "Top face DOWN on the smooth side of the plate: flat, slick, dull."),
     "hood":            (hood, 1, "PLA matte black", "Upside down (roof on the plate), tree supports for the tunnel only. ~16 h."),
-    "pi_mount":        (pi_mount, 1, "PETG", "Flat, bosses up. Pi 5 on 4 x M2.5 x 6; to the hood's back pads with 4 x M3 x 8."),
-    "camera_plate":    (camera_plate, 1, "PETG", "Tabs up. 2 M3 inserts in the tabs; clamps to the hood ribs with 2 x M3 x 10."),
+    "camera_plate":    (camera_plate, 1, "PETG", "Tabs up. 2 M3 inserts in the tabs; clamps to the hood ribs with 2 x M3 x 10. Camera ribbon connector toward the FRONT (screen side)."),
     "polarizer_cap":   (polarizer_cap, 1, "PETG", ""),
     "bin_side_back":   (lambda: bin_module_side(1), 2, "PETG", "On its outer face; one per bin module."),
     "bin_side_front":  (lambda: bin_module_side(-1), 2, "PETG", "On its outer face; one per bin module."),
@@ -973,8 +991,8 @@ PRINTED = {
     "psu_cradle":      (psu_cradle, 2, "PETG", "On its back."),
     "inlet_plate":     (inlet_plate, 1, "PETG", "Flat. Cutout 47.5 x 27.5 mm for a snap-in C14 inlet; check yours."),
     "channel_cover":   (channel_cover, 6, "PLA", "On its back. Clips over the wire channels."),
-    "screen_cradle":   (screen_cradle, 1, "PETG", "Face down. Check the display size on arrival. GoPro tab on the back."),
-    "mount_front":     (mount_front, 1, "PETG", "Screen mount on the hood front (default spot): 2 x M3 x 10 into the hood's pads."),
+    "screen_cradle":   (screen_cradle, 1, "PETG", "Face down. Display (with the Pi on its back) drops in from behind; Pi's port edge UP. Tree supports under the crossbar."),
+    "mount_front":     (mount_front, 1, "PETG", "Screen mount on the hood front: 2 x M3 x 10 into the hood's pads. The camera ribbon goes in just above it."),
     "mount_wall":      (mount_wall, 2, "PETG", "Bolts to any module wall: between hopper and scanner, or on the back for an arm over the track."),
     "mount_roof":      (mount_roof, 1, "PETG", "Optional: screen on top of the hood."),
     "gopro_arm":       (gopro_arm, 2, "PETG", "100% infill. Or use store-bought GoPro extension arms."),
@@ -995,7 +1013,6 @@ def placed():
     P["scan_side_back"] = scan_side_back()
     P["scan_floor"] = scan_floor()
     P["hood"] = hood()
-    P["pi_mount"] = pi_mount().translate((SCAN_X, 75.0 + 6, PI_Z))
     for i, xb in enumerate(BIN_X[:2]):
         x0 = xb - PITCH / 2
         P[f"bin_side_back_{i}"] = bin_module_side(1).translate((x0, 0, 0))
@@ -1008,7 +1025,7 @@ def placed():
     for xc in (PSU_X0 + 8, PSU_X0 + PSU_L - 26):
         P[f"psu_cradle_{int(xc)}"] = psu_cradle().translate((xc, 0, 0))
     P["inlet_plate"] = inlet_plate().translate((SCAN_X0 + 32, WALL_OUT, RAIL_Z + 29))
-    # default screen spot: on the front of the hood, near the Pi (500 mm ribbon over the roof), tilted back
+    # screen + Pi block on the front of the hood, tilted back; the camera ribbon goes straight in above it
     P["mount_front"] = mount_front().translate((SCAN_X, -75.0 - 6, SCREEN_MZ))
     P["screen_cradle"] = screen_placed(screen_cradle())
     P["mount_wall_gap"] = mount_wall().rotate((0, 0, 0), (0, 0, 1), 180).translate((175, -WALL_OUT - 9, PATH - 21))

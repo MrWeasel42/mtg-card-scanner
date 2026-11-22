@@ -46,9 +46,11 @@ put("card_bin1", box(BIN_X[0] - 44, BIN_X[0] + 44, -31.5, 31.5, PATH, PATH + 0.6
 BY = [BIN_Y, BIN_Y, BIN_Y]
 for i, h in enumerate((60, 25, 90)):
     put(f"cards_in_bin{i}", box(BIN_X[i] - 44, BIN_X[i] + 44, BY[i] - 31.5, BY[i] + 31.5, 2, 2 + h * 0.3), "stack")
-# the 7 in display in its cradle (picture only)
-disp = screen_placed(box(-94.75, 94.75, -15, 0, -7, 113))
-put("display", disp, "screen")
+# the 7 in display in its cradle with the Pi on its back, and the camera ribbon (picture only)
+put("display", screen_placed(box(-SCREEN_W / 2, SCREEN_W / 2, -SCREEN_T, 0, 0, SCREEN_H)), "screen")
+put("pi5", screen_placed(box(-42.5, 42.5, 0, 1.6 + 8, PI_ON_SCREEN_Z, PI_ON_SCREEN_Z + 56)), "servo")
+put("pi5_cooler", screen_placed(box(-35, 35, 9.6, PI_STACK, PI_ON_SCREEN_Z + 6, PI_ON_SCREEN_Z + 50)), "alu")
+put("ribbon", camera_ribbon()[0], "card")
 # PSU on its side under the scanner
 put("psu", box(PSU_X0, PSU_X0 + PSU_L, -PSU_H / 2, PSU_H / 2, RAIL_Z + 5, RAIL_Z + 5 + PSU_W), "alu")
 # camera on the hood roof
