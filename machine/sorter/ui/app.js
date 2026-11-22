@@ -487,3 +487,16 @@ setInterval(() => {
 
 poll();
 render(true);
+
+// --------------------------------------------------------------------------------------------- hide the pointer (kiosk)
+// Touch only: no arrow on screen. A plugged-in mouse shows it until 5 s without moving.
+if (KIOSK) {
+  document.documentElement.classList.add("nocursor");
+  let hideTimer = 0;
+  addEventListener("pointermove", e => {
+    if (e.pointerType !== "mouse") return;
+    document.documentElement.classList.remove("nocursor");
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => document.documentElement.classList.add("nocursor"), 5000);
+  }, { passive: true });
+}

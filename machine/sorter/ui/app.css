@@ -149,3 +149,6 @@ h1 { font-size: 28px; margin: 0 0 12px; } h2 { font-size: 22px; margin: 18px 0 1
   .controls { padding-right: 0; padding-bottom: 120px; }
   #chips { display: none; }
 }
+
+/* kiosk: no mouse pointer unless a real mouse is moving */
+html.nocursor, html.nocursor * { cursor: none !important; }

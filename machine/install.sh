@@ -26,5 +26,9 @@ fi
 echo 'SUBSYSTEM=="backlight", RUN+="/bin/chmod 666 /sys/class/backlight/%k/brightness /sys/class/backlight/%k/bl_power"' \
   | sudo tee /etc/udev/rules.d/90-sorter-backlight.rules >/dev/null
 
+echo "== Touch lined up with the picture"
+ROT=$(cat ~/sorter_data/rotation 2>/dev/null || echo 90)
+bash screen-rotate.sh "$ROT" "$(cat ~/sorter_data/touchflip 2>/dev/null)" || true
+
 echo "== Done. Reboot to start the touchscreen:  sudo reboot"
 echo "   Any browser on your Wi-Fi: http://$(hostname).local:8080"

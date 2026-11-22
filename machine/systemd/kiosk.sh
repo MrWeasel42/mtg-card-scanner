@@ -1,6 +1,6 @@
 #!/bin/sh
 # Runs inside cage on the Touch Display: turns the screen to landscape, then opens the sorter app full screen.
-# Picture upside down?  echo 270 > ~/sorter_data/rotation   (or 90), then: sudo systemctl restart sorter-screen
+# Picture upside down or taps in the wrong place?  bash ~/mtg-card-scanner/machine/screen-rotate.sh 270  (see that file)
 ROT=$(cat "$HOME/sorter_data/rotation" 2>/dev/null || echo 90)
 for out in $(wlr-randr | grep -E '^[A-Za-z]' | cut -d' ' -f1); do
   wlr-randr --output "$out" --transform "$ROT"
