@@ -1,0 +1,91 @@
+name: Pi engine
+
+# The card sorter's on-machine identifying (machine/sorter/engine) is a Python copy of the PC app's C# recognition
+# engine. This checks the two give the same answers: fake photos of real cards, the PC engine on Windows, the Pi's
+# copy on 64-bit ARM in Raspberry Pi OS's Debian (bookworm and trixie, with Debian's own OpenCV and numpy like the
+# Pi), then a side-by-side comparison. Also runs the machine's tests.
+on:
+  push:
+    branches: [main, "pi-*"]
+    paths:
+      - "machine/sorter/**"
+      - "src/CardScanner.Core/**"
+      - "tools/pi_parity/**"
+      - "tools/CardScanner.Parity/**"
+      - ".github/workflows/pi-engine.yml"
+  workflow_dispatch:
+    inputs:
+      cards:
+        description: "Random cards to photograph (plus some special ones)"
+        default: "40"
+
+jobs:
+  photos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install "opencv-python-headless<5" numpy
+      - name: Fake photos of real cards
+        run: |
+          curl -sSfL -o catalog.sqlite https://github.com/MrWeasel42/mtg-card-scanner/releases/download/catalog-latest/catalog.sqlite
+          python tools/pi_parity/make_photos.py catalog.sqlite photos ${{ inputs.cards || '40' }}
+      - uses: actions/upload-artifact@v4
+        with: { name: photos, path: photos }
+
+  pc:
+    needs: photos
+    runs-on: ${{ vars.WINDOWS_RUNNER || 'windows-2022' }}
+    env: { DOTNET_NOLOGO: true, DOTNET_CLI_TELEMETRY_OPTOUT: true }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with: { dotnet-version: "10.0.x" }
+      - uses: actions/download-artifact@v4
+        with: { name: photos, path: photos }
+      - name: PC engine on the photos
+        run: dotnet run --project tools/CardScanner.Parity -c Release -- photos pics pc.json
+      - uses: actions/upload-artifact@v4
+        with: { name: pc, path: "pc.json\npics" }
+
+  pi:
+    needs: pc
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        debian: [bookworm, trixie]
+    container: debian:${{ matrix.debian }}
+    steps:
+      - name: Raspberry Pi OS's packages (Debian's numpy and OpenCV), then the machine's requirements
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq python3-opencv python3-numpy python3-yaml python3-pip git curl ca-certificates >/dev/null
+          python3 -c "import cv2, numpy; print('OpenCV', cv2.__version__, 'numpy', numpy.__version__)"
+      - uses: actions/checkout@v5
+      - run: pip3 install -q --break-system-packages -r machine/sorter/requirements.txt || pip3 install -q --break-system-packages onnxruntime rapidfuzz
+      - uses: actions/download-artifact@v4
+        with: { name: photos, path: photos }
+      - uses: actions/download-artifact@v4
+        with: { name: pc, path: pc }
+      - name: Catalog (the same files the PC app downloads)
+        run: |
+          mkdir catalog && cd catalog
+          for f in catalog.sqlite fingerprints.bin fingerprint_ids.txt manifest.json; do
+            curl -sSfL -o $f https://github.com/MrWeasel42/mtg-card-scanner/releases/download/catalog-latest/$f; done
+          curl -sSfL -o model.onnx https://github.com/MrWeasel42/mtg-card-scanner/releases/download/model-v1/model.onnx
+      - name: Machine tests (failover in the simulator, the real engine on a drawn card)
+        working-directory: machine/sorter
+        env: { MTG_CATALOG: "${{ github.workspace }}/catalog" }
+        run: |
+          python3 test_app.py
+          python3 test_sim.py > /dev/null
+          python3 test_identify.py | grep -v '^\['
+      - name: Pi engine on the photos
+        run: python3 tools/pi_parity/run_engine.py catalog photos pc/pics pi.json
+      - name: Compare with the PC engine
+        run: python3 tools/pi_parity/compare.py photos/truth.json pc/pc.json pi.json "Pi engine (Debian ${{ matrix.debian }}, arm64)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: "pi-${{ matrix.debian }}", path: pi.json }

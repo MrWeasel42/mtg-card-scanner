@@ -41,3 +41,12 @@ Only 5 cards flagged. Older cards with no collector line rely on picture + borde
 - Non-English cards aren't in the catalog (English only by design); they get flagged.
 - Pre-2015 cards have no set code/number on them, so the edition comes from the picture alone.
 - Foil detection only uses the ★/• marker for now; the lighting check comes with the machine.
+
+## On the card sorter (Raspberry Pi 5)
+The machine carries its own copy of this engine (`machine/sorter/engine/`, Python): same catalog, AI model, text-reader
+models and rules, including the checks after recognition (crop refine, ★/• mark, detail compare). It identifies
+whenever the PC app isn't connected (see machine/README.md, **Identifying**). The **Pi engine** workflow
+(`.github/workflows/pi-engine.yml`) runs `tools/CardScanner.Parity` (this C# engine) and `tools/pi_parity` (the Pi's)
+on the same photos and fails if they disagree on the card or the pin too often. Any change to the scoring here must be
+made there too.
+

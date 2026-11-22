@@ -196,7 +196,9 @@ const VIEWS = {
       ["levels", "📏 Bin levels", "Distance to each stack"], ["tower", "🗼 Which tower?", "Reads the tower-ID magnets"],
       ["calib-shot", "▦ Lens photo", "Checkerboard under the camera, then tap (8+ times, move it each time)"],
       ["calib-done", "✓ Finish lens calibration", "Works out the lens correction from the photos"],
-      ["motors-off", "🔌 Motors off", "Belts turn by hand"]];
+      ["motors-off", "🔌 Motors off", "Belts turn by hand"]]
+      .concat(S && S.sim ? [["sim-pc-off", "🖥 Pretend PC off", "Simulator: the PC goes away"], ["sim-pc-hang", "🖥 Pretend PC hangs", "Simulator: the PC stops answering mid-card"],
+        ["sim-pc-on", "🖥 Pretend PC on", "Simulator: the PC is back"]] : []);
     return `<p class="muted" style="margin-top:0">Setup and tests. The red STOP button cuts the motors at once.</p>
       <div class="bins">${t.map(([k, n, d]) => `<button class="tile" style="min-height:130px" data-tool="${k}"><span class="t" style="font-size:22px">${n}</span><span class="s">${d}</span></button>`).join("")}
       <button class="tile" style="min-height:130px" data-act="lights"><span class="t" style="font-size:22px">💡 Lights</span><span class="s">On / off</span></button></div>
@@ -208,7 +210,14 @@ const VIEWS = {
     const seg = (key, opts) => `<span class="seg">${opts.map(([v, l]) => `<button class="${String(st[key]) === String(v) ? "on" : ""}" data-set="${key}" data-val="${v}">${l}</button>`).join("")}</span>`;
     const u = S.update;
     return `<div class="list">
-      <div class="panel"><h3>Identifying</h3><p class="muted small" style="margin:0">Cards are identified by the MTG Scanner app on your PC (Settings → Phone link on). If the PC is off, the machine keeps sorting: each card's photo is saved and it goes to the Flagged bin, and you identify those on the PC later.</p></div>
+      <div class="panel"><h3>Identify cards on</h3>${seg("identifyOn", [["auto", "PC, else this machine"], ["pc", "PC only"], ["machine", "This machine only"]])}
+        <p class="muted small">${{
+          auto: "The MTG Scanner app on your PC identifies cards while it's connected (Settings → Phone link on): it's faster. When the PC isn't there, or drops out partway through a card, this machine identifies the card itself with the same recognition engine (same catalog, same AI model, same rules), so sorting carries on.",
+          pc: "Only the PC identifies. With no PC, each card's photo is kept and the card goes to the Flagged bin, to identify later.",
+          machine: "This machine identifies every card itself and never asks the PC. Slower than the PC (time per card below).",
+        }[st.identifyOn] || ""}</p>
+        <div class="muted small">On this machine: ${esc(machineIdText(S.machineId))}</div>
+        <p class="muted small" style="margin-bottom:0">The machine downloads the card catalog once (about 220 MB, needs the internet) and keeps it up to date. Its close-up checks between look-alike printings use card pictures from Scryfall: without internet it still identifies, it just flags a few more cards for you to check.</p></div>
       <div class="panel"><h3>Price shown while sorting</h3>${seg("priceShow", [["last", "Last card"], ["top", "Highest so far"], ["both", "Both"]])}</div>
       <div class="panel"><h3>Screen sleep</h3>${seg("sleepMinutes", [[0, "Never"], [5, "5 min"], [10, "10 min"], [30, "30 min"]])}
         <p class="muted small">Never sleeps while sorting. Tap to wake.</p>
@@ -219,6 +228,12 @@ const VIEWS = {
       <div class="panel row"><div class="grow">Shut down the Pi before unplugging the machine.</div><button class="btn danger" data-act="shutdown">Shut down</button></div></div>`;
   },
 };
+
+function machineIdText(m) {
+  if (!m) return "";
+  const t = m.avgMs ? ` · about ${(m.avgMs / 1000).toFixed(1)} s per card` + (m.lastMs ? ` (last ${(m.lastMs / 1000).toFixed(1)} s)` : "") : "";
+  return (m.detail || m.state) + t;
+}
 
 // --------------------------------------------------------------------------------------------- start screen
 let ST = null;   // {opts, name, mode, setup, labels, src}

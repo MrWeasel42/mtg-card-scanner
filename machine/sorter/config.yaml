@@ -1,9 +1,16 @@
-# Card sorter settings. Distances in mm. The PC app's session decides which bin each card goes to.
+# Card sorter settings. Distances in mm. The machine's session (touchscreen) decides which bin each card goes to.
 
 pc:
   host: ""              # blank = find the PC automatically (PC app: Settings -> Phone link on)
   port: 8770
   poll_s: 2             # how often to ask the PC while paused or waiting for cards
+
+identify:               # Settings -> "Identify cards on" picks PC / machine / auto (default: auto)
+  pc_give_up_s: 15      # auto: a PC that hasn't answered a card in this long (or drops off the Wi-Fi) -> this machine
+                        # identifies the same photo too, and whichever answers first is used. The PC app itself can
+                        # take up to ~13 s on a card whose catalog pictures it has to download first.
+  machine_threads: 4    # CPU cores the on-machine engine uses (the Pi 5 has 4)
+  machine_wait_s: 120   # just after power-on the machine's catalog takes a little while to load: wait this long for it
 
 bins:
   max: 9

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- CI: runs the PC app's recognition engine on a folder of photos and writes every intermediate answer to JSON,
+       so the Raspberry Pi's copy of the engine (machine/sorter/engine) can be checked against it. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CardScanner.Core\CardScanner.Core.csproj" />
+  </ItemGroup>
+</Project>

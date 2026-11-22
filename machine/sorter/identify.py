@@ -1,7 +1,9 @@
 """Who says what a card is. The machine asks an identifier and decides the bin itself.
 
-  PcIdentifier   the Windows app on your PC (Settings -> Phone link on), over Wi-Fi. Fast: it uses the graphics card.
-  (later)        the same recognition engine running on the Pi, so no PC is needed at all.
+  PcIdentifier     the Windows app on your PC (Settings -> Phone link on), over Wi-Fi. The faster one.
+  LocalIdentifier  (engine/local.py) the same recognition engine on the Pi: same catalog, same AI model, same text
+                   reader models, same rules (a Python copy of the C# code, checked against it in CI:
+                   .github/workflows/pi-engine.yml). Used whenever the PC isn't there, even partway through a card.
 
 Every identifier answers identify(jpeg) with the same dict:
     {"ok": True, "id": "m12", "noCard": False, "pinned": True, "pinReason": "...", "flagReason": None,
@@ -151,17 +153,27 @@ class PcIdentifier:
 
 
 class SimIdentifier:
-    """Answers like the PC with made-up cards (for --sim and the tests)."""
+    """Answers like the PC with made-up cards (for --sim and the tests). Can be switched off or made to hang, to try
+    what the machine does when the PC goes away mid-run."""
     kind = "sim"
-    label = "Simulator"
-    online = True
+
+    def __init__(self, seed: int = 3, label: str = "Simulator", delay: float = 0.0):
+        self.rng = random.Random(seed)
+        self.n = 0
+        self.label = label
+        self.delay = delay
+        self.online = True
+        self.ready = True
+        self.hang_s = 0.0                 # > 0: the next identify hangs this long, then fails (a PC that went to sleep)
+
+    def status(self) -> dict:
+        return {"state": "ready", "detail": "Simulated", "catalog": "sim", "lastMs": None, "avgMs": None}
+
+    def wait_ready(self, timeout: float) -> bool:
+        return True
 
     NAMES = ["Lightning Bolt", "Counterspell", "Llanowar Elves", "Swords to Plowshares", "Dark Ritual", "Sol Ring",
              "Island", "Thoughtseize", "Goblin Guide", "Brainstorm", "Opt", "Wrath of God", "Zuran Orb"]
-
-    def __init__(self, seed: int = 3):
-        self.rng = random.Random(seed)
-        self.n = 0
 
     def connect(self) -> bool:
         return True
@@ -179,6 +191,15 @@ class SimIdentifier:
                 "imageUrl": ""}
 
     def identify(self, jpeg: bytes) -> dict:
+        if self.hang_s > 0:
+            time.sleep(self.hang_s)
+            if self.hang_s > 0:
+                self.online = False
+            return {"ok": False, "error": "PC not reachable (timed out)", "offline": True}
+        if not self.online:
+            return {"ok": False, "error": "PC not reachable (connection refused)", "offline": True}
+        if self.delay:
+            time.sleep(self.delay)
         self.n += 1
         r = self.rng.random()
         if r < 0.05:

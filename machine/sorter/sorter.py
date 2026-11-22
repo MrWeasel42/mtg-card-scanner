@@ -82,9 +82,10 @@ class Sorter:
                             "pinned", "finish_unsure", "price", "error"])
 
     def say(self, msg: str) -> None:
-        print(f"[{dt.datetime.now():%H:%M:%S}] {msg}", flush=True)
         if self.on_say:
-            self.on_say(msg)
+            self.on_say(msg)              # the app logs it (and shows it on the screen)
+        else:
+            print(f"[{dt.datetime.now():%H:%M:%S}] {msg}", flush=True)
 
     def nap(self, s: float) -> None:
         """sleep, but the emergency stop ends it at once"""

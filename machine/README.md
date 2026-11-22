@@ -1,10 +1,10 @@
 # Machine software (Raspberry Pi 5)
 
 The Pi runs the whole machine on its own: the touchscreen app, sessions, bins, review and the ManaBox/Moxfield
-CSVs all live on the Pi. The PC app identifies the cards: the Pi sends it each photo. If the PC is off the machine
-keeps sorting, saves every photo and sends those cards to the Flagged bin to identify later. The PC copies every
-finished session to
-`Sessions\Machine\`. Any phone or PC on the Wi-Fi can open the same app at **http://sorter.local:8080**
+CSVs all live on the Pi, and so does a copy of the card recognition engine. While the PC app is connected it
+identifies the cards (it's faster): the Pi sends it each photo. When the PC isn't there, or drops out partway
+through a card, the Pi identifies the card itself and sorting carries on (see **Identifying** below). The PC copies
+every finished session to `Sessions\Machine\`. Any phone or PC on the Wi-Fi can open the same app at **http://sorter.local:8080**
 (download CSVs, review cards, watch a run).
 
 ```
@@ -12,7 +12,8 @@ PC app (Windows) <--Wi-Fi--  sorter.py (Pi) --Moonraker--> Klipper --UART--> SKR
                                   |                                                       2 tower-ID hall sensors, LEDs
                                   |--I2C (4-wire bin bus)--> bin hub on bin module 2:
                                   |        PCA9685 (8 door servos), MCP23017 (8 break-beams), 2 x TCA9548A (9 VL53L1X)
-                                  '--CSI--> HQ camera (lens distortion corrected after calibration)
+                                  |--CSI--> HQ camera (lens distortion corrected after calibration)
+                                  '--engine/ (on-machine identifying: same catalog, AI model, text reader and rules)
 ```
 
 ## 1. Pi setup (once)
@@ -66,9 +67,37 @@ and restart Klipper (`sudo systemctl restart klipper`).
 | Home | `python3 sorter.py --home-only` | a fin stops exactly on the scan station (use the fin gauge); otherwise change `home_to_station_mm` |
 | Doors | edit `closed_us` / `open_us` in `config.yaml` until each door shuts flush and opens fully | |
 | Feeding | `python3 sorter.py --limit 1` with 5 cards in the hopper | one card at a time, none doubled |
-| Full run | PC app open with **Phone link** on, then `python3 sorter.py` | cards land in the right bins; the PC shows each scan |
+| Full run | Start a session on the touchscreen (PC app open with **Phone link** on, or not) | cards land in the right bins; the screen shows who identified each one |
 
 `python3 sorter.py --sim 20` runs the whole cycle with pretend hardware, anywhere (no Pi needed).
+
+## Identifying
+
+Settings → **Identify cards on**:
+
+| Setting | What happens |
+|---|---|
+| **PC, else this machine** (default) | The PC app identifies while it's connected. If the PC goes away (app closed, PC asleep, off the Wi-Fi) or hasn't answered a card within `identify.pc_give_up_s` (15 s), the Pi identifies that same photo and whichever answers first is used; the next cards go to the Pi until the PC is back, then the PC again. |
+| **PC only** | No PC: each card's photo is kept and the card goes to the Flagged bin (identify it later with **↻ Identify again** in review). |
+| **This machine only** | The Pi identifies every card and never asks the PC. |
+
+The engine on the Pi (`sorter/engine/`) is a Python copy of the PC app's C# engine: the same published catalog
+(`catalog-latest`), the same AI model (`model-v1`), the same text-reader models (`src/CardScanner.Core/OcrModels`)
+and the same scoring, pinning and flagging rules, plus the checks the PC runs after it (crop straightening against the
+top match, the ★/• mark, the close-up compare of look-alike printings). The **Pi engine** GitHub check runs both on the
+same photos of real cards and compares every answer, on 64-bit ARM with Raspberry Pi OS's Debian (bookworm and trixie).
+Change one engine, change the other.
+
+* First start: the Pi downloads the catalog once (about 220 MB, `~/sorter_data/catalog`) and checks for a new one every
+  12 hours; it swaps it in only while nothing is sorting. Loading it takes a few seconds after power-on.
+* Slower than the PC: Settings shows the Pi's time per card. It uses about 1.2 GB of the Pi 5's 4 GB.
+* The close-up checks use card pictures from Scryfall (cached in `~/sorter_data/cache/thumbs`). With no internet
+  the Pi still identifies; a few more look-alike printings get flagged for you to check.
+* Reviews of cards the Pi identified are logged in `~/sorter_data/logs/machine_identify_feedback.csv` (the PC keeps
+  its own accuracy log for the cards it identified).
+* Try it anywhere: `python3 sorter/app.py --sim` has a pretend PC you can switch off or make hang from Tools; add
+  `--sim-engine --sim-photos <folder of card photos>` to run the real engine. Tests: `python3 sorter/test_identify.py`
+  (`MTG_CATALOG=<catalog folder>` also runs the real engine).
 
 ## Bins
 

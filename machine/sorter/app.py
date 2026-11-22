@@ -6,6 +6,8 @@ http://sorter.local:8080 (phone or PC: start sessions, review flagged cards, dow
 
     python3 app.py            on the machine (systemd: card-sorter.service)
     python3 app.py --sim      anywhere: pretend hardware and a pretend identifier, to try the screens
+    python3 app.py --sim --sim-engine --sim-photos DIR
+                              pretend hardware, but cards identified by the real on-machine engine from photos in DIR
 
 Everything the screen does goes through the JSON API below; the page itself is ui/index.html.
 """
@@ -20,6 +22,7 @@ import os
 import subprocess
 import sys
 import threading
+import concurrent.futures as cf
 import time
 import traceback
 import urllib.request
@@ -40,7 +43,7 @@ import sorter as sorter_mod   # noqa: E402
 REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
 UI = os.path.join(HERE, "ui")
 DEFAULT_SETTINGS = {
-    "identifyOn": "auto",            # auto (PC when it's on, else the machine) | pc | machine
+    "identifyOn": "auto",            # auto (the PC while it's connected, else the machine) | pc | machine
     "priceShow": "both",             # last | top | both
     "sleepMinutes": 10,              # screen dims after this long idle (never while sorting); 0 = never
     "brightness": 100,
@@ -59,8 +62,11 @@ def log(msg: str) -> None:
 class Machine:
     """Owns the hardware, the session store, the identifiers and the sorter thread."""
 
-    def __init__(self, cfg: dict, sim: bool, data_dir: str):
+    def __init__(self, cfg: dict, sim: bool, data_dir: str, sim_engine: bool = False, sim_photos: str = ""):
         self.cfg, self.sim = cfg, sim
+        self.sim_photos = sorted(os.path.join(sim_photos, f) for f in os.listdir(sim_photos)
+                                 if f.lower().endswith(".jpg")) if sim_photos else []
+        self.sim_photo_i = 0
         self.data_dir = data_dir
         os.makedirs(data_dir, exist_ok=True)
         self.store = sessions.Store(os.path.join(data_dir, "sessions"))
@@ -73,8 +79,18 @@ class Machine:
         self.bins_in_use = int(cfg["bins"]["in_use"])
         self.sim_cards = 25                    # cards in the pretend hopper (--sim)
         self.sim_speed = 0.25                  # seconds per pretend step
+        idc = cfg.get("identify") or {}
+        self.give_up_s = float(idc.get("pc_give_up_s", 15))
+        self.local_wait_s = float(idc.get("machine_wait_s", 120))
         self.pc = identify.SimIdentifier() if sim else identify.PcIdentifier(cfg["pc"]["host"], cfg["pc"]["port"])
-        self.local = None                      # no on-machine identifier: the PC app identifies cards
+        if sim and not sim_engine:
+            self.local = identify.SimIdentifier(seed=11, label="This machine (simulated)", delay=0.6)
+        else:                                  # the same recognition engine as the PC app, on the Pi
+            from engine.local import LocalIdentifier
+            self.local = LocalIdentifier(data_dir, threads=idc.get("machine_threads"), log=log)
+        self.pc_pool = cf.ThreadPoolExecutor(8, thread_name_prefix="pc-identify")
+        self.local_pool = cf.ThreadPoolExecutor(2, thread_name_prefix="machine-identify")   # never queues behind the PC
+        self.pc_rest_until = 0.0               # a PC that stopped answering gets a rest before it's asked again
         self.lock = threading.RLock()
         self.session: sessions.Session | None = None
         self.state = "idle"                    # idle | starting | running | stopping | stopped | error | estop
@@ -99,6 +115,8 @@ class Machine:
                 s.d["ended"] = s.d.get("ended") or sessions.now()
                 s.save()
         threading.Thread(target=self._background, daemon=True).start()
+        if not sim:
+            threading.Thread(target=self._catalog_loop, daemon=True).start()
 
     # ------------------------------------------------------------------ settings
     def save_settings(self) -> None:
@@ -113,14 +131,84 @@ class Machine:
 
     # ------------------------------------------------------------------ identifiers
     def identifier(self):
-        """The PC app identifies cards. With no PC the machine keeps going: photos saved, cards Flagged."""
-        return self.pc if self.pc.online else None
+        """Who identifies the next card: the PC app while it's connected (faster), else this machine."""
+        mode = self.settings.get("identifyOn", "auto")
+        if mode != "machine" and self.pc.online:
+            return self.pc
+        if mode != "pc" and self.local.ready:
+            return self.local
+        return None
 
     def identifier_label(self) -> str:
         i = self.identifier()
-        if i is None:
+        if i is not None:
+            return i.label
+        mode = self.settings.get("identifyOn", "auto")
+        if mode == "pc":
             return "No PC found: cards are kept and flagged"
-        return i.label
+        st = self.local.status()
+        if st["state"] in ("starting", "loading"):
+            return "This machine (getting ready…)"
+        return "Nothing: " + (st["detail"] or "the machine's card reader isn't ready") + " · cards are kept and flagged"
+
+    def _flag_offline(self, why: str) -> dict:
+        return {"ok": False, "offline": True, "error": why + ": card kept and flagged, identify it later"}
+
+    def _identify_local(self, jpeg: bytes, why: str = "") -> dict:
+        loc = self.local
+        if not loc.ready and loc.status()["state"] in ("starting", "loading"):
+            loc.wait_ready(self.local_wait_s)       # the catalog is still loading: worth the wait (seconds)
+        if not loc.ready:
+            return self._flag_offline(f"{why or 'No PC'} and the machine's card reader isn't ready ({loc.status()['detail']})")
+        r = loc.identify(jpeg)
+        r.setdefault("source", loc.label)
+        return r
+
+    def identify_card(self, jpeg: bytes) -> dict:
+        """One photo -> the identifier's answer. The PC is asked first while it's connected; if it drops out (an
+        error, the background check loses it, or no answer within pc_give_up_s) this machine identifies the same
+        photo, and whichever answers first is used. Nothing waits for a PC that has gone."""
+        mode = self.settings.get("identifyOn", "auto")
+        pc, loc = self.pc, self.local
+        if mode == "machine":
+            return self._identify_local(jpeg, "Set to identify on this machine")
+        if not pc.online:
+            if mode == "pc":
+                return self._flag_offline("No PC found")
+            return self._identify_local(jpeg, "No PC")
+        fallback = mode == "auto"
+        if fallback and time.monotonic() < self.pc_rest_until and loc.ready:
+            return self._identify_local(jpeg, "PC not answering")
+        pc_job = self.pc_pool.submit(pc.identify, jpeg)
+        t0 = time.monotonic()
+        why = ""
+        while True:
+            try:
+                r = pc_job.result(timeout=0.2)
+                if r.get("ok") or r.get("noCard") or not fallback:
+                    return r
+                why = f"PC answered: {r.get('error') or 'no answer'}"
+                break
+            except cf.TimeoutError:
+                pass
+            except Exception as e:                   # noqa: BLE001
+                why = f"PC not reachable ({e})"
+                if not fallback:
+                    return self._flag_offline(why)
+                break
+            if fallback and not pc.online:
+                why = "PC disconnected"
+                break
+            if fallback and time.monotonic() - t0 > self.give_up_s and loc.ready:
+                why = f"PC took over {self.give_up_s:.0f} s"
+                self.pc_rest_until = time.monotonic() + 60      # try it again in a minute
+                break
+        self.say(f"{why}: this card is identified on the machine.", "warn")
+        local_job = self.local_pool.submit(self._identify_local, jpeg, why)
+        done, _ = cf.wait([pc_job, local_job], return_when=cf.FIRST_COMPLETED)
+        if pc_job in done and not pc_job.exception() and (pc_job.result().get("ok") or pc_job.result().get("noCard")):
+            return pc_job.result()                   # the slow PC got there first after all
+        return local_job.result()
 
     def _background(self) -> None:
         """Keeps an eye on the PC, the motor board and updates."""
@@ -131,6 +219,8 @@ class Machine:
                     was = self.pc.online
                     self.pc.connect()
                     if self.pc.online != was:
+                        if self.pc.online:
+                            self.pc_rest_until = 0.0          # it's back: use it again straight away
                         self.say(f"PC {'connected: ' + self.pc.name if self.pc.online else 'disconnected'}.")
                     self.hw_status["motors"] = self._klipper_state()
                     if self.hw_status["motors"] == "ready":
@@ -145,6 +235,21 @@ class Machine:
             except Exception:
                 traceback.print_exc()
             time.sleep(3)
+
+    def _sim_photo(self) -> bytes:
+        f = self.sim_photos[self.sim_photo_i % len(self.sim_photos)]
+        self.sim_photo_i += 1
+        return open(f, "rb").read()
+
+    def _catalog_loop(self) -> None:
+        """Keeps the machine's card catalog as fresh as the PC's (a new one is published weekly)."""
+        time.sleep(600)
+        while True:
+            if self.local.ready and hasattr(self.local, "update_catalog"):
+                r = self.local.update_catalog(busy=lambda: self.state in ("running", "starting", "stopping"))
+                if r == "updated":
+                    self.say("Card catalog on the machine updated.")
+            time.sleep(12 * 3600)
 
     def _klipper_state(self) -> str:
         try:
@@ -214,7 +319,7 @@ class Machine:
         logs = os.path.join(self.data_dir, "logs")
         if self.sim:
             m = hw.SimMachine(cards=self.sim_cards)
-            m.jpeg = _placeholder_jpeg
+            m.jpeg = self._sim_photo if self.sim_photos else _placeholder_jpeg
             self._sim_machine = m
             return sorter_mod.Sorter(cfg, m, m, m, m, m, brain, logs, sleep=lambda s: time.sleep(min(s, 0.05) + self.sim_speed))
         m = hw.Klipper(cfg["moonraker"])
@@ -421,7 +526,7 @@ class Machine:
         elif sorter and sorter.alert:
             alert = sorter.alert
         elif self.state in ("running", "starting") and self.identifier() is None:
-            alert = {"kind": "nopc", "text": "No PC found: cards are kept and flagged until it's back"}
+            alert = {"kind": "nopc", "text": "Nothing to identify cards with: " + self.identifier_label()}
         levels = []
         if sorter and sorter.last_levels:
             full, empty = self.cfg["levels"]["full_mm"], self.cfg["levels"].get("empty_mm", 230)
@@ -436,6 +541,7 @@ class Machine:
             "rate": round(rate, 1), "levels": levels, "binsInUse": self.bins_in_use,
             "pc": {"online": bool(self.pc.online), "name": getattr(self.pc, "name", "")},
             "identifyOn": self.settings["identifyOn"], "identifier": self.identifier_label(),
+            "machineId": self.local.status(),
             "hw": self.hw_status, "settings": self.settings_public(), "update": self.update,
             "version": self.version(), "messages": self.messages[-8:], "sim": self.sim,
         }
@@ -518,11 +624,7 @@ class Brain:
             return {"ok": False, "stop": True, "error": "session stopped before this card was read"}
         if m.paused:
             return {"paused": True}
-        ident_by = m.identifier()
-        if ident_by is None:
-            ident = {"ok": False, "offline": True, "error": "No PC found: card kept and flagged, identify it later on the PC"}
-        else:
-            ident = ident_by.identify(jpeg)
+        ident = m.identify_card(jpeg)
         c = m.session.add_card(jpeg, ident)
         m.last_card = c
         return {"ok": bool(c.get("card")) and not c["noCard"], "n": c["n"],
@@ -711,7 +813,8 @@ class Handler(BaseHTTPRequestHandler):
                 b = self.body()
                 c = s.review(int(b["n"]), b.get("verdict", "ok"), b.get("card"), b.get("finish"), b.get("note"),
                              b.get("condition"))
-                ident = m.identifier() or m.pc
+                src = c.get("ident", {}).get("source") or ""
+                ident = m.local if src.startswith(m.local.label) else m.pc
                 if ident and c.get("ident", {}).get("id"):
                     threading.Thread(target=ident.feedback, args=({
                         "id": c["ident"]["id"], "verdict": c["verdict"], "cardId": (c.get("card") or {}).get("id"),
@@ -719,11 +822,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.json({"ok": True, "card": c, "session": s.summary()})
             if method == "POST" and rest == ["reidentify"]:
                 n = int(self.body()["n"])
-                ident_by = m.identifier()
-                if ident_by is None:
-                    return self.json({"ok": False, "error": "No PC found to identify with."})
+                if m.identifier() is None:
+                    return self.json({"ok": False, "error": m.identifier_label()})
                 jpeg = open(s.photo_path(n), "rb").read()
-                c = s.replace_ident(n, ident_by.identify(jpeg))
+                c = s.replace_ident(n, m.identify_card(jpeg))
                 return self.json({"ok": True, "card": c, "session": s.summary()})
             if method == "POST" and rest == ["finish"]:
                 return self.json(m.finish(s.id))
@@ -768,6 +870,8 @@ class Handler(BaseHTTPRequestHandler):
             b = self.body()
             for k in ("identifyOn", "priceShow", "sleepMinutes", "brightness"):
                 if k in b:
+                    if k == "identifyOn" and b[k] not in ("auto", "pc", "machine"):
+                        continue
                     m.settings[k] = b[k]
             m.save_settings()
             if "brightness" in b:
@@ -792,6 +896,13 @@ class Handler(BaseHTTPRequestHandler):
 
 def tool(m: Machine, name: str, b: dict) -> dict:
     """Setup and test tools (only when nothing is running)."""
+    if m.sim and name.startswith("sim-pc-"):         # --sim only: take the pretend PC away mid-run
+        what = name[7:]
+        m.pc.online, m.pc.hang_s = what != "off", (20.0 if what == "hang" else 0.0)
+        if what == "on":
+            m.pc_rest_until = 0.0
+        return {"ok": True, "text": {"off": "Pretend PC switched off.", "hang": "Pretend PC will stop answering (hangs).",
+                                     "on": "Pretend PC back on."}.get(what, what)}
     if m.state in ("running", "starting", "stopping"):
         return {"ok": False, "error": "Stop the session first."}
     if m.sim:
@@ -871,11 +982,14 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Card sorter service + touchscreen app")
     ap.add_argument("--config", default=os.path.join(HERE, "config.yaml"))
     ap.add_argument("--sim", action="store_true", help="pretend hardware and identifier (try the screens anywhere)")
+    ap.add_argument("--sim-engine", action="store_true",
+                    help="with --sim: identify with the real on-machine engine (downloads the catalog into --data)")
+    ap.add_argument("--sim-photos", default="", help="with --sim: folder of card photos the pretend camera takes")
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--data", default=os.path.join(os.path.expanduser("~"), "sorter_data"))
     args = ap.parse_args(argv)
     cfg = yaml.safe_load(open(args.config))
-    Handler.machine = Machine(cfg, args.sim, args.data)
+    Handler.machine = Machine(cfg, args.sim, args.data, args.sim_engine, args.sim_photos)
     srv = ThreadingHTTPServer(("0.0.0.0", args.port), Handler)
     srv.daemon_threads = True
     log(f"Card sorter app on http://0.0.0.0:{args.port} ({'simulation' if args.sim else 'machine'})")

@@ -9,5 +9,6 @@
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/CardScanner.Smoke/CardScanner.Smoke.csproj" />
+    <Project Path="tools/CardScanner.Parity/CardScanner.Parity.csproj" />
   </Folder>
 </Solution>

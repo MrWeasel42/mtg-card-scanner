@@ -4,3 +4,6 @@ gpiozero
 lgpio
 VL53L1X
 # picamera2 comes from Raspberry Pi OS: sudo apt install -y python3-picamera2
+# On-machine identifying (engine/): numpy and OpenCV come from Raspberry Pi OS (python3-numpy, python3-opencv)
+onnxruntime>=1.18
+rapidfuzz>=3.0
