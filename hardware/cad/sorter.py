@@ -718,17 +718,16 @@ def camera_plate():
             p = p.cut(cyl_z(dx, dy, 1.35, -1, 5))
     return p
 
-LENS_D = 30.0   # front of the 6 mm lens (datasheet ~30 mm): Eric to measure; the cap is made from this
+LENS_D = 30.00      # 6 mm lens front, measured by Eric (its own cover's bore: 30.11)
+LENS_BORE = 30.20   # cap bore as drawn: holes this size print ~0.1 mm small (fit coupon), so it comes out ~30.1, like the lens's cover
 
 def polarizer_cap():
-    """Push-on cap for the front of the 6 mm lens: holds a 32 mm disc of the polarizer film; turn it to cross-polarize
-    (darkest glare). 0.3 mm grip, 3 slits so it springs on; index tab to mark the best angle."""
-    ri = LENS_D / 2 + 0.3
+    """Slip-on cap for the front of the 6 mm lens (same fit as the cover it came with): holds a 32 mm disc of the
+    polarizer film; turn it to cross-polarize (darkest glare). Index tab to mark the best angle."""
+    ri = LENS_BORE / 2
     c = cq.Workplane("XY").circle(ri + 2.0).circle(ri).extrude(10)
     c = c.union(cq.Workplane("XY").circle(ri + 2.0).circle(ri - 4.0).extrude(1.6))
     c = c.cut(cq.Workplane("XY").circle(16.2).extrude(0.6).translate((0, 0, 1.6)))     # film disc seat (32 mm)
-    for k in range(3):
-        c = c.cut(box(-0.6, 0.6, ri - 1, ri + 3, 4.0, 11).rotate((0, 0, 0), (0, 0, 1), 120 * k + 60))
     c = c.union(box(ri + 1.5, ri + 7, -2, 2, 0, 10))   # index tab
     return c
 
@@ -1329,7 +1328,7 @@ PRINTED = {
     "hood_lid":        (hood_lid, "PLA matte black", "Roof down, no supports."),
     "sheen_cap":       (sheen_cap, "PLA matte black", "Back face down. 50 mm piece of the COB strip inside."),
     "camera_plate":    (camera_plate, "PETG", "Tabs up. Camera connector faces LEFT (hopper side)."),
-    "polarizer_cap":   (polarizer_cap, "PETG", "Waiting on the lens measurement."),
+    "polarizer_cap":   (polarizer_cap, "PETG", "Open end up, no supports. Slip fit on the 30.00 mm lens; film disc goes in the seat at the bottom."),
     "bin_side_back":   (lambda: bin_module_side(1), "PETG", "On its outer face, tree supports under the hinge knuckles and servo bracket."),
     "bin_side_front":  (lambda: bin_module_side(-1), "PETG", "On its outer face."),
     "door":            (door, "PETG", "Top face DOWN on the smooth side, tree supports under the barrels and lever."),

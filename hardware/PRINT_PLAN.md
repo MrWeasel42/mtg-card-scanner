@@ -30,7 +30,7 @@ module from bin module 2, bolt modules 3-8 in, bolt the end module back on, swap
 | `hood_lid.stl` | 1 | PLA matte black | 155 x 150 x 54 mm (6.1 x 5.9 x 2.1 in) |  | Roof down, no supports. |
 | `sheen_cap.stl` | 1 | PLA matte black | 76 x 9 x 20 mm (3.0 x 0.4 x 0.8 in) |  | Back face down. 50 mm piece of the COB strip inside. |
 | `camera_plate.stl` | 1 | PETG | 62 x 69 x 14 mm (2.4 x 2.7 x 0.6 in) |  | Tabs up. Camera connector faces LEFT (hopper side). |
-| `polarizer_cap.stl` | 1 | PETG | 40 x 35 x 10 mm (1.6 x 1.4 x 0.4 in) |  | Waiting on the lens measurement. |
+| `polarizer_cap.stl` | 1 | PETG | 39 x 34 x 10 mm (1.5 x 1.3 x 0.4 in) |  | Open end up, no supports. Slip fit on the 30.00 mm lens; film disc goes in the seat at the bottom. |
 | `bin_side_back.stl` | 2 | PETG | 122 x 58 x 225 mm (4.8 x 2.3 x 8.9 in) |  | On its outer face, tree supports under the hinge knuckles and servo bracket. |
 | `bin_side_front.stl` | 2 | PETG | 122 x 40 x 245 mm (4.8 x 1.6 x 9.6 in) |  | On its outer face. |
 | `door.stl` | 2 | PETG | 111 x 70 x 18 mm (4.4 x 2.8 x 0.7 in) |  | Top face DOWN on the smooth side, tree supports under the barrels and lever. |
