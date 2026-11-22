@@ -485,19 +485,25 @@ document.addEventListener("focusin", e => { if (KIOSK && e.target.matches("[data
 function showKbd(el) {
   kbdTarget = el; kbdNum = el.dataset.kbd === "num";
   drawKbd(); $("#kbd").hidden = false;
-  // everything moves up above the keyboard, and the box being typed in stays in sight
-  document.documentElement.style.setProperty("--kbd-h", $("#kbd").offsetHeight + "px");
-  document.body.classList.add("kbd-open");
-  requestAnimationFrame(() => el.scrollIntoView({ block: "center", behavior: "smooth" }));
 }
-function hideKbd() { $("#kbd").hidden = true; kbdTarget = null; document.body.classList.remove("kbd-open"); }
+function hideKbd() { $("#kbd").hidden = true; kbdTarget = null; }
+// the keyboard shows the field's name and what's being typed in a bar on top, so nothing has to move out of the way
+function kbdLabel(el) {
+  const h = el.closest(".field")?.querySelector("h3")?.textContent || el.closest(".sheet")?.querySelector("h1")?.textContent;
+  return h || el.placeholder || "Typing";
+}
+function drawPreview() {
+  const el = kbdTarget; if (!el || !$("#kprev")) return;
+  $("#kprev").innerHTML = `<span class="lab">${esc(kbdLabel(el))}</span><span class="val">${el.value ? esc(el.value) : `<span class="ph">${esc(el.placeholder || "")}</span>`}<i class="caret"></i></span>`;
+}
 function drawKbd() {
   const rows = kbdNum ? [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], [".", "0", "⌫"]]
     : [["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-"], ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "⌫"],
        ["a", "s", "d", "f", "g", "h", "j", "k", "l", "'", ","], ["⇧", "z", "x", "c", "v", "b", "n", "m", ".", "#", "&"]];
   const k = x => kbdShift && x.length === 1 ? x.toUpperCase() : x;
-  $("#kbd").innerHTML = rows.map(r => `<div class="r">${r.map(x => `<button class="${x === "⇧" || x === "⌫" ? "w" : ""}" data-key="${esc(x)}">${esc(k(x))}</button>`).join("")}</div>`).join("")
+  $("#kbd").innerHTML = `<div id="kprev"></div>` + rows.map(r => `<div class="r">${r.map(x => `<button class="${x === "⇧" || x === "⌫" ? "w" : ""}" data-key="${esc(x)}">${esc(k(x))}</button>`).join("")}</div>`).join("")
     + `<div class="r">${kbdNum ? "" : `<button class="sp" data-key=" ">space</button>`}<button class="w" data-key="clear">Clear</button><button class="w ok" data-key="done">Done</button></div>`;
+  drawPreview();
 }
 const keyUp = b => setTimeout(() => b.classList.remove("down"), 120);
 ["pointerup", "pointercancel", "pointerleave"].forEach(ev => $("#kbd").addEventListener(ev, e => { const b = e.target.closest?.("[data-key]"); if (b) keyUp(b); }));
@@ -512,6 +518,7 @@ $("#kbd").addEventListener("pointerdown", e => {
   else if (key === "⌫") el.value = el.value.slice(0, -1);
   else { el.value += kbdShift ? key.toUpperCase() : key; if (kbdShift) { kbdShift = false; drawKbd(); } }
   el.dispatchEvent(new Event("input"));
+  drawPreview();
 });
 
 // --------------------------------------------------------------------------------------------- screen sleep (kiosk)

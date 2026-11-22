@@ -9,7 +9,7 @@ def put(name, shape, kind):
     items.append({"file": fn, "kind": kind})
 P = placed()
 for k, v in P.items():
-    kind = "black" if k in ("hood", "scan_floor") else ("bin" if k.startswith("bin_") and "side" not in k else "petg")
+    kind = "black" if k in ("hood", "scan_floor", "pod_cover", "ribbon_duct", "wire_tube") else ("bin" if k.startswith("bin_") and "side" not in k else "petg")
     put(k, v, kind)
 # bought parts (for the picture only)
 L = LENGTH
@@ -51,6 +51,7 @@ put("display", screen_placed(box(-SCREEN_W / 2, SCREEN_W / 2, -SCREEN_T, 0, 0, S
 put("pi5", screen_placed(box(-42.5, 42.5, 0, 1.6 + 8, PI_ON_SCREEN_Z, PI_ON_SCREEN_Z + 56)), "servo")
 put("pi5_cooler", screen_placed(box(-35, 35, 9.6, PI_STACK, PI_ON_SCREEN_Z + 6, PI_ON_SCREEN_Z + 50)), "alu")
 put("ribbon", camera_ribbon()[0], "card")
+put("converter", screen_placed(converter_block()), "motor")
 # PSU on its side under the scanner
 put("psu", box(PSU_X0, PSU_X0 + PSU_L, -PSU_H / 2, PSU_H / 2, RAIL_Z + 5, RAIL_Z + 5 + PSU_W), "alu")
 # camera on the hood roof

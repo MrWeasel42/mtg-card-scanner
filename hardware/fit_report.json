@@ -538,23 +538,47 @@
  {
   "label": "Screen + Pi block vs hood",
   "overlap": 0.0,
-  "gap": 39.7,
+  "gap": 43.32,
   "need": 2.0,
   "ok": true,
   "note": "screen on the hood front, tilted back, Pi on its back"
  },
  {
-  "label": "Screen + Pi block vs its cradle",
+  "label": "Screen + Pi block vs pod frame + cover",
   "overlap": 0.0,
   "gap": 0.4,
   "need": 0.0,
   "ok": true,
-  "note": "drops in from behind, 0.4 mm play"
+  "note": "drops in from behind, 0.4 mm play; >= 6 mm air over the fan"
  },
  {
-  "label": "Screen + Pi + cradle vs everything else",
+  "label": "Pi cooler vs pod back wall (air gap)",
   "overlap": 0.0,
-  "gap": 106.35,
+  "gap": 8.5,
+  "need": 5.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "5 V converter vs Pi block",
+  "overlap": 0.0,
+  "gap": 10.5,
+  "need": 3.0,
+  "ok": true,
+  "note": "beside the Pi, at its USB-C end"
+ },
+ {
+  "label": "5 V converter vs pod (only its bosses)",
+  "overlap": 0.0,
+  "gap": 0.0,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Screen pod vs everything else",
+  "overlap": 0.0,
+  "gap": 101.33,
   "need": 3.0,
   "ok": true,
   "note": ""
@@ -568,20 +592,52 @@
   "note": ""
  },
  {
-  "label": "Camera ribbon (outside the hood) vs cradle crossbar",
+  "label": "Ribbon duct vs hood (butts on the front wall)",
   "overlap": 0.0,
-  "gap": 8.6,
-  "need": 1.0,
+  "gap": 0.3,
+  "need": 0.0,
   "ok": true,
-  "note": "runs between the screen and the crossbar"
+  "note": ""
  },
  {
-  "label": "Camera ribbon run (Pi -> screen back -> hood slot -> camera) vs 305 mm",
+  "label": "Ribbon duct vs mount + screen",
+  "overlap": 0.0,
+  "gap": 7.0,
+  "need": 1.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Wire tube vs track / walls",
+  "overlap": 0.0,
+  "gap": 4.25,
+  "need": 0.0,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Camera ribbon vs ribbon duct (runs inside)",
+  "overlap": 0.0,
+  "gap": 2.6,
+  "need": 0.5,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Camera ribbon vs pod (inside, clear of the walls)",
+  "overlap": 0.0,
+  "gap": 4.0,
+  "need": 0.5,
+  "ok": true,
+  "note": ""
+ },
+ {
+  "label": "Camera ribbon run (Pi -> pod -> duct -> hood -> camera) vs 305 mm",
   "overlap": 0,
-  "gap": 127.9,
+  "gap": 118.7,
   "need": 30,
   "ok": true,
-  "note": "~177 mm; flat, bends only"
+  "note": "~186 mm; flat, bends only; spare folds flat inside the pod"
  },
  {
   "label": "Back wire channel fill, full 9-bin build",
