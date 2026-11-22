@@ -549,29 +549,13 @@
   "gap": 0.4,
   "need": 0.0,
   "ok": true,
-  "note": "drops in from behind, 0.4 mm play; >= 6 mm air over the fan"
+  "note": "drops in from behind, 0.4 mm play"
  },
  {
   "label": "Pi cooler vs pod back wall (air gap)",
   "overlap": 0.0,
   "gap": 8.5,
   "need": 5.0,
-  "ok": true,
-  "note": ""
- },
- {
-  "label": "5 V converter vs Pi block",
-  "overlap": 0.0,
-  "gap": 10.5,
-  "need": 3.0,
-  "ok": true,
-  "note": "beside the Pi, at its USB-C end"
- },
- {
-  "label": "5 V converter vs pod (only its bosses)",
-  "overlap": 0.0,
-  "gap": 0.0,
-  "need": 0.0,
   "ok": true,
   "note": ""
  },
@@ -592,68 +576,60 @@
   "note": "2 prongs between 3, M5 thumbscrew"
  },
  {
-  "label": "Ribbon duct vs hood (butts on the left wall)",
+  "label": "Camera ribbon vs hood (through the slot, under the rails)",
   "overlap": 0.0,
-  "gap": 0.3,
-  "need": 0.0,
+  "gap": 0.35,
+  "need": 0.1,
   "ok": true,
   "note": ""
  },
  {
-  "label": "Ribbon duct vs hopper tower + feeder",
+  "label": "Camera ribbon vs pod",
   "overlap": 0.0,
-  "gap": 52.75,
-  "need": 3.0,
+  "gap": 2.2,
+  "need": 0.3,
   "ok": true,
   "note": ""
  },
  {
-  "label": "Ribbon duct vs everything else",
+  "label": "Camera ribbon vs everything else (track, fins, hopper)",
   "overlap": 0.0,
-  "gap": 2.6,
+  "gap": 14.7,
   "need": 2.0,
   "ok": true,
   "note": ""
  },
  {
-  "label": "Wire tube vs everything but the pod + bay cover",
+  "label": "Ribbon run beside the camera vs camera + plate at 158 mm",
   "overlap": 0.0,
-  "gap": 8.65,
-  "need": 1.0,
-  "ok": true,
-  "note": ""
- },
- {
-  "label": "Wire tube vs bay cover (butts on it)",
-  "overlap": 0.0,
-  "gap": 0.3,
-  "need": 0.0,
-  "ok": true,
-  "note": ""
- },
- {
-  "label": "Camera ribbon vs ribbon duct (runs inside)",
-  "overlap": 0.0,
-  "gap": 4.0,
+  "gap": 37.82,
   "need": 0.5,
   "ok": true,
-  "note": ""
+  "note": "up to the fold; the last bit follows the camera when you set its height"
  },
  {
-  "label": "Camera ribbon vs pod (inside, clear of the walls)",
+  "label": "Ribbon run beside the camera vs camera + plate at 205 mm",
   "overlap": 0.0,
-  "gap": 4.0,
+  "gap": 7.0,
   "need": 0.5,
   "ok": true,
-  "note": ""
+  "note": "up to the fold; the last bit follows the camera when you set its height"
  },
  {
-  "label": "Camera ribbon run (Pi -> pod -> duct up the gap -> hood -> camera) vs 500 mm cable",
+  "label": "Camera ribbon run (Pi -> behind screen -> up inside the hood -> camera)",
   "overlap": 0,
-  "gap": 154.3,
+  "gap": 55.5,
   "need": 40,
   "ok": true,
-  "note": "~346 mm; flat, bends only; spare folds flat inside the pod"
+  "note": "~445 mm on a 500 mm cable"
+ },
+ {
+  "label": "USB-C power cable (converter in the bay -> Pi) vs its 305 mm lead",
+  "overlap": 0,
+  "gap": 31.8,
+  "need": 25,
+  "ok": true,
+  "note": "~273 mm; hangs free from the pod into the bay"
  },
  {
   "label": "Back wire channel fill, full 9-bin build",

@@ -459,7 +459,9 @@ CAM_D_MIN, CAM_D_MAX = 158.0, 205.0
 CAM_SLOT_Z0 = PATH + 44 + CAM_D_MIN + CAM_HOLE_DZ   # lens tip is 44 below the PCB underside
 CAM_SLOT_Z1 = PATH + 44 + CAM_D_MAX + CAM_HOLE_DZ
 HOOD_H = 266.0        # lens-to-card 160-205 mm with 2 mm over the camera at the top; prints 256 tall (Neptune 4 Pro: 265)
-CAM_CABLE_Z = PATH + HOOD_H - 15.0  # camera ribbon slot in the FRONT wall, up by the camera (ribbon comes from the screen)
+CAM_CABLE_Z = PATH + HOOD_H - 15.0  # camera connector level (roughly)
+RIB_Y = -46.0                       # camera ribbon's line along the hood's left wall and roof (clear of the camera ribs)
+RIB_SLOT_Z = WALL_TOP + 15.0        # ribbon slot low in the hood's left wall, just above the conveyor
 SCREEN_TILT = 15.0                  # screen leans back this many degrees
 
 def side_frame(x0, x1, side, drive_floor=False, bin_opening=True, rails=True, bay=False):
@@ -576,10 +578,18 @@ def hood():
         h = h.cut(box(xa - 1, xb + 1, -1.7, 1.7, CAM_SLOT_Z0, CAM_SLOT_Z1))
         for zz in (CAM_SLOT_Z0, CAM_SLOT_Z1):
             h = h.cut(cyl_x(0, zz, 1.7, xa - 1, xb + 1))
-    # Camera ribbon slot in the LEFT (hopper-side) wall, level with the camera: 24 x 5 mm, the ribbon arrives flat
-    # from the duct coming up the gap between the hopper and the hood. A lip inside keeps light off the card.
-    h = h.cut(box(x0 - 1, x0 + 4, -12, 12, CAM_CABLE_Z - 2.5, CAM_CABLE_Z + 2.5))
-    h = h.union(box(x0 + 3, x0 + 12, -15, 15, CAM_CABLE_Z + 2.5, CAM_CABLE_Z + 4.5))
+    # Camera ribbon: in through a slot low in the LEFT (hopper-side) wall, just above the conveyor and hidden behind
+    # the screen, then up the inside of the wall under pairs of opposing L-rails (slide the ribbon in under them
+    # before plugging it in), then across at camera height (beside the camera plate) to the camera's front edge.
+    c = RIB_Y
+    h = h.cut(box(x0 - 1, x0 + 4, c - 12, c + 12, RIB_SLOT_Z - 2.5, RIB_SLOT_Z + 2.5))
+    for z in range(int(RIB_SLOT_Z + 14), int(PATH + CAM_D_MIN + 44 - 20), 36):   # rail pairs, 18 mm long, up the wall
+        for sg in (-1, 1):
+            e = c + sg * 8.75
+            y0r, y1r = sorted((e, e + sg * 2))
+            h = h.union(box(x0 + 3 - 0.1, x0 + 3 + 2.4, y0r, y1r, z, z + 18))                 # stem off the wall
+            y0l, y1l = sorted((e + sg * 2, e - sg * 3))
+            h = h.union(box(x0 + 3 + 1.4, x0 + 3 + 2.4, y0l, y1l, z, z + 18))                # lip over the ribbon edge
     # LED channel ledges (aluminium channel 17 x 8 mm) at 90 mm above the card, all round
     zled = PATH + 90
     h = h.union(box(x0 + 3, x1 - 3, y0 + 3, y0 + 14, zled - 2, zled))
@@ -774,8 +784,7 @@ def bay_cover():
             c = c.cut(cyl_y(108 + dx, 30 + dz, 1.5, -1, 4))
     for (x, z) in ((5, 6), (131, 6), (5, 66), (131, 66)):
         c = c.cut(cyl_y(x, z, M3 / 2, -1, 4))
-    gx = POD_PIV_W[0] + CONV_X - 7                                        # the screen's 24 V pair comes in here
-    c = c.cut(cyl_y(gx, 100 - (RAIL_Z + 6), 4.5, -1, 4))
+    c = c.cut(cyl_y(128, 80, 7.5, -1, 4))                                 # USB-C cable up to the Pi (plug passes through)
     return c
 
 def psu_cradle():
@@ -874,7 +883,9 @@ POD_PIV_W = (175.0, -WALL_OUT - 9 - 19, PATH - 21)   # pivot on mount_wall_gap's
 POD_D = 40.0             # screen pod depth behind the display: Pi stack 29 + 6 mm air over the fan + 3 mm wall
 SCR_PIV = (0.0, POD_D + POD_STANDOFF + 12.0, 12.0)   # GoPro pivot in the cradle frame: low on the pod's back
 CONV_L, CONV_W, CONV_T, CONV_EARS = 48.0, 34.0, 14.0, 55.0   # 24 V -> 5 V USB-C converter (measured), ear slots 55 apart
-CONV_X, CONV_Z = -70.0, 60.0   # converter centre in the pod, beside the Pi (USB-C end of the Pi)
+CONV_X, CONV_Z = -70.0, 60.0   # (unused: the converter lives in the electronics bay)
+USBC_X = -31.0                 # Pi's USB-C port, from the screen centre (port edge up, at the GPIO end)
+RIB_EXIT_Z = PI_ON_SCREEN_Z + 56 + 10   # camera ribbon leaves the pod's back just above the Pi
 
 def screen_xf(x, y, z):
     """A point in the cradle frame -> machine coordinates (pivot on mount_wall_gap's prongs, tilted back)."""
@@ -948,9 +959,9 @@ def screen_cradle():
     return c
 
 def pod_cover():
-    """Back of the screen pod: hides the Pi, the 5 V converter, the camera ribbon and every cable. Vents over the
-    Pi's fan; the camera ribbon leaves through the top into the duct, the 24 V pair through the bottom. GoPro tab on
-    the back (fixed 15 deg with the duct fitted). 4 x M3 x 10 into the frame's ears. Prints back face down."""
+    """Back of the screen pod: hides the Pi and the ends of its cables. Vents over the Pi's fan. The camera ribbon
+    leaves through a slot in the back just above the Pi; the USB-C power cable through a notch low down, and drops
+    straight into the electronics bay. GoPro tab on a standoff low on the back. 4 x M3 x 10 to the frame."""
     W, H, T, w = SCREEN_W + 0.8, SCREEN_H + 0.8, 3.0, 2.5
     x0, x1, z0, z1 = -W / 2 - T, W / 2 + T, -0.4 - T, H - 0.4 + T
     c = box(x0, x1, T, POD_D, z0, z1).cut(box(x0 + w, x1 - w, T - 1, POD_D - w, z0 + w, z1 - w))
@@ -961,63 +972,42 @@ def pod_cover():
             c = c.cut(cyl_y(sx * (x1 + 4.5), zc, M3 / 2, T - 1, T + 6))
     for xv in range(-32, 33, 8):                                             # fan / board vents
         c = c.cut(box(xv - 2, xv + 2, POD_D - w - 1, POD_D + 1, PI_ON_SCREEN_Z + 6, PI_ON_SCREEN_Z + 50))
-    for zv in range(20, 101, 10):                                            # converter vents (side wall)
-        c = c.cut(box(x0 - 1, x0 + w + 1, 12, 30, zv, zv + 4))
-    c = c.cut(box(CAM_PORT_X - 12, CAM_PORT_X + 12, 8, 17, z1 - w - 1, z1 + 1))  # camera ribbon exit -> duct
-    c = c.cut(cyl_z(CONV_X, 20, 4.5, z0 - 1, z0 + w + 1))                   # 24 V pair exit -> wire tube
-    for dz in (-CONV_EARS / 2, CONV_EARS / 2):                               # converter bosses on the back wall
-        c = c.union(cyl_y(CONV_X, CONV_Z + dz, 4.5, POD_D - w - 6, POD_D - w + 0.1))
-        c = c.cut(cyl_y(CONV_X, CONV_Z + dz, M3_INSERT / 2, POD_D - w - 7, POD_D - w - 1))
+    c = c.cut(box(CAM_PORT_X - 11, CAM_PORT_X + 11, POD_D - w - 1, POD_D + 1, RIB_EXIT_Z - 2.5, RIB_EXIT_Z + 2.5))
+    c = c.cut(box(USBC_X - 7, USBC_X + 7, POD_D - w - 1, POD_D + 1, z0 - 1, z0 + w + 10))   # USB-C cable notch
     c = c.union(box(-17, 17, POD_D - 0.5, POD_D + POD_STANDOFF, SCR_PIV[2] - 9.5, SCR_PIV[2] + 9.5))   # standoff
     tab = gopro(2, 12, base_w=30, base_t=0.01).rotate((0, 0, 0), (1, 0, 0), -90).translate((0, POD_D + POD_STANDOFF, SCR_PIV[2]))
     return c.union(tab)
 
-def converter_block():
-    """The 5 V USB-C converter on its bosses (body + ears), cradle frame."""
-    yb = POD_D - 2.5 - 6
-    b = box(CONV_X - CONV_W / 2, CONV_X + CONV_W / 2, yb - CONV_T, yb, CONV_Z - CONV_L / 2, CONV_Z + CONV_L / 2)
-    return b.union(box(CONV_X - 6, CONV_X + 6, yb - 2, yb, CONV_Z - CONV_L / 2 - 7, CONV_Z + CONV_L / 2 + 7))
-
-def _ribbon_route():
-    """Centre line of the camera ribbon outside the pod: out of the pod's top, up the gap between the hopper and the
-    hood (rolling 90 deg on the way, gently), over in a round bend and into the hood's left-wall slot."""
-    gx = (POD_PIV_W[0] + CAM_PORT_X)
-    p0 = screen_xf(CAM_PORT_X, 12.5, SCREEN_H + 2.6)
-    p1 = screen_xf(CAM_PORT_X, 12.5, SCREEN_H + 20)
-    p2 = (HOOD_X0 - 22, -6.0, CAM_CABLE_Z - 36)
-    p3 = (HOOD_X0 - 19, 0.0, CAM_CABLE_Z)
-    p4 = (HOOD_X0 - 0.3, 0.0, CAM_CABLE_Z)
-    return [p0, p1, p2, p3, p4]
-
-def ribbon_duct():
-    """Closed duct for the camera ribbon from the screen pod into the hood's left wall (2 halves screwed together
-    would print best; here as one piece for the fit check)."""
-    return _tube(_ribbon_route(), 30.0, 24.0, 1.12, 1.05)
-
-def wire_tube():
-    """Covered run for the converter's 24 V pair from the pod's bottom straight down into the electronics bay
-    (through the grommet hole in the bay cover)."""
-    p0 = screen_xf(CONV_X, 20.0, -0.4 - 3.0 + 1)
-    p1 = screen_xf(CONV_X, 20.0, -30.0)
-    p2 = (p1[0], -63.0 - 9, 100.0)
-    p3 = (p1[0], -63.0 - 0.3, 100.0)
-    return _tube([p0, p1, p2, p3], 14.0, 9.0)
-
 def camera_ribbon():
-    """The camera ribbon's path (picture + length check): Pi port -> up inside the pod -> duct up the gap -> hood's
-    left-wall slot -> camera connector (on the camera's LEFT edge). Returns (shape, length mm)."""
-    pts = [screen_xf(CAM_PORT_X, 12.5, PI_ON_SCREEN_Z + 56)] + _ribbon_route()[1:]
-    pts += [(HOOD_X0 + 6, 0.0, CAM_CABLE_Z), (SCAN_X - 22, 0.0, PATH + CAM_D + 44 + 3)]
+    """The camera ribbon's path (picture + length check): Pi port -> out the pod's back -> across the hidden gap behind
+    the screen (one soft 45 deg fold turns it toward the hood) -> slot low in the hood's left wall -> up the wall
+    under the rails -> along under the roof -> soft fold -> down to the camera's front-edge connector."""
+    xw = HOOD_X0 + 3 + 0.75                                                  # between the wall and the rail lips
+    zt = PATH + CAM_D + 44 + 3                                               # camera connector height (default lens height)
+    pts = [screen_xf(CAM_PORT_X, 12.5, PI_ON_SCREEN_Z + 56), screen_xf(CAM_PORT_X, 12.5, RIB_EXIT_Z),
+           screen_xf(CAM_PORT_X, POD_D + 2, RIB_EXIT_Z)]
+    e = pts[-1]
+    pts += [(e[0], RIB_Y, RIB_SLOT_Z), (HOOD_X0 + 8, RIB_Y, RIB_SLOT_Z), (xw, RIB_Y, RIB_SLOT_Z + 12),
+            (xw, RIB_Y, zt - 12), (HOOD_X0 + 16, RIB_Y, zt), (SCAN_X, RIB_Y, zt),
+            (SCAN_X, -26.0, zt), (SCAN_X, -19.0, zt)]
+    X, Y = cq.Vector(1, 0, 0), cq.Vector(0, 1, 0)
+    widths = [X, X, X, Y, Y, Y, Y, Y, X, X]                               # ribbon width direction, segment by segment
     shp, total = None, 0.0
-    for a, b in zip(pts, pts[1:]):
+    for (a, b), wd in zip(zip(pts, pts[1:]), widths):
         d = cq.Vector(b) - cq.Vector(a); L = d.Length; total += L; d = d.normalized()
-        s_ = box(-8, 8, -0.4, 0.4, 0, L)
-        ax = cq.Vector(0, 0, 1).cross(d)
-        if ax.Length > 1e-6:
-            s_ = s_.rotate((0, 0, 0), ax.toTuple(), math.degrees(math.acos(max(-1, min(1, d.z)))))
-        s_ = s_.translate(a)
+        wd = (wd - d * wd.dot(d)).normalized()
+        s_ = cq.Workplane(cq.Plane(origin=a, xDir=wd, normal=d)).box(16, 0.6, L, centered=(True, True, False))
         shp = s_ if shp is None else shp.union(s_)
-    return shp, total + 5 * 8                                            # + the bends
+    return shp, total + 6 * 6                                            # + the bends and folds
+
+def usbc_cable_run():
+    """USB-C power cable from the 5 V converter in the electronics bay up to the Pi (length check only)."""
+    port = screen_xf(USBC_X, 10, PI_ON_SCREEN_Z + 56)
+    notch = screen_xf(USBC_X, POD_D, 4)
+    hole = (7 + 128.0, -63.0, RAIL_Z + 6 + 80)
+    up = 25                                                              # plug + bend over the top of the port
+    run = up + math.dist(port, notch) + math.dist(notch, hole) + 60      # + ~60 mm inside the bay to the converter
+    return run
 
 # ============================================================================ final-look shell (render / later print)
 def shell_parts(length=660.0):
@@ -1067,7 +1057,7 @@ PRINTED = {
     "scan_side_back":  (lambda: scan_side_back(), 1, "PETG", "On its outer face."),
     "scan_floor":      (scan_floor, 1, "PLA matte green", "Top face DOWN on the smooth side of the plate: flat, slick, dull."),
     "hood":            (hood, 1, "PLA matte black", "Upside down (roof on the plate), tree supports for the tunnel only. ~16 h."),
-    "camera_plate":    (camera_plate, 1, "PETG", "Tabs up. 2 M3 inserts in the tabs; clamps to the hood ribs with 2 x M3 x 10. Camera ribbon connector toward the LEFT (hopper side)."),
+    "camera_plate":    (camera_plate, 1, "PETG", "Tabs up. 2 M3 inserts in the tabs; clamps to the hood ribs with 2 x M3 x 10. Camera ribbon connector toward the FRONT."),
     "polarizer_cap":   (polarizer_cap, 1, "PETG", ""),
     "bin_side_back":   (lambda: bin_module_side(1), 2, "PETG", "On its outer face; one per bin module."),
     "bin_side_front":  (lambda: bin_module_side(-1), 2, "PETG", "On its outer face; one per bin module."),
@@ -1085,9 +1075,7 @@ PRINTED = {
     "inlet_plate":     (inlet_plate, 1, "PETG", "Flat. Cutout 47.5 x 27.5 mm for a snap-in C14 inlet; check yours."),
     "channel_cover":   (channel_cover, 6, "PLA", "On its back. Clips over the wire channels."),
     "screen_cradle":   (screen_cradle, 1, "PETG", "Face down. Display (Pi on its back) drops in from behind, Pi's port edge UP. 4 M3 inserts in the ears."),
-    "pod_cover":       (pod_cover, 1, "PLA matte black", "Back face down, tree supports for the GoPro tab. Converter on 2 M3 inserts inside; 4 x M3 x 10 to the frame."),
-    "ribbon_duct":     (ribbon_duct, 1, "PLA matte black", "On its side, tree supports. Camera ribbon threads through before the pod goes on."),
-    "wire_tube":       (wire_tube, 1, "PLA matte black", "On its side, tree supports. The converter's 24 V pair (extended to reach the PSU) runs inside."),
+    "pod_cover":       (pod_cover, 1, "PLA matte black", "Back face down, tree supports for the GoPro standoff. 4 x M3 x 10 to the frame."),
     "mount_wall":      (mount_wall, 1, "PETG", "Screen mount: bolts across the hopper/scanner gap on the front walls; the screen pod clips on (M5 thumbscrew)."),
     "mount_roof":      (mount_roof, 1, "PETG", "Optional: screen on top of the hood."),
     "gopro_arm":       (gopro_arm, 2, "PETG", "100% infill. Or use store-bought GoPro extension arms."),
@@ -1123,8 +1111,6 @@ def placed():
     # screen + Pi block on the front of the hood, tilted back; the camera ribbon goes straight in above it
     P["screen_cradle"] = screen_placed(screen_cradle())
     P["pod_cover"] = screen_placed(pod_cover())
-    P["ribbon_duct"] = ribbon_duct()
-    P["wire_tube"] = wire_tube()
     P["mount_wall_gap"] = mount_wall().rotate((0, 0, 0), (0, 0, 1), 180).translate((175, -WALL_OUT - 9, PATH - 21))
     xe = BIN_X[1] + PITCH / 2
     P["end_side_front"] = end_side(-1).translate((xe, 0, 0))
