@@ -869,10 +869,10 @@ def gopro_arm(length=90.0):
 # straight up, lies flat on the back of the screen, curves over to the hood and goes in through the front-wall slot
 # to the camera. Bends only, no twist. (Turn the picture with screen-rotate.sh to suit.)
 # Cradle frame: display back face on y = 0 (front face y = -15, toward the user), bottom edge z = 0, centre x = 0.
-PI_ON_SCREEN_Z = 8.0     # Pi's GPIO (bottom) edge above the display's bottom edge, as mounted on its standoffs
+PI_ON_SCREEN_Z = 32.0    # Pi centred on the display back (measured): its GPIO edge 32 mm above the display edge
 PI_STACK = 29.0          # display back to the top of the Pi's cooler
-CAM_PORT_X = 0.0         # CAM/DISP 0 port centre from the screen centre (check on the real one: the ribbon must
-                         # line up with the camera, a flat ribbon can't jog sideways)
+CAM_PORT_X = 18.0        # camera port centre from the screen centre, toward the Pi's USB/Ethernet end (measured off
+                         # photos, ~0.7 in): the screen sits that far off-centre so the ribbon lines up with the camera
 SCR_PIV = (0.0, 52.0, 86.0)   # GoPro pivot in the cradle frame: behind the Pi, above it
 
 def screen_xf(x, y, z):

@@ -538,7 +538,7 @@
  {
   "label": "Screen + Pi block vs hood",
   "overlap": 0.0,
-  "gap": 47.66,
+  "gap": 39.7,
   "need": 2.0,
   "ok": true,
   "note": "screen on the hood front, tilted back, Pi on its back"
@@ -554,7 +554,7 @@
  {
   "label": "Screen + Pi + cradle vs everything else",
   "overlap": 0.0,
-  "gap": 116.7,
+  "gap": 106.35,
   "need": 3.0,
   "ok": true,
   "note": ""
@@ -578,10 +578,10 @@
  {
   "label": "Camera ribbon run (Pi -> screen back -> hood slot -> camera) vs 305 mm",
   "overlap": 0,
-  "gap": 103.9,
+  "gap": 127.9,
   "need": 30,
   "ok": true,
-  "note": "~201 mm; flat, bends only"
+  "note": "~177 mm; flat, bends only"
  },
  {
   "label": "Back wire channel fill, full 9-bin build",
