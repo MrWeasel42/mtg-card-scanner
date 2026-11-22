@@ -176,6 +176,7 @@ for i, n in enumerate(names):
     for m in names[i + 1:]:
         check(f"{n} vs {m}", bay[n], bay[m], 1.0)
 check("Bay boards vs bay cover", conv6, P["bay_cover"], 1.0)
+check("SKR Pico + plugs vs bay cover", skr, P["bay_cover"], 1.0, "its front plugs and cable bends must stay inside the base")
 check("SKR Pico + plugs vs roller shafts/pulleys", skr, shafts, 3.0)
 from sorter import CAM_CABLE_Z
 # --- PSU under the scanner

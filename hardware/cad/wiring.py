@@ -5,7 +5,7 @@ import math, os
 from sorter import *
 
 # ---- landmarks (machine coordinates, mm)
-SKR = (60.0, -22.0, 60.0)                         # SKR Pico on the electronics tray (bay under the hopper)
+SKR = (60.0, 0.0, 60.0)                           # SKR Pico on the electronics tray (bay under the hopper)
 CONV5 = screen_xf(CONV_X, 26.0, CONV_Z)            # 24 V -> 5 V USB-C converter, in the screen pod beside the Pi
 CONV6 = (11.0, 18.0, 105.0)                       # 24 V -> 6 V servo step-down, on the bay's left inner wall
 JUNC = (40.0, 40.0, 70.0)                         # bay junction: Pi I2C meets the 6 V pair -> the bin bus

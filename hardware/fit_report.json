@@ -458,7 +458,7 @@
  {
   "label": "SKR Pico + plugs (on 8 mm tray bosses) vs base",
   "overlap": 0.0,
-  "gap": 5.0,
+  "gap": 3.0,
   "need": 1.0,
   "ok": true,
   "note": "the Pi (in the screen pod) talks to it over UART"
@@ -526,6 +526,14 @@
   "need": 1.0,
   "ok": true,
   "note": ""
+ },
+ {
+  "label": "SKR Pico + plugs vs bay cover",
+  "overlap": 0.0,
+  "gap": 7.0,
+  "need": 1.0,
+  "ok": true,
+  "note": "its front plugs and cable bends must stay inside the base"
  },
  {
   "label": "SKR Pico + plugs vs roller shafts/pulleys",
@@ -1296,9 +1304,9 @@
   "note": "the cables in the display box"
  },
  {
-  "label": "Cable: UART to the motor board (TX, RX, GND) (264 mm run +15%)",
+  "label": "Cable: UART to the motor board (TX, RX, GND) (272 mm run +15%)",
   "overlap": 0,
-  "gap": 96.0,
+  "gap": 86.6,
   "need": 0,
   "ok": true,
   "note": "female-female jumpers, 40 cm (in one black braided sleeve with the I2C pair)"
@@ -1312,41 +1320,41 @@
   "note": "female-female jumpers, 40 cm"
  },
  {
-  "label": "Cable: Feed motor (297 mm run +15%)",
+  "label": "Cable: Feed motor (275 mm run +15%)",
   "overlap": 0,
-  "gap": 658.5,
+  "gap": 683.3,
   "need": 0,
   "ok": true,
   "note": "the motor's own 1 m cable (coil the spare)"
  },
  {
-  "label": "Cable: Track motor (1706 mm run +15%)",
+  "label": "Cable: Track motor (1684 mm run +15%)",
   "overlap": 0,
-  "gap": 38.4,
+  "gap": 63.1,
   "need": 0,
   "ok": true,
   "note": "its 1 m cable + a 1 m 4-pin stepper extension (BUY)"
  },
  {
-  "label": "Cable: Card-clear sensor (TCRT5000) (187 mm run +15%)",
+  "label": "Cable: Card-clear sensor (TCRT5000) (190 mm run +15%)",
   "overlap": 0,
-  "gap": 85.0,
+  "gap": 81.2,
   "need": 0,
   "ok": true,
   "note": "female-female jumpers, 30 cm"
  },
  {
-  "label": "Cable: Belt-home sensor (TCRT5000) (354 mm run +15%)",
+  "label": "Cable: Belt-home sensor (TCRT5000) (332 mm run +15%)",
   "overlap": 0,
-  "gap": 93.2,
+  "gap": 117.9,
   "need": 0,
   "ok": true,
   "note": "female-female jumpers, 50 cm"
  },
  {
-  "label": "Cable: Tower-ID hall sensor 1 (A3144) (164 mm run +15%)",
+  "label": "Cable: Tower-ID hall sensor 1 (A3144) (163 mm run +15%)",
   "overlap": 0,
-  "gap": 111.5,
+  "gap": 112.2,
   "need": 0,
   "ok": true,
   "note": "female-female jumpers, 30 cm (the A3144 legs plug straight in; heat-shrink each leg)"
@@ -1354,15 +1362,15 @@
  {
   "label": "Cable: Tower-ID hall sensor 2 (A3144) (169 mm run +15%)",
   "overlap": 0,
-  "gap": 105.3,
+  "gap": 106.0,
   "need": 0,
   "ok": true,
   "note": "female-female jumpers, 30 cm (the A3144 legs plug straight in; heat-shrink each leg)"
  },
  {
-  "label": "Cable: Bay fan (30 mm) (67 mm run +15%)",
+  "label": "Cable: Bay fan (30 mm) (81 mm run +15%)",
   "overlap": 0,
-  "gap": 73.0,
+  "gap": 56.3,
   "need": 0,
   "ok": true,
   "note": "fan's own leads"
