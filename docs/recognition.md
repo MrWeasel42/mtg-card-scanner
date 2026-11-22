@@ -40,7 +40,7 @@ Only 5 cards flagged. Older cards with no collector line rely on picture + borde
 ## Known limits
 - Non-English cards aren't in the catalog (English only by design); they get flagged.
 - Pre-2015 cards have no set code/number on them, so the edition comes from the picture alone.
-- Foil detection only uses the ★/• marker for now; the lighting check comes with the machine.
+- Foil detection uses the ★/• marker (and the 1999–2003 shooting star). The machine's low-angle sheen LED is wired and switchable (`hw.sheen`), but no foil check uses it yet: see the card sorter notes.
 
 ## On the card sorter (Raspberry Pi 5)
 The machine carries its own copy of this engine (`machine/sorter/engine/`, Python): same catalog, AI model, text-reader

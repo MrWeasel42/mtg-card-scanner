@@ -1,8 +1,8 @@
 # MTG Card Scanner
 
-A free tool that identifies Magic: The Gathering cards — exact printing, set, collector number, foil and foil type — sorts them into bins, and exports CSV files for ManaBox and Moxfield. Built to run on a desktop PC now and inside a DIY scanning machine later.
+A free tool that identifies Magic: The Gathering cards — exact printing, set, collector number, foil and foil type — sorts them into bins, and exports CSV files for ManaBox and Moxfield. Runs on a Windows PC, and on a DIY card-sorting machine (Raspberry Pi 5) that can identify cards by itself.
 
-> **Status:** early testing. The desktop app (v0.1) identifies cards from photos; scan sessions, bins and CSV export are next.
+> **Status:** testing. The desktop app does scan sessions, bins, review and CSV export (phone or machine as the camera); the machine is being built.
 
 ## For users
 Download the latest `MTGCardScanner_Setup_x.y.z.exe` from [Releases](https://github.com/MrWeasel42/mtg-card-scanner/releases/latest) and double-click it. Windows may warn that the app is unrecognized (it isn't code-signed yet): click **More info → Run anyway**.
@@ -12,7 +12,7 @@ Download the latest `MTGCardScanner_Setup_x.y.z.exe` from [Releases](https://git
 |---|---|---|
 | Catalog builder | `catalog-builder/` + `.github/workflows/catalog.yml` | Every week, GitHub's cloud machines download all card data from Scryfall, fingerprint every printing, and publish the result to the `catalog-latest` release. |
 | Desktop app | `src/` | Downloads the catalog, identifies cards, runs scan sessions, review, and CSV export. |
-| Machine | *(later)* | Feeder, camera, lighting and bins driven by a Raspberry Pi 5 and a microcontroller. |
+| Machine | `hardware/`, `machine/` | 9-bin card sorter: feeder, camera hood, trapdoor bins. The Pi 5 runs the touchscreen app and sessions, and identifies cards itself whenever the PC app isn't connected. |
 
 The full design is in [docs/blueprint.md](docs/blueprint.md).
 
