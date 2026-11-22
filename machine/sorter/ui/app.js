@@ -183,7 +183,7 @@ const VIEWS = {
   session() { return sessionView(); },
   review() { return reviewView(); },
   camera() {
-    return `<div style="display:flex;flex-direction:column;height:100%;gap:12px">
+    return `<div style="display:flex;flex-direction:column;height:100%;gap:12px;overflow:hidden">
       <div class="row"><span class="seg"><button class="${camExp === "auto" ? "on" : ""}" data-act="camexp" data-arg="auto">Auto brightness</button><button class="${camExp === "fixed" ? "on" : ""}" data-act="camexp" data-arg="fixed">As when sorting</button></span>
         <span class="muted small grow">Lens tip to card: 200 mm (7⅞″). Turn the focus ring until the card text is sharp. "As when sorting" is dark without the hood lights.</span></div>
       <img id="camimg" class="cam" alt="camera"></div>`;
@@ -191,7 +191,7 @@ const VIEWS = {
   tools() {
     const t = [["home", "⌂ Home the belt", "A fin stops on the scan station"], ["index", "→ Move one station", "Track moves 122 mm"],
       ["feed", "⤓ Feed 50 mm", "Turns the feed roller"], ["doors", "🚪 Test doors", "Each door opens and shuts twice"],
-      ["levels", "📏 Bin levels", "Distance to each stack"], ["motors-off", "⏻ Motors off", "Belts turn by hand"]];
+      ["levels", "📏 Bin levels", "Distance to each stack"], ["motors-off", "🔌 Motors off", "Belts turn by hand"]];
     return `<p class="muted" style="margin-top:0">Setup and tests. The red STOP button cuts the motors at once.</p>
       <div class="bins">${t.map(([k, n, d]) => `<button class="tile" style="min-height:130px" data-tool="${k}"><span class="t" style="font-size:22px">${n}</span><span class="s">${d}</span></button>`).join("")}
       <button class="tile" style="min-height:130px" data-act="lights"><span class="t" style="font-size:22px">💡 Lights</span><span class="s">On / off</span></button></div>
@@ -485,8 +485,30 @@ document.addEventListener("focusin", e => { if (KIOSK && e.target.matches("[data
 function showKbd(el) {
   kbdTarget = el; kbdNum = el.dataset.kbd === "num";
   drawKbd(); $("#kbd").hidden = false;
+  requestAnimationFrame(() => liftFor(el));
 }
-function hideKbd() { $("#kbd").hidden = true; kbdTarget = null; }
+function hideKbd() { $("#kbd").hidden = true; kbdTarget = null; unlift(); }
+// If the box being typed in is hidden behind the keyboard, slide things up just enough to show it: a dialog moves up
+// (but never past the top of the screen, then scrolls inside); a page scrolls. Otherwise nothing moves.
+function unlift() { $("#sheet").style.transform = ""; $("#view").style.paddingBottom = ""; }
+function liftFor(el) {
+  const kbdTop = innerHeight - $("#kbd").offsetHeight, margin = 12;
+  const sheet = el.closest("#sheet");
+  if (sheet) {
+    sheet.style.transform = "";
+    const r = el.getBoundingClientRect(), need = r.bottom + margin - kbdTop;
+    if (need <= 0) return;
+    const room = Math.max(0, sheet.getBoundingClientRect().top - 8);
+    const shift = Math.min(need, room);
+    sheet.style.transform = `translateY(${-shift}px)`;
+    if (need > shift) sheet.scrollTop += need - shift;
+    return;
+  }
+  const v = $("#view");
+  v.style.paddingBottom = $("#kbd").offsetHeight + 16 + "px";
+  const r = el.getBoundingClientRect(), need = r.bottom + margin - kbdTop;
+  if (need > 0) v.scrollTop += need;
+}
 // the keyboard shows the field's name and what's being typed in a bar on top, so nothing has to move out of the way
 function kbdLabel(el) {
   const h = el.closest(".field")?.querySelector("h3")?.textContent || el.closest(".sheet")?.querySelector("h1")?.textContent;
