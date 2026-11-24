@@ -49,7 +49,7 @@ SEAT_685 = 11.3; SEAT_625 = 16.3      # bearing seats (11 / 16 mm OD) in round h
 # Teardrop seats (printed upright) only grip on their round lower 3/4, and upright holes print true to size
 # (measured 625 seat: 16.25 wide for 16.3 drawn), so 16.3 let the bearing fall out. Drawn almost at bearing size:
 # Seat gauge (upright teardrops, no supports): 625 fits well at 16.1; 685 slightly loose at 11.15, so 11.05
-# (confirmed on a 685 gauge). The 11.05 test piece that "didn't fit" had tree supports printed inside its hole:
+# (confirmed: 685 gauge, 11.05 hole fits great). The 11.05 test piece that "didn't fit" had tree supports printed inside its hole:
 # keep supports OUT of bearing seats (support blocker in Orca).
 TEAR_685 = 11.05; TEAR_625 = 16.1
 PILOT_M2, PILOT_M25 = 2.1, 2.5        # self-tapping pilots: print ~1.66 (M2 core 1.57) and ~2.12 (M2.5 core 2.01)
