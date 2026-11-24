@@ -45,7 +45,10 @@ HUB_MODULE = 1                     # the bin hub (back panel with the servo boar
 # Hole sizes tuned on the PETG fit coupon (Neptune 4 Pro, 0.4 nozzle, flow 0.95). Measured: a printed hole comes
 # out about 0.07 + 0.78/d mm under size (16 mm: -0.12, 5 mm: -0.23, 4 mm: -0.27, 2 mm: -0.46).
 M5 = 5.6; M3 = 3.6; M3_INSERT = 4.7   # clearance (prints 3.3) / heat-set insert (prints 4.45: 4.32 lead drops in, 5.04 knurl melts)
-SEAT_685 = 11.3; SEAT_625 = 16.3      # bearing seats (11 / 16 mm OD): firm hand press
+SEAT_685 = 11.3; SEAT_625 = 16.3      # bearing seats (11 / 16 mm OD) in round holes (printed flat): firm hand press
+# Teardrop seats (printed upright) only grip on their round lower 3/4, and upright holes print true to size
+# (measured 625 seat: 16.25 wide for 16.3 drawn), so 16.3 let the bearing fall out. Drawn almost at bearing size:
+TEAR_685 = 11.05; TEAR_625 = 16.05
 PILOT_M2, PILOT_M25 = 2.1, 2.5        # self-tapping pilots: print ~1.66 (M2 core 1.57) and ~2.12 (M2.5 core 2.01)
 M2 = 2.2
 FIN_START_X = 131.0   # start idlers (stub shafts in the posts on the feeder base); fins land here, 5 mm behind the exit nip
@@ -232,12 +235,12 @@ def feeder_base():
     k = (zr0 + 2) - xr1                                  # underside line z = x + k through the rib's low corner
     front = [(xw0, xw0 + k), (xr1, xr1 + k), (xr1, ztop), (FEED_X - 12, ztop), (FEED_X - 12, FEED_X - 12 + k + 8), (xw0, xw0 + k + 8)]
     b = b.union(cq.Workplane("XZ").polyline(front).close().extrude(-5).translate((0, -29, 0)))
-    b = b.cut(tear_y(FEED_X, FEED_Z, SEAT_685 / 2, -30, 30))      # (teardrops: the base prints upright)
+    b = b.cut(tear_y(FEED_X, FEED_Z, TEAR_685 / 2, -30, 30))      # (teardrops: the base prints upright)
     b = b.cut(tear_y(FEED_X, FEED_Z, 3.0, Y0 - 1, Y1 + 1))
     # exit roller shaft through both walls
     # exit roller bearings sit in slots (+-2 mm along X) so the 122 mm belt can be tensioned
     for yy in ((Y0 - 1, Y0 + 5), (Y1 - 5, Y1 + 1)):
-        b = b.cut(tear_y(EXIT_X - 2, EXIT_Z, SEAT_625 / 2, *yy)).cut(tear_y(EXIT_X + 2, EXIT_Z, SEAT_625 / 2, *yy)).cut(box(EXIT_X - 2, EXIT_X + 2, yy[0], yy[1], EXIT_Z - SEAT_625 / 2, EXIT_Z + SEAT_625 / 2 * 1.2))
+        b = b.cut(tear_y(EXIT_X - 2, EXIT_Z, TEAR_625 / 2, *yy)).cut(tear_y(EXIT_X + 2, EXIT_Z, TEAR_625 / 2, *yy)).cut(box(EXIT_X - 2, EXIT_X + 2, yy[0], yy[1], EXIT_Z - TEAR_625 / 2, EXIT_Z + TEAR_625 / 2 * 1.2))
     # feed motor on the back wall at the feed shaft (on a 30 mm standoff). The standoff's square is centred on the
     # shaft, so its upper screws land above the hopper floor: a tab rises there (behind the tower skirt), and the
     # wall is thickened to 8 mm inside so every insert is fully buried (5.7 mm insert in a 7.5 mm hole).
@@ -245,7 +248,7 @@ def feeder_base():
     b = b.union(box(FEED_X - 23, FEED_X + 21, Y1 - 8.5, Y1, PATH - 0.1, FEED_Z + 23))
     b = b.cut(tear_y(FEED_X, FEED_Z, 3.0, Y1 - 9, Y1 + 1))
     for (x, z) in ((FEED_X, FEED_Z),):
-        b = b.cut(tear_y(x, z, SEAT_625 / 2, Y1 - 5, Y1 + 1))     # 625 bearing seat in the wall; shaft passes out to the coupler
+        b = b.cut(tear_y(x, z, TEAR_625 / 2, Y1 - 5, Y1 + 1))     # 625 bearing seat in the wall; shaft passes out to the coupler
         for dx in (-1, 1):
             for dz in (-1, 1):
                 b = b.cut(cyl_y(x + dx * NEMA_HOLES / 2, z + dz * NEMA_HOLES / 2, M3_INSERT / 2, Y1 - 6.5, Y1 + 1))
@@ -1085,7 +1088,7 @@ def end_side(side):
     xs = END_SHAFT_X - END_X0                            # drive shaft position in this module (112)
     f = f.cut((tear_y if s > 0 else cyl_y)(xs, PUL_Z, 2.75, -WALL_OUT - 1, WALL_OUT + 1))   # back prints upright: teardrops
     yb0, yb1 = sorted((s * (WALL_OUT - 5.2), s * (WALL_OUT + 0.1)))
-    f = f.cut((tear_y if s > 0 else cyl_y)(xs, PUL_Z, SEAT_625 / 2, yb0, yb1))   # 625 bearing seat (outer face)
+    f = f.cut((tear_y if s > 0 else cyl_y)(xs, PUL_Z, (TEAR_625 if s > 0 else SEAT_625) / 2, yb0, yb1))   # 625 bearing seat (outer face)
     f = f.cut(box(xs - 20, END_L + 1, *sorted((s * 35.0, s * WALL_IN_UP)), PATH, WALL_TOP + 1))  # room for pulley + fins
     if s > 0:   # ramp flange screws into the underside of the back strip
         for xh in (RAMP_X0 + 15, PITCH - 5.0 - 15):

@@ -4,7 +4,7 @@ Writes hardware/stl/test_sections/*.stl"""
 import os, sys
 import numpy as np, trimesh, manifold3d as m3d
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cad"))
-from sorter import FEED_X, EXIT_X, FEED_Z, PATH, PUL_Z, SLIDER_POCKET_X, END_SHAFT_X, END_X0, WALL_OUT, PITCH, HINGE_Z
+from sorter import FEED_X, EXIT_X, FEED_Z, PATH, PUL_Z, SLIDER_POCKET_X, END_SHAFT_X, END_X0, WALL_OUT, PITCH, HINGE_Z, SERVO_TOP_X
 
 STL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "stl")
 OUT = os.path.join(STL, "test_sections"); os.makedirs(OUT, exist_ok=True)
@@ -24,7 +24,11 @@ if __name__ == "__main__":
     # feeder base back wall: both roller bearing seats (teardrops), the idler-slider pocket and the post top
     cut("feeder_base", (FEED_X - 18, 30, FEED_Z - 18), (SLIDER_POCKET_X[1] + 8, 80, 240), "test_feeder_seats_and_slider")
     # bin module back wall: hinge knuckles, door-rest, servo bracket, joint insert (one module end)
-    cut("bin_side_back", (-1, 25, HINGE_Z - 30), (PITCH / 2 + 1, 70, HINGE_Z + 50), "test_bin_hinge_and_servo")
+    cut("bin_side_back", (-1, 25, HINGE_Z - 30), (PITCH / 2 + 1, 70, HINGE_Z + 50), "test_bin_hinge")
+    # bin module back wall, other end: the servo bracket and the pocket the servo slides into (ES08MA II)
+    cut("bin_side_back", (SERVO_TOP_X - 8, 25, HINGE_Z - 52), (PITCH + 1, 70, HINGE_Z + 8), "test_servo_bracket")
+    # feeder inner rib: the 685ZZ seat for the feed roller shaft (teardrop, prints upright)
+    cut("feeder_base", (FEED_X - 16, 18, FEED_Z - 18), (FEED_X + 16, 31, FEED_Z + 16), "test_feeder_685_seat")
     # front end wall: 625 bearing seat with the 0.2 mm skin (flat print)
     xs = END_SHAFT_X - END_X0
     cut("end_side_front", (xs - 22, -WALL_OUT - 1, PUL_Z - 22), (xs + 22, -30, PUL_Z + 22), "test_end_bearing_seat")
