@@ -33,6 +33,13 @@ also isolate cable capacitance. Decide after measuring bus behavior on machine #
   same keyed connector, mounted in the printed pockets
 - LRS-100-24 PSU and AC inlet (pre-wired harness in the kit)
 
+## Bin boards (one per bin, built in from the start)
+A small board at each bin: the distance sensor, break-beam and servo plug into it, and ONE cable runs back
+to the hub (9 cables instead of 27). It carries an I2C bus extender (PCA9615 differential I2C, with its
+partner chip on the hub per bin channel), so the far bins (~1 m / 3 ft of cable) are as solid as the near
+ones. It's a couple of dollars per bin, factory-assembled, so the buyer never solders anything. Not optional:
+the kit can't depend on cable luck.
+
 ## Cables
 - Pre-made, keyed (JST-PH/XH or similar), cut to the lengths the CAD gives per bin position
 - one cable type per job, color-coded, so nothing can be plugged in wrong
