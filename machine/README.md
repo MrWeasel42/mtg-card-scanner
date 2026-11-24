@@ -8,7 +8,7 @@ every finished session to `Sessions\Machine\`. Any phone or PC on the Wi-Fi can 
 (download CSVs, review cards, watch a run).
 
 ```
-PC app (Windows) <--Wi-Fi--  sorter.py (Pi) --Moonraker--> Klipper --UART--> SKR Pico --> 2 steppers, 2 TCRT,
+PC app (Windows) <--Wi-Fi--  sorter.py (Pi) --Moonraker--> Klipper --USB--> SKR Pico --> 2 steppers, 2 TCRT,
                                   |                                                       2 tower-ID hall sensors, LEDs
                                   |--I2C (4-wire bin bus)--> bin hub on bin module 2:
                                   |        PCA9685 (8 door servos), MCP23017 (8 break-beams), 2 x TCA9548A (9 VL53L1X)
@@ -48,7 +48,7 @@ computer: `python3 sorter/app.py --sim --port 8080` and open http://localhost:80
 cd ~/klipper && make menuconfig
   Micro-controller: Raspberry Pi RP2040
   Bootloader offset: No bootloader
-  Communication interface: UART0 on GPIO1/GPIO0
+  Communication interface: USB
 make
 ```
 Flash it over USB (the SKR Pico has no BOOT button: it uses jumpers):
@@ -56,8 +56,9 @@ Flash it over USB (the SKR Pico has no BOOT button: it uses jumpers):
 2. USB-C cable from the SKR to a Pi USB port, then press the SKR's **RESET** button.
 3. `lsusb` should list `2e8a:0003` (Raspberry Pi RP2 Boot).
 4. `sudo apt install -y libusb-1.0-0-dev` (once), then `make flash FLASH_DEVICE=2e8a:0003`.
-5. Unplug the USB and take **both jumpers off** (the board runs from 24 V and talks to the Pi over the 3-wire
-   UART from then on; the USB power jumper is only for flashing without 24 V).
+5. Take **both jumpers off** and tap RST. The board runs from 24 V and talks to the Pi over that same USB-C cable
+   (the 3-wire UART header echoed the Pi's own messages back on our board, so we use USB).
+6. `ls /dev/serial/by-id/` shows `usb-Klipper_rp2040_...`: put that path on the `serial:` line of printer.cfg.
 
 Copy the config: `cp ~/mtg-card-scanner/machine/klipper/printer.cfg ~/printer_data/config/printer.cfg`
 and restart Klipper (`sudo systemctl restart klipper`).

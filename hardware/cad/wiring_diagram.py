@@ -18,12 +18,12 @@ OUT_DIR = os.path.join(HERE, "..", "wiring")
 
 COL = {  # wire colors
     "24V": "#e11d48", "GND": "#111827", "6V": "#f97316", "3V3": "#ec4899", "5V": "#b91c1c", "SDA": "#2563eb",
-    "SCL": "#eab308", "TX": "#16a34a", "RX": "#7c3aed", "SIG": "#0d9488", "MOT": "#64748b", "RIB": "#94a3b8",
+    "SCL": "#eab308", "TX": "#16a34a", "RX": "#7c3aed", "SIG": "#0d9488", "MOT": "#64748b", "RIB": "#94a3b8", "USB": "#334155",
     "L": "#92400e", "N": "#1d4ed8", "PE": "#65a30d", "WHT": "#d4d4d8", "GRN": "#22c55e",
 }
 NAMES = {"24V": "24 V (red)", "GND": "GND (black)", "6V": "6 V servo bus (red wire; orange here)", "3V3": "3.3 V", "5V": "5 V",
          "SDA": "SDA (blue)", "SCL": "SCL (yellow)", "TX": "Pi TX → board RX", "RX": "Pi RX ← board TX",
-         "SIG": "signal", "MOT": "stepper cable (4 wires)", "RIB": "ribbon cable", "L": "mains L (brown)",
+         "SIG": "signal", "MOT": "stepper cable (4 wires)", "RIB": "ribbon cable", "USB": "USB data cable", "L": "mains L (brown)",
          "N": "mains N (blue)", "PE": "earth (green/yellow)", "WHT": "white", "GRN": "green"}
 
 
@@ -146,7 +146,7 @@ def skr():
         ("FAN3", ["24V", "GND"], "Bay fan 30 mm", "on the bay cover\nits own leads", "#e2e8f0", "24 V fan"),
     ], 50, 280, 270, 160)
     side_devices(sh, "right", 1180, [
-        ("UART: RX TX GND", ["TX", "RX", "GND"], "Raspberry Pi 5", "pins 8 (TX), 10 (RX), 14 (GND)\nsheet 3 · leave both 5V pins empty", "#dcfce7", "TX crosses to RX"),
+        ("USB-C", ["USB"], "Raspberry Pi 5", "any USB-A port, 50 cm data cable\nsheet 3 · UART header not used", "#dcfce7", "USB"),
         ("X-STOP (card clear)", ["3V3", "GND", "SIG"], "Card-clear sensor", "TCRT5000, under the floor\nat the feeder exit", "#ccfbf1", "30 cm jumpers"),
         ("Y-STOP (belt home)", ["3V3", "GND", "SIG"], "Belt-home sensor", "TCRT5000, under the scan\nmodule's back strip", "#ccfbf1", "50 cm jumpers"),
         ("Z-STOP (tower 1)", ["SIG", "GND"], "Tower-ID hall sensor 1", "A3144 in the hopper floor\n5 V from the probe header", "#ccfbf1", "30 cm jumpers"),
@@ -169,14 +169,12 @@ def pi():
         ("pin 2 (5 V)  pin 6 (GND)", ["5V", "GND"], "Touch Display 2 power", "the display's power lead", "#dbeafe", "display power"),
     ], 50, 280, 290, 190)
     side_devices(sh, "right", 1140, [
-        ("pin 8 (TX)", ["TX"], "SKR Pico UART RX", "sheet 2 · 40 cm jumper", "#d1fae5", "UART"),
-        ("pin 10 (RX)", ["RX"], "SKR Pico UART TX", "sheet 2 · 40 cm jumper", "#d1fae5", "UART"),
-        ("pin 14 (GND)", ["GND"], "SKR Pico UART GND", "sheet 2", "#d1fae5", "UART ground (pin 6 is the display)"),
+        ("USB-A port", ["USB"], "SKR Pico USB-C", "sheet 2 · 50 cm data cable", "#d1fae5", "USB"),
         ("pin 3 (SDA)", ["SDA"], "Bin bus SDA", "bay junction → hub (sheet 4)", "#dbeafe", "I2C"),
         ("pin 5 (SCL)", ["SCL"], "Bin bus SCL", "bay junction → hub (sheet 4)", "#dbeafe", "I2C"),
         ("pin 9 (GND)", ["GND"], "Bin bus GND", "bay junction → hub (sheet 4)", "#dbeafe", "I2C ground"),
     ], 1510, 240, 300, 125)
-    sh.text(50, 1000, "UART and I2C jumpers run together in one black braided sleeve: pod → notch → bay-cover slot.", 14, 600, "#334155")
+    sh.text(50, 1000, "The SKR's USB cable and the I2C jumpers run together in one black braided sleeve: pod → notch → bay-cover slot.", 14, 600, "#334155")
     sh.legend(1200, 1000)
     sh.save("3-pi5")
 

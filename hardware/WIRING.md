@@ -15,7 +15,7 @@ Picture diagrams, one per board (what plugs in where, wires in their real colors
 | USB-C power (Pi) | 5 V USB-C converter (in the pod) | Pi 5 USB-C | inside the pod (coil the spare beside the converter) | 76 mm (3.0 in) | 280 mm (11.0 in): the converter's own 12 in (305 mm) lead | yes | A |
 | Camera ribbon | Pi 5 CAM/DISP 0 | HQ camera (connector facing left) | out the pod's back -> back across the gap above the conveyor -> up beside the hood (one long twist) -> under the L-rails -> through the slot straight into the camera | 337 mm (13.3 in) | 500 mm (19.7 in): Pi 5 camera cable, 500 mm (22-pin mini -> 15-pin standard) | yes | A |
 | Display ribbon + power | Pi 5 CAM/DISP 1 + pins 2/6 | Touch Display 2 | inside the pod | 60 mm (2.4 in) | 100 mm (3.9 in): the cables in the display box | yes | A |
-| UART to the motor board (TX, RX, GND) | Pi pins 8, 10, 14 | SKR Pico UART header | pod -> notch -> bay-cover slot -> tray | 270 mm (10.6 in) | 400 mm (15.7 in): female-female jumpers, 40 cm (in one black braided sleeve with the I2C pair) | yes | A |
+| USB to the motor board | Pi USB-A port | SKR Pico USB-C | pod -> notch -> bay-cover slot -> tray | 270 mm (10.6 in) | 500 mm (19.7 in): USB-A to USB-C data cable, 50 cm (in the black braided sleeve with the I2C wires) | yes | A |
 | I2C to the bay junction (SDA, SCL, GND) | Pi pins 3, 5, 9 | bay junction (joins the bin bus) | same loom | 312 mm (12.3 in) | 400 mm (15.7 in): female-female jumpers, 40 cm | yes | A |
 | Bin bus (6 V, GND, SDA, SCL) | 6 V step-down + bay junction | bin hub: PCA9685 V+/GND, 3.3 V regulator in, I2C in | bay -> back window -> back channel -> up into the hub's window | 608 mm (23.9 in) | 22 AWG: red 6 V, black GND, blue SDA, yellow SCL (twist SDA with GND and SCL with GND), cut to length | cut to length | A |
 | Feed motor | feeder base back wall (NEMA 17) | SKR Pico X driver | down the back of the base -> back window -> tray | 191 mm (7.5 in) | 1000 mm (39.4 in): the motor's own 1 m cable (coil the spare) | yes | A |
@@ -68,8 +68,8 @@ on channel 0 (not 0x70: the PCA9685 answers its all-call there). Pololu D24V5F3 
 Each VL53L1X is alone on its switch channel, so they all keep address 0x29 and need no XSHUT wire.
 
 ## Pins
-Pi 5: UART 14/15 (pins 8/10) to the SKR Pico, I2C SDA/SCL (pins 3/5) to the bin bus, GND on 14/9 (UART/I2C); display power on
+Pi 5: USB to the SKR Pico, I2C SDA/SCL (pins 3/5) to the bin bus, GND on pin 9; display power on
 pins 2 (5 V) and 6. Nothing else: every per-bin signal lives on the hub.
 SKR Pico: X (feed), Y (track), X-STOP (card-clear), Y-STOP (belt-home), Z-STOP + E0-STOP (tower-ID hall sensors,
 5 V from the probe header), HE0 (hood LEDs), FAN2 (sheen LED, jumper on 24 V), FAN3 (bay fan), VIN 24 V,
-UART header to the Pi. All grounds are common (PSU -V).
+USB-C to the Pi (its UART header is not used). All grounds are common (PSU -V).
