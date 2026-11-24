@@ -19,10 +19,14 @@ The Windows app and the machine's touchscreen are one app on two screens: same f
 The full design is in [docs/blueprint.md](docs/blueprint.md).
 
 ## License
-Free for personal, hobby, educational and other noncommercial use. **You may not sell this software or use it to make money.**
+Free for personal, hobby, educational and other noncommercial use. **Only the project owner may sell this
+software, the designs, or kits.** See [COMMERCIAL.md](COMMERCIAL.md) for the planned kits (the software is always free).
 
 - **Software:** [PolyForm Noncommercial 1.0.0](LICENSE.md)
-- **Machine designs** (PCB, 3D-printed parts, wiring), once added: [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) — build and share it freely, give credit, no commercial use, and share your changes under the same terms.
+- **Machine designs** (CAD, 3D-printed parts, boards, wiring): [CC BY-NC-SA 4.0](hardware/LICENSE.md): build and share it freely, give credit, no commercial use, and share your changes under the same terms.
+- **Third-party software, models and data:** [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+- **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Safety** (wall power, moving parts): [hardware/SAFETY.md](hardware/SAFETY.md)
 
 ## Credits
 Card data and images from [Scryfall](https://scryfall.com). Magic: The Gathering is © Wizards of the Coast; this project is unofficial fan content and is not affiliated with or endorsed by Wizards of the Coast.
