@@ -229,6 +229,7 @@ class Machine:
                             self.pc_rest_until = 0.0          # it's back: use it again straight away
                         self.say(f"PC {'connected: ' + self.pc.name if self.pc.online else 'disconnected'}.")
                     self.hw_status["motors"] = self._klipper_state()
+                    self._auto_reconnect_board()
                     if self.hw_status["motors"] == "ready":
                         t = hw.tower_kind(hw.Klipper(self.cfg["moonraker"]))
                         if t != self.hw_status.get("tower"):
@@ -256,6 +257,21 @@ class Machine:
                 if r == "updated":
                     self.say("Card catalog on the machine updated.")
             time.sleep(12 * 3600)
+
+    def _auto_reconnect_board(self) -> None:
+        """The motor board loses power whenever the machine is switched off and on again, and Klipper then sits in
+        'error' until told to restart. Do that for the user (every 20 s at most), but never after an emergency stop:
+        that one needs the Reset button, and cards may still be on the track."""
+        if self.hw_status.get("motors") != "not connected" or self.state == "estop":
+            return
+        if time.time() - getattr(self, "_last_board_restart", 0.0) < 20:
+            return
+        self._last_board_restart = time.time()
+        try:
+            urllib.request.urlopen(urllib.request.Request(self.cfg["moonraker"] + "/printer/firmware_restart",
+                                                          method="POST"), timeout=5).read()
+        except Exception:
+            pass
 
     def _klipper_state(self) -> str:
         try:
