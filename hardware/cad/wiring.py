@@ -80,7 +80,7 @@ def runs():
         "the cables in the display box")
     out[-1]["internal"] = True                     # inside the pod, between two boards that are screwed together
     loom = [PI_HDR, POD_NOTCH, BAY_SLOT, (BAY_SLOT[0], -40, 80)]
-    add("UART to the motor board (TX, RX, GND)", "Pi pins 8, 10, 6", "SKR Pico UART header", "pod -> notch -> bay-cover slot -> tray",
+    add("UART to the motor board (TX, RX, GND)", "Pi pins 8, 10, 14", "SKR Pico UART header", "pod -> notch -> bay-cover slot -> tray",
         loom + [SKR], 400, "female-female jumpers, 40 cm (in one black braided sleeve with the I2C pair)")
     add("I2C to the bay junction (SDA, SCL, GND)", "Pi pins 3, 5, 9", "bay junction (joins the bin bus)", "same loom",
         loom + [JUNC], 400, "female-female jumpers, 40 cm")
@@ -177,7 +177,7 @@ if __name__ == "__main__":
               "on channel 0 (not 0x70: the PCA9685 answers its all-call there). Pololu D24V5F3 3.3 V regulator from the bus's 6 V powers the logic, the sensors and the emitters.",
               "Each VL53L1X is alone on its switch channel, so they all keep address 0x29 and need no XSHUT wire.", "",
               "## Pins",
-              "Pi 5: UART 14/15 (pins 8/10) to the SKR Pico, I2C SDA/SCL (pins 3/5) to the bin bus, GND on 6/9; display power on",
+              "Pi 5: UART 14/15 (pins 8/10) to the SKR Pico, I2C SDA/SCL (pins 3/5) to the bin bus, GND on 14/9 (UART/I2C); display power on",
               "pins 2 (5 V) and 6. Nothing else: every per-bin signal lives on the hub.",
               "SKR Pico: X (feed), Y (track), X-STOP (card-clear), Y-STOP (belt-home), Z-STOP + E0-STOP (tower-ID hall sensors,",
               "5 V from the probe header), HE0 (hood LEDs), FAN2 (sheen LED, jumper on 24 V), FAN3 (bay fan), VIN 24 V,",

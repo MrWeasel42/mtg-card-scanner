@@ -56,6 +56,10 @@ Benchy, then the fit-test pieces.
 for overhangs" on. The design changes in round 2 remove the worst bridges (motor standoffs, pod cover). The Benchy
 below shows whether these numbers are enough.
 
+**Keep supports out of bearing seats.** Upright parts have teardrop bearing seats that need no support, but tree
+supports still grow into them and leave the seat too small for the bearing (fit test 2). Paint a support blocker
+over each bearing seat in Orca before slicing, and check the sliced preview for green inside the holes.
+
 **Brims:** the tall upright walls get an 8 mm brim (their notes say so); broad flat parts with sharp corners get
 mouse ears (10-20 mm across, 3-5 layers). Gyroid or crosshatch infill only, no grid (the nozzle clips the crossings).
 

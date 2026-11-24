@@ -51,8 +51,13 @@ cd ~/klipper && make menuconfig
   Communication interface: UART0 on GPIO1/GPIO0
 make
 ```
-Hold the SKR's **BOOT** button, plug it into the Pi's USB, and copy `out/klipper.uf2` to the drive that appears.
-Unplug the USB (the board talks to the Pi over the 3-wire UART from then on).
+Flash it over USB (the SKR Pico has no BOOT button: it uses jumpers):
+1. Put a jumper on the pins labeled **BOOT** and one on the **USB power** pins (labels are on the board; BTT pin diagram if unsure).
+2. USB-C cable from the SKR to a Pi USB port, then press the SKR's **RESET** button.
+3. `lsusb` should list `2e8a:0003` (Raspberry Pi RP2 Boot).
+4. `sudo apt install -y libusb-1.0-0-dev` (once), then `make flash FLASH_DEVICE=2e8a:0003`.
+5. Unplug the USB and take **both jumpers off** (the board runs from 24 V and talks to the Pi over the 3-wire
+   UART from then on; the USB power jumper is only for flashing without 24 V).
 
 Copy the config: `cp ~/mtg-card-scanner/machine/klipper/printer.cfg ~/printer_data/config/printer.cfg`
 and restart Klipper (`sudo systemctl restart klipper`).

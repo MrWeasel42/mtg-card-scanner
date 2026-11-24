@@ -146,7 +146,7 @@ def skr():
         ("FAN3", ["24V", "GND"], "Bay fan 30 mm", "on the bay cover\nits own leads", "#e2e8f0", "24 V fan"),
     ], 50, 280, 270, 160)
     side_devices(sh, "right", 1180, [
-        ("UART: RX TX GND", ["TX", "RX", "GND"], "Raspberry Pi 5", "pins 8 (TX), 10 (RX), 6 (GND)\nsheet 3", "#dcfce7", "TX crosses to RX"),
+        ("UART: RX TX GND", ["TX", "RX", "GND"], "Raspberry Pi 5", "pins 8 (TX), 10 (RX), 14 (GND)\nsheet 3 · leave both 5V pins empty", "#dcfce7", "TX crosses to RX"),
         ("X-STOP (card clear)", ["3V3", "GND", "SIG"], "Card-clear sensor", "TCRT5000, under the floor\nat the feeder exit", "#ccfbf1", "30 cm jumpers"),
         ("Y-STOP (belt home)", ["3V3", "GND", "SIG"], "Belt-home sensor", "TCRT5000, under the scan\nmodule's back strip", "#ccfbf1", "50 cm jumpers"),
         ("Z-STOP (tower 1)", ["SIG", "GND"], "Tower-ID hall sensor 1", "A3144 in the hopper floor\n5 V from the probe header", "#ccfbf1", "30 cm jumpers"),
@@ -171,7 +171,7 @@ def pi():
     side_devices(sh, "right", 1140, [
         ("pin 8 (TX)", ["TX"], "SKR Pico UART RX", "sheet 2 · 40 cm jumper", "#d1fae5", "UART"),
         ("pin 10 (RX)", ["RX"], "SKR Pico UART TX", "sheet 2 · 40 cm jumper", "#d1fae5", "UART"),
-        ("pin 6 (GND)", ["GND"], "SKR Pico UART GND", "sheet 2", "#d1fae5", "shared with the display"),
+        ("pin 14 (GND)", ["GND"], "SKR Pico UART GND", "sheet 2", "#d1fae5", "UART ground (pin 6 is the display)"),
         ("pin 3 (SDA)", ["SDA"], "Bin bus SDA", "bay junction → hub (sheet 4)", "#dbeafe", "I2C"),
         ("pin 5 (SCL)", ["SCL"], "Bin bus SCL", "bay junction → hub (sheet 4)", "#dbeafe", "I2C"),
         ("pin 9 (GND)", ["GND"], "Bin bus GND", "bay junction → hub (sheet 4)", "#dbeafe", "I2C ground"),

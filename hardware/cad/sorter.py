@@ -48,8 +48,10 @@ M5 = 5.6; M3 = 3.6; M3_INSERT = 4.7   # clearance (prints 3.3) / heat-set insert
 SEAT_685 = 11.3; SEAT_625 = 16.3      # bearing seats (11 / 16 mm OD) in round holes (printed flat): firm hand press
 # Teardrop seats (printed upright) only grip on their round lower 3/4, and upright holes print true to size
 # (measured 625 seat: 16.25 wide for 16.3 drawn), so 16.3 let the bearing fall out. Drawn almost at bearing size:
-# 685 at 11.05 came out too small to take the bearing at all (small holes shrink more), so 11.25.
-TEAR_685 = 11.25; TEAR_625 = 16.05
+# Seat gauge (upright teardrops, no supports): 625 fits well at 16.1; 685 slightly loose at 11.15, so 11.05
+# (confirmed on a 685 gauge). The 11.05 test piece that "didn't fit" had tree supports printed inside its hole:
+# keep supports OUT of bearing seats (support blocker in Orca).
+TEAR_685 = 11.05; TEAR_625 = 16.1
 PILOT_M2, PILOT_M25 = 2.1, 2.5        # self-tapping pilots: print ~1.66 (M2 core 1.57) and ~2.12 (M2.5 core 2.01)
 M2 = 2.2
 FIN_START_X = 131.0   # start idlers (stub shafts in the posts on the feeder base); fins land here, 5 mm behind the exit nip

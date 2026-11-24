@@ -20,6 +20,18 @@ def cut(name, lo, hi, out):
     res.export(f"{OUT}/{out}.stl")
     print(f"{out:34s} from {name:16s} {np.round(res.extents, 1)} mm  {res.volume / 1000:.1f} cm3  bounds {np.round(t.bounds, 0).tolist()}")
 
+def tear_gauge_685():
+    """Small upright plate: 685 teardrop seats at 10.95 / 11.0 / 11.05 (1 / 2 / 3 ticks)."""
+    import cadquery as cq
+    from sorter import tear_y, box
+    g = box(-8, 38, 0, 5, 0, 20)
+    for i, x in enumerate((0, 15, 30)):
+        g = g.cut(tear_y(x, 10, (10.95, 11.0, 11.05)[i] / 2, -1, 6))
+        for k in range(i + 1):
+            g = g.union(box(x - 3 + 2.2 * k, x - 2 + 2.2 * k, -0.6, 0.01, 0.8, 2.6))
+    g = g.union(box(-8, 38, -4, 9, 0, 1.0))           # 13 mm wide foot so it can't tip
+    p = os.path.join(OUT, "test_tear_gauge_685.stl"); cq.exporters.export(g, p); print("test_tear_gauge_685", p)
+
 def tear_gauge():
     """Upright plate with teardrop seats at 3 sizes each for the 685 (11 mm) and 625 (16 mm) bearings.
     Numbers are embossed under each hole (tenths over the bearing size: 1 = 11.15 / 16.0 ...)."""
@@ -36,6 +48,7 @@ def tear_gauge():
 
 if __name__ == "__main__":
     tear_gauge()
+    tear_gauge_685()
     # feeder base back wall: both roller bearing seats (teardrops), the idler-slider pocket and the post top
     cut("feeder_base", (FEED_X - 18, 30, FEED_Z - 18), (SLIDER_POCKET_X[1] + 8, 80, 240), "test_feeder_seats_and_slider")
     # bin module back wall: hinge knuckles, door-rest, servo bracket, joint insert (one module end)
