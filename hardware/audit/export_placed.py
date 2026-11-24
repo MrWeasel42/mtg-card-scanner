@@ -8,7 +8,7 @@ out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "placed")
 P = placed()
 from extras import extras
 E = extras()
-import shutil; shutil.rmtree(out); os.makedirs(out)
+import shutil; shutil.rmtree(out, ignore_errors=True); os.makedirs(out, exist_ok=True)
 names = {}
 for d in (P, E):
     for k, v in d.items():

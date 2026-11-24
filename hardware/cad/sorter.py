@@ -48,7 +48,8 @@ M5 = 5.6; M3 = 3.6; M3_INSERT = 4.7   # clearance (prints 3.3) / heat-set insert
 SEAT_685 = 11.3; SEAT_625 = 16.3      # bearing seats (11 / 16 mm OD) in round holes (printed flat): firm hand press
 # Teardrop seats (printed upright) only grip on their round lower 3/4, and upright holes print true to size
 # (measured 625 seat: 16.25 wide for 16.3 drawn), so 16.3 let the bearing fall out. Drawn almost at bearing size:
-TEAR_685 = 11.05; TEAR_625 = 16.05
+# 685 at 11.05 came out too small to take the bearing at all (small holes shrink more), so 11.25.
+TEAR_685 = 11.25; TEAR_625 = 16.05
 PILOT_M2, PILOT_M25 = 2.1, 2.5        # self-tapping pilots: print ~1.66 (M2 core 1.57) and ~2.12 (M2.5 core 2.01)
 M2 = 2.2
 FIN_START_X = 131.0   # start idlers (stub shafts in the posts on the feeder base); fins land here, 5 mm behind the exit nip
@@ -901,6 +902,7 @@ DOOR_OPEN = 60.0
 LEVER_X = (84.5, 88.5)        # lever plate on the second barrel
 LEVER_R, LEVER_A0 = 12.0, 240.0   # lever length; angle (deg, in the YZ plane from +Y) with the door closed
 SERVO_S = (HINGE_Y + 3.0, HINGE_Z - 22.0)   # servo shaft (Y, Z)
+SERVO_PLATE_Y = 27.5          # front edge of the servo bracket plate (was 29.5: left a 1.45 mm strip that snapped)
 SERVO_TOP_X = 96.0            # servo's top face (the horn side); body runs to X 120
 LINK_X = (89.0, 91.5)
 
@@ -934,7 +936,7 @@ def door():
         d = d.cut(cyl_x(HINGE_Y, HINGE_Z, 1.1, xa - 1, xb + 1))           # 2.2 hole: the door turns on the pin
     d = d.cut(cyl_x(le[0], le[1], PILOT_M2 / 2, LEVER_X[0] - 1, LEVER_X[1] + 1))   # M2 x 8 from the link side
     # notch in the back edge where the servo bracket stands: the door goes in from below, past the bracket
-    d = d.cut(box(SERVO_TOP_X + 6.0 - 0.6, SERVO_TOP_X + 9.0 + 0.6, 28.9, FLOOR_W + 1, PATH - 12, PATH + 1))
+    d = d.cut(box(SERVO_TOP_X + 6.0 - 0.6, SERVO_TOP_X + 9.0 + 0.6, SERVO_PLATE_Y - 0.6, FLOOR_W + 1, PATH - 12, PATH + 1))
     # break-beam slot: where the beam (X 61, Z PATH-22) crosses the open door
     d = d.cut(box(PITCH / 2 - 3.0, PITCH / 2 + 3.0, 7.5, 16.5, PATH - 4, PATH + 1))
     return d
@@ -986,9 +988,12 @@ def bin_module_side(side):
         f = f.cut(cyl_x(HINGE_Y, HINGE_Z, 1.05, FRAME_KN[0][0] - 1, FRAME_KN[-1][1] + 1))             # 2.1 pin hole
         # servo bracket: a plate across the module (normal to X) that the servo's tabs screw to (2 x M2 x 8)
         ys, zs = SERVO_S; zc = zs - 5.75; xp = SERVO_TOP_X + 6.0
-        br = (cq.Workplane("YZ").polyline([(29.5, zc - 20.0), (WALL_IN + 0.01, zc - 20.0 - (WALL_IN - 29.5)),
-                                            (WALL_IN + 0.01, PATH - 11.99), (29.5, PATH - 11.99)]).close()
+        yb = SERVO_PLATE_Y                                                  # 3.45 mm of plate left in front of the servo
+        br = (cq.Workplane("YZ").polyline([(yb, zc - 20.0), (WALL_IN + 0.01, zc - 20.0 - (WALL_IN - yb)),
+                                            (WALL_IN + 0.01, PATH - 11.99), (yb, PATH - 11.99)]).close()
               .extrude(3.0).translate((xp, 0, 0)))                       # 45 degree underside: prints upright
+        br = br.cut(cq.Workplane("YZ").polyline([(yb - 1, PATH - 17.0), (yb + 5.0, PATH - 11.0), (yb - 1, PATH - 11.0)]).close()
+                    .extrude(5.0).translate((xp - 1, 0, 0)))            # top front corner chamfered: the open door swings past it
         br = br.cut(box(xp - 1, xp + 4, ys - 6.05, ys + 6.05, zc - 12.0, zc + 12.0))   # measured ES08MA II body 11.63 x 23.54
         for dz in (-13.9, 13.9):
             br = br.cut(cyl_x(ys, zc + dz, PILOT_M2 / 2, xp - 1, xp + 4))
