@@ -44,6 +44,20 @@ also isolate cable capacitance. Decide after measuring bus behavior on machine #
   cable lengths.
 - Printed parts need connector cutouts and board mounts updated to match.
 
+## Sourcing: everything orderable, then just assemble
+Every part must be orderable as a finished piece. Three buying paths:
+1. **Full kit, made for you:** structural parts made by PCBWay (CNC or sheet aluminum where it makes sense,
+   or their 3D printing service) plus the electronics, shipped ready to assemble.
+2. **Printed parts made for you:** STLs sent out to a print service (PCBWay or similar) and shipped,
+   plus the electronics.
+3. **Print at home:** the buyer prints the STLs and orders only the electronics kit (hub board, sensor
+   boards, cable set, Pi, servos, motors, PSU harness, hardware bag).
+
+So the design has to work for both PCBWay manufacturing and home FDM printing: keep a per-part material and
+process field (PETG FDM / PCBWay 3D print / CNC aluminum / sheet metal), and keep the printed parts within a
+normal home printer's bed size. The BOM is split into an "electronics kit" and a "structure kit" that can be
+ordered separately.
+
 ## Kit contents (target)
 Printed parts (or STLs) · Pi 5 + touchscreen · hub board · sensor/beam boards · servos · motors · belts,
 bearings, shafts, hardware bag · PSU harness · pre-made cable set · assembly guide.
