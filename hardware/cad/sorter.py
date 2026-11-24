@@ -962,7 +962,7 @@ def servo_placed(ang=0.0):
     """ES08MA II envelope + its horn (single arm, 12 mm hole) in module coordinates."""
     xt, (ys, zs) = SERVO_TOP_X, SERVO_S
     zc = zs - 5.75
-    body = box(xt, xt + 24.0, ys - 5.75, ys + 5.75, zc - 11.5, zc + 11.5)
+    body = box(xt, xt + 24.0, ys - 5.85, ys + 5.85, zc - 11.8, zc + 11.8)   # measured 11.63 x 23.54 (tabs 32.11)
     tabs = box(xt + 3.5, xt + 6.0, ys - 5.75, ys + 5.75, zc - 16.25, zc + 16.25)
     hub = cyl_x(ys, zs, 3.5, xt - 4.0, xt)
     ht = _lever_end(LEVER_A0 + ang, origin=SERVO_S)
@@ -989,7 +989,7 @@ def bin_module_side(side):
         br = (cq.Workplane("YZ").polyline([(29.5, zc - 20.0), (WALL_IN + 0.01, zc - 20.0 - (WALL_IN - 29.5)),
                                             (WALL_IN + 0.01, PATH - 11.99), (29.5, PATH - 11.99)]).close()
               .extrude(3.0).translate((xp, 0, 0)))                       # 45 degree underside: prints upright
-        br = br.cut(box(xp - 1, xp + 4, ys - 5.95, ys + 5.95, zc - 11.7, zc + 11.7))
+        br = br.cut(box(xp - 1, xp + 4, ys - 6.05, ys + 6.05, zc - 12.0, zc + 12.0))   # measured ES08MA II body 11.63 x 23.54
         for dz in (-13.9, 13.9):
             br = br.cut(cyl_x(ys, zc + dz, PILOT_M2 / 2, xp - 1, xp + 4))
         f = f.union(br)
