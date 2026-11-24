@@ -17,6 +17,12 @@ sudo systemctl enable card-sorter.service sorter-screen.service
 sudo systemctl disable getty@tty1.service 2>/dev/null || true
 sudo systemctl set-default graphical.target
 
+echo "== Let the app's Shut down button work (shutdown/reboot only, no password)"
+RULE=/etc/sudoers.d/090-sorter-power
+echo "$USER ALL=(root) NOPASSWD: /usr/sbin/shutdown, /usr/sbin/reboot" | sudo tee $RULE >/dev/null
+sudo chmod 440 $RULE
+sudo visudo -cf $RULE >/dev/null || { echo "sudoers rule rejected, removing it"; sudo rm -f $RULE; }
+
 echo "== Screen: Touch Display 2 in landscape, backlight dimmable by the app"
 CFG=/boot/firmware/config.txt
 if ! grep -q "vc4-kms-dsi-ili9881-7inch" $CFG; then

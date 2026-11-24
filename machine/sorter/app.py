@@ -952,9 +952,39 @@ class Handler(BaseHTTPRequestHandler):
             if m.state in ("running", "starting", "stopping"):
                 return self.json({"ok": False, "error": "Stop the session first."})
             if not m.sim:
-                threading.Timer(1, lambda: subprocess.run(["sudo", "shutdown", "now"])).start()
+                err = power_off(m.cfg["moonraker"])
+                if err:
+                    return self.json({"ok": False, "error": err})
             return self.json({"ok": True})
         return self.json({"ok": False, "error": "Unknown request"}, 404)
+
+
+SHUTDOWN = "/usr/sbin/shutdown"
+
+
+def power_off(moonraker: str) -> str | None:
+    """Shut the Pi down. Returns None when it's on its way down, or the reason it can't.
+
+    1. Moonraker: KIAUH gives it PolicyKit rights to power off without a password.
+    2. sudo without a password prompt: works when install.sh's sudoers rule is in place.
+    A plain `sudo shutdown` from this service fails silently when sudo wants a password, which is
+    what made the button do nothing."""
+    try:
+        req = urllib.request.Request(moonraker + "/machine/shutdown", data=b"", method="POST")
+        with urllib.request.urlopen(req, timeout=4) as r:
+            if r.status == 200:
+                return None
+    except (ConnectionResetError, TimeoutError):
+        return None                                   # it answered by going down mid-reply
+    except Exception as e:                            # Moonraker off, or not allowed: try sudo
+        why = getattr(e, "reason", e)
+        if isinstance(why, (ConnectionResetError, TimeoutError)):
+            return None
+    if subprocess.run(["sudo", "-n", "-l", SHUTDOWN], capture_output=True).returncode != 0:
+        return ("The Pi won't let the app shut it down (sudo wants a password). Over SSH run: "
+                "bash ~/mtg-card-scanner/machine/install.sh   then try again.")
+    threading.Timer(1, lambda: subprocess.run(["sudo", "-n", SHUTDOWN, "now"])).start()
+    return None
 
 
 def tool(m: Machine, name: str, b: dict) -> dict:
