@@ -20,6 +20,16 @@ together, never for the software or for card data. This is required: the card da
 be required to pay or subscribe to get it). Tier 1 stays free for the same reason, and because the files are
 already public on GitHub.
 
+## Donations
+The software stays free. Optional donations (e.g. GitHub Sponsors or Ko-fi) are welcome and never unlock
+features or card data. Wizards' Fan Content Policy allows fan projects to be supported by sponsorships, ad
+revenue and donations, as long as access stays free.
+
+## Crowdfunding (e.g. Kickstarter)
+Rewards are physical kits (tier 2 / tier 3) and supporter-only extras that aren't software or card data. The
+software and design files stay free and public for everyone, backers or not. A campaign needs a working
+prototype (Kickstarter's hardware rule) and the LLC in place first.
+
 ## Rules every kit must follow
 
 - **Card data and images:** used under Scryfall's API terms and the Wizards of the Coast
