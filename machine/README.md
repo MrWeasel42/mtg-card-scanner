@@ -46,11 +46,16 @@ computer: `python3 sorter/app.py --sim --port 8080` and open http://localhost:80
 
 ```
 cd ~/klipper && make menuconfig
+  [*] Enable extra low-level configuration options
   Micro-controller: Raspberry Pi RP2040
   Bootloader offset: No bootloader
+  Flash chip: GENERIC_03H with CLKDIV 4
   Communication interface: USB
-make
+make clean && make
 ```
+**Flash chip matters.** With the default (W25Q080, CLKDIV 2) our SKR Pico booted Klipper only sometimes: after a
+reset or power cycle it often never showed up on USB, while bootloader mode always worked. The slower
+`GENERIC_03H with CLKDIV 4` setting fixed it (boots every time).
 Flash it over USB (the SKR Pico has no BOOT button: it uses jumpers):
 1. Put a jumper on the pins labeled **BOOT** and one on the **USB power** pins (labels are on the board; BTT pin diagram if unsure).
 2. USB-C cable from the SKR to a Pi USB port, then press the SKR's **RESET** button.
@@ -59,6 +64,13 @@ Flash it over USB (the SKR Pico has no BOOT button: it uses jumpers):
 5. Take **both jumpers off** and tap RST. The board runs from 24 V and talks to the Pi over that same USB-C cable
    (the 3-wire UART header echoed the Pi's own messages back on our board, so we use USB).
 6. `ls /dev/serial/by-id/` shows `usb-Klipper_rp2040_...`: put that path on the `serial:` line of printer.cfg.
+
+Whenever the 24 V supply is switched off (for example to plug in a motor), the SKR loses power and Klipper shuts
+down. Power back on, wait ~10 s, then `sudo systemctl restart klipper`. Unplug the old UART jumper wires from the
+SKR if they are still attached; they can feed 3.3 V into an unpowered board.
+
+`MANUAL_STEPPER ... MOVE=50` moves **to** position 50, not by 50. Add `SET_POSITION=0` to spin it again:
+`MANUAL_STEPPER STEPPER=feed ENABLE=1 SET_POSITION=0 MOVE=50 SPEED=40` (tested: feed on X, track on Y).
 
 Copy the config: `cp ~/mtg-card-scanner/machine/klipper/printer.cfg ~/printer_data/config/printer.cfg`
 and restart Klipper (`sudo systemctl restart klipper`).
