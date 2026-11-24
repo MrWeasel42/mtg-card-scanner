@@ -112,7 +112,7 @@ class Beams:
         from smbus2 import SMBus
         self.bus = bus or SMBus(1)
         self.broken_low = bool(cfg["doors"]["beam_broken_when_low"])
-        self.mcp = Mcp23017(self.bus, int(cfg["hub"].get("mcp23017", 0x20)))
+        self.mcp = Mcp23017(self.bus, int(cfg["hub"].get("mcp23017", 0x27)))
         self.pins = {d["bin"]: int(d.get("beam_pin", d["bin"] - 1)) for d in cfg["doors"]["servos"]}
 
     def broken(self, bin_no: int) -> bool:

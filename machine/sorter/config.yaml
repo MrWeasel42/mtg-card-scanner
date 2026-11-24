@@ -51,7 +51,7 @@ doors:
 
 hub:                          # the bin hub on bin module 2's back panel (all on the Pi's I2C bus 1, run at 50 kHz)
   pca9685: 0x40               # door servos
-  mcp23017: 0x20              # beam receivers
+  mcp23017: 0x27              # beam receivers (CQRobot board ships with A0-A2 high = 0x27)
   tca9548a: [0x71, 0x72]      # bin-level sensors: bins 1-8 on switch 1 (A0 bridged), bin 9 on switch 2 (A1 bridged). Not 0x70: the PCA9685 answers its all-call there
 
 levels:                       # VL53L1X above each bin (one per switch channel): distance to the top of the stack

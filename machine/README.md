@@ -65,7 +65,7 @@ and restart Klipper (`sudo systemctl restart klipper`).
 | Feed motor | `MANUAL_STEPPER STEPPER=feed MOVE=50 SPEED=40` | the roller turns forward (swap one coil pair if backwards) |
 | Track motor | `MANUAL_STEPPER STEPPER=track MOVE=122 SPEED=60` | the fins move one station toward the bins |
 | Tower ID | Touchscreen Tools → **Which tower?** with each tower on the feeder | Raw / Single-sleeved / Double-sleeved; flip a magnet if a tower reads wrong (south pole must face down) |
-| Bin hub | `i2cdetect -y 1` | 0x20 (MCP23017), 0x40 (PCA9685; 0x70 too until the app starts: its all-call), 0x71 + 0x72 (the two switches) |
+| Bin hub | `i2cdetect -y 1` | 0x27 (MCP23017), 0x40 (PCA9685; 0x70 too until the app starts: its all-call), 0x71 + 0x72 (the two switches) |
 | Lens calibration | Print `machine/calibration_board.pdf` at 100%, check a square is 10.0 mm, glue it to card. Lid on, lights on. Tools → **Lens photo** 8–12 times, moving and tilting the board each time, then **Finish lens calibration** | "error" under 0.5 px; card edges look straight in the Camera view |
 | Home | `python3 sorter.py --home-only` | a fin stops exactly on the scan station (use the fin gauge); otherwise change `home_to_station_mm` |
 | Doors | edit `closed_us` / `open_us` in `config.yaml` until each door shuts flush and opens fully | |

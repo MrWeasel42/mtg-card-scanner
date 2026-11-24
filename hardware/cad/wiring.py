@@ -172,7 +172,7 @@ if __name__ == "__main__":
         lines.append(f'| {r["cable"]} | {r["frm"]} | {r["to"]} | {r["route"]} | {fmt(r["run"])} | {have} | {ok} | {r["stage"]} |')
     cut = [r for r in rows if r["have"] is None]
     lines += ["", "## Bin hub (back panel of bin module 2)",
-              "PCA9685 (I2C 0x40): door servos on channels 0-7, V+ from the bus's 6 V. MCP23017 (0x20): beam receivers on GPA0-7",
+              "PCA9685 (I2C 0x40): door servos on channels 0-7, V+ from the bus's 6 V. MCP23017 (0x27, CQRobot default): beam receivers on GPA0-7",
               "(inputs, pull-ups on). TCA9548A #1 (0x71: bridge A0): bin-level sensors 1-8 on channels 0-7; #2 (0x72: bridge A1): bin 9",
               "on channel 0 (not 0x70: the PCA9685 answers its all-call there). Pololu D24V5F3 3.3 V regulator from the bus's 6 V powers the logic, the sensors and the emitters.",
               "Each VL53L1X is alone on its switch channel, so they all keep address 0x29 and need no XSHUT wire.", "",
