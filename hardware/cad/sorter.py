@@ -195,8 +195,15 @@ def feeder_base():
             b = b.cut(box(x - 9.5, x + 9.5, yn0, yn1, RAIL_Z + 4, RAIL_Z + 11))
     # electronics bay windows: front (service, covered by bay_cover) and back (cables); kept below the motor bolts.
     # The front window is wider than the electronics tray (124 mm), so the tray slides in through it.
-    b = b.cut(box(X0 + 12, X1 - 12, Y0 - 1, Y0 + 5, RAIL_Z + 15, RAIL_Z + 95))
-    b = b.cut(box(X0 + 30, X1 - 30, Y1 - 5, Y1 + 1, RAIL_Z + 15, RAIL_Z + 60))
+    # Both have peaked ("house") tops at 45 degrees so the flat top is only 40 mm: Orca supports any bridge longer
+    # than its max bridge length, and a 126 mm / 90 mm flat top grew big support trees. Full width stays up to
+    # Z+52 / Z+35, well above the tray and the boards on it.
+    def window(xa, xb, z0, zs, zt, ya, yb):
+        xm, half = (xa + xb) / 2, 20.0
+        pts = [(xa, z0), (xb, z0), (xb, zs), (xm + half, zt), (xm - half, zt), (xa, zs)]
+        return cq.Workplane("XZ").polyline(pts).close().extrude(-(yb - ya)).translate((0, ya, 0))
+    b = b.cut(window(X0 + 12, X1 - 12, RAIL_Z + 15, RAIL_Z + 52, RAIL_Z + 95, Y0 - 1, Y0 + 5))
+    b = b.cut(window(X0 + 30, X1 - 30, RAIL_Z + 15, RAIL_Z + 35, RAIL_Z + 60, Y1 - 5, Y1 + 1))
     # the back wire channel starts here (x 115..150), lined up with the modules' channel (inside Y 55..65): the
     # base's wall is cut away behind it, so the looms go straight from the bay into the channel
     b = b.union(box(X1 - 35, X1, Y1, WALL_OUT + 12, RAIL_Z + 6, CHAN_Z1))
@@ -208,6 +215,8 @@ def feeder_base():
     for (xa, xb, xr0, xr1) in ((X0 + 3, X0 + 22, X0 + 18, X0 + 22), (X1 - 22, X1 - 3, X1 - 22, X1 - 18)):
         b = b.union(box(xa, xb, Y0 + 3, Y1 - 3, RAIL_Z + 14, RAIL_Z + 17))
         b = b.union(box(xr0, xr1, Y0 + 10, Y1 - 10, RAIL_Z + 5, RAIL_Z + 14))
+        # fill under the shelf between wall and rib: a 15 mm bridge there was another support spot
+        b = b.union(box(xa, xb, Y0 + 3.5, Y1 - 3.5, RAIL_Z + 5, RAIL_Z + 14))
     for x in TRAY_SCREW_X:
         b = b.union(box(x - 5, x + 5, TRAY_SCREW_Y - 5, TRAY_SCREW_Y + 5, RAIL_Z + 5, RAIL_Z + 17))
         b = b.cut(cyl_z(x, TRAY_SCREW_Y, M3_INSERT / 2, RAIL_Z + 9, RAIL_Z + 17.1))
@@ -215,7 +224,8 @@ def feeder_base():
     for (x, z) in ((X0 + 7, RAIL_Z + 30), (X1 - 7, RAIL_Z + 30), (X0 + 7, RAIL_Z + 90), (X1 - 7, RAIL_Z + 90)):
         b = b.cut(cyl_y(x, z, M3_INSERT / 2, Y0 - 1, Y0 + 6))
     # wiring pass-through into the space under the scanner (24 V in, sensor and servo looms out)
-    b = b.cut(box(X1 - 5, X1 + 1, -25, 25, RAIL_Z + 18, RAIL_Z + 48))
+    # (30 wide x 50 tall: its top is a 30 mm bridge, not 50)
+    b = b.cut(box(X1 - 5, X1 + 1, -15, 15, RAIL_Z + 18, RAIL_Z + 68))
     # hopper floor openings: feed roller, exit roller, fin slots where the fins rise around the start pulleys
     b = b.cut(box(FEED_X - 18, FEED_X + 18, -21, 21, PATH - 6, PATH + 1))
     b = b.cut(box(EXIT_X - 14, EXIT_X + 14, -17, 17, PATH - 6, PATH + 1))
@@ -255,14 +265,28 @@ def feeder_base():
         for dx in (-1, 1):
             for dz in (-1, 1):
                 b = b.cut(cyl_y(x + dx * NEMA_HOLES / 2, z + dz * NEMA_HOLES / 2, M3_INSERT / 2, Y1 - 6.5, Y1 + 1))
-    # two webs under the hopper floor (Y +-22.5, V-shaped underside at 45 degrees from the end walls) so the
-    # floor prints as 32 / 42 / 32 mm bridges instead of one 112 mm bridge
+    # two webs under the hopper floor (Y +-22.5) so the floor prints as 32 / 42 / 32 mm bridges instead of one
+    # 112 mm bridge. Tent-shaped underside: lowest at the end walls, rising at 45 degrees to the middle, so each web
+    # grows out of the walls. (v3 had them V-shaped, lowest in the middle: each started as a point in mid-air.)
     for yc in (-22.5, 22.5):
-        web = (cq.Workplane("XZ").polyline([(X0 + 3, PATH - 3.9), (X1 - 3, PATH - 3.9), (X1 - 3, PATH - 10), ((X0 + X1) / 2, PATH - 10 - (X1 - X0 - 6) / 2),
-                                            (X0 + 3, PATH - 10)]).close().extrude(1.25, both=True).translate((0, yc, 0)))
+        xm = (X0 + X1) / 2
+        zl = PATH - 5 - (xm - (X0 + 3))
+        web = (cq.Workplane("XZ").polyline([(X0 + 3, PATH - 3.9), (X1 - 3, PATH - 3.9), (X1 - 3, zl), (xm, PATH - 5),
+                                            (X0 + 3, zl)]).close().extrude(1.25, both=True).translate((0, yc, 0)))
         web = web.cut(cyl_y(FEED_X, FEED_Z, 3.5, -60, 60)).cut(cyl_y(EXIT_X, EXIT_Z, 13.5, -60, 60))
         web = web.cut(box(CARD_CLEAR_X - 9, CARD_CLEAR_X + 18, -30, -14, 0, 400))    # card-clear sensor housing (and no sliver by the roller)
         b = b.union(web)
+        if yc < 0:
+            # the front web jogs out to Y -27..-25 round the card-clear sensor channel (open underneath for the
+            # sensor), so it still runs on to the end wall instead of ending in a sharp tip in mid-air
+            def tent(t):
+                return (cq.Workplane("XZ").polyline([(X0 + 3, PATH - 3.9), (X1 - 3, PATH - 3.9), (X1 - 3, zl), (xm, PATH - 5),
+                                                     (X0 + 3, zl)]).close().extrude(-t).translate((0, -27.0, 0)))
+            det = tent(5.75).intersect(box(CARD_CLEAR_X - 11, CARD_CLEAR_X - 9, -30, 0, 0, 400))
+            det = det.union(tent(2.0).intersect(box(CARD_CLEAR_X - 9.01, X1 - 3, -30, 0, 0, 400)))
+            det = det.cut(cyl_y(EXIT_X - 2, EXIT_Z, 3.5, -30, -20)).cut(cyl_y(EXIT_X + 2, EXIT_Z, 3.5, -30, -20))
+            det = det.cut(box(EXIT_X - 2, EXIT_X + 2, -30, -20, EXIT_Z - 3.5, EXIT_Z + 3.5))
+            b = b.union(det)
     # posts on top of the base carry the start idlers above the floor (they continue the track side walls)
     for sg in (-1, 1):
         y0p, y1p = sorted((sg * WALL_IN_UP, sg * 60.0))
@@ -279,6 +303,11 @@ def feeder_base():
         # outer ledges the belt rides on (same as the track walls), and the heat-set inserts for the lid
         yl0, yl1 = sorted((sg * 44.0, sg * WALL_IN_UP))
         b = b.union(box(FIN_START_X + 12, X1, yl0, yl1, BELT_BACK_LOW - 2, BELT_BACK_LOW))
+        # 45 degree chamfer under the ledge (it stuck out 4.5 mm from the post with nothing below: prints upright)
+        ya, yb = sg * 44.0, sg * WALL_IN_UP
+        b = b.union(cq.Workplane("YZ").polyline([(ya, BELT_BACK_LOW - 2), (yb, BELT_BACK_LOW - 2),
+                                                 (yb, BELT_BACK_LOW - 2 - abs(yb - ya))]).close()
+                    .extrude(X1 - (FIN_START_X + 12)).translate((FIN_START_X + 12, 0, 0)))
         b = b.cut(cyl_z(X1 - 6, sg * 54.0, M3_INSERT / 2, WALL_TOP - 7, WALL_TOP + 1))
     # fin lanes where the fins come down round the start idlers, and the start of the tapered side guides
     b = b.cut(fin_groove(FIN_START_X - 7, X1 + 1, 40.0))
@@ -292,7 +321,18 @@ def feeder_base():
     b = b.cut(box(xc - 4.5, xc + 4.5, -24.0, -20.0, PATH - 5, PATH + 1))
     b = b.cut(box(xc - 5.2, xc + 5.2, -25.0, -19.0, PATH - 12, PATH - 3.9))
     b = b.union(box(xc - 7.2, xc + 6.2, -27.0, -17.0, PATH - 13, PATH - 4).cut(box(xc - 5.2, xc + 5.2, -25.0, -19.0, PATH - 14, PATH - 3.9)))
-    # (this pocket hangs under the floor: the only spot on the base that needs printed support)
+    # The housing used to hang 9 mm under the floor with nothing below it (a floating island: big support trees).
+    # Now a 45 degree wedge grows out of the end wall and carries it, so the whole base prints with supports OFF.
+    # Underside line z = 192 - (x - 117.3): lowest at the end wall, rising toward the housing. A channel under the
+    # pocket stays open so the sensor still goes in from below; the exit shaft passes through a slot (+-2 mm travel).
+    # y -27..-17 (the housing's full width) keeps 2 mm off the 30 mm exit roller (|Y| <= 15).
+    xh0, zh0 = xc - 7.2, PATH - 13
+    wedge = (cq.Workplane("XZ").polyline([(xh0, zh0), (X1 - 3, zh0 - (X1 - 3 - xh0)), (X1 - 3, PATH - 3.9), (xh0, PATH - 3.9)])
+             .close().extrude(-10.0).translate((0, -27.0, 0)))
+    wedge = wedge.cut(box(xc - 5.2, xc + 5.2, -25.0, -19.0, 0, PATH - 3.9))                   # sensor goes in from below
+    wedge = wedge.cut(cyl_y(EXIT_X - 2, EXIT_Z, 3.5, -30, -15)).cut(cyl_y(EXIT_X + 2, EXIT_Z, 3.5, -30, -15))
+    wedge = wedge.cut(box(EXIT_X - 2, EXIT_X + 2, -30, -15, EXIT_Z - 3.5, EXIT_Z + 3.5))
+    b = b.union(wedge)
     # The hopper floor is flat and clear from the entry side to the exit roller: nothing stands on it in the card's
     # way (v2 had a locating bar under the exit wall that the bottom card ran into). Any tower sits flat on its skirt,
     # held and located by 2 M3 thumb screws in heat-set inserts. Each insert gets a boss tied to the left wall at
@@ -1196,14 +1236,14 @@ def bay_cover():
     Frame: x 0 = world X 0, z 0 = world Z 32; outer face at y 0, wall side at y 3."""
     c = box(0, 150, 0, 3, 0, 89)
     for z in range(10, 78, 7):
-        c = c.cut(box(27, 87, -1, 4, z, z + 3.5))
+        c = c.cut(box(27, 83, -1, 4, z, z + 3.5))
     c = c.cut(cyl_y(123, 24, 14, -1, 4))
     for dx in (-12, 12):
         for dz in (-12, 12):
             c = c.cut(cyl_y(123 + dx, 24 + dz, M3 / 2, -1, 4))       # fan: M3 x 12 through the cover into the fan frame
     for (x, z) in ((7, 18), (143, 18), (7, 78), (143, 78)):
         c = c.cut(cyl_y(x, z, M3 / 2, -1, 4))
-    c = c.cut(box(118, 140, -1, 4, 68, 80))                               # USB-C + the Pi's jumper loom (plugs pass through)
+    c = c.cut(box(88, 104, -1, 4, 60, 72))       # USB-C + the Pi's jumper loom; under the base window's peak (its corners are cut at 45 deg)
     return c
 
 def psu_cradle():
@@ -1551,7 +1591,7 @@ def shell_parts(length=660.0):
 #   C = the sleeved towers
 PRINTED = {
     "fit_coupon":      (fit_coupon, "PETG", "PRINT FIRST (done). Hole sizes are tuned to it."),
-    "feeder_base":     (feeder_base, "PETG", "v3. Upright, 15% gyroid, 4 walls, 5 top layers, ~19 h. Tree supports only under the card-clear sensor pocket."),
+    "feeder_base":     (feeder_base, "PETG", "v4. Upright, 15% gyroid, 4 walls, 5 top layers, ~20 h. Supports OFF (no floating islands; every span bridges)."),
     "raw_tower":       (raw_tower, "PETG", "Upright, 3 walls. Magnet in position 1 (front), south pole down."),
     "single_tower":    (lambda: tower("single"), "PETG", "Single-sleeved cards (inside 92.5 x 67.5). Magnet in position 2 (back)."),
     "double_tower":    (lambda: tower("double"), "PETG", "Double-sleeved cards (inside 93.5 x 68.5). Magnets in both positions."),

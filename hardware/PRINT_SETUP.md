@@ -47,7 +47,7 @@ Benchy, then the fit-test pieces.
 
 | Profile | Use | Key settings |
 |---|---|---|
-| **Sorter PETG 0.20 Structure** | walls, base, towers, brackets | 0.20 layers, 4 walls, 5 top / 4 bottom, gyroid 15 %, seam aligned and placed at the back, outer wall 60 mm/s, inner 120, precise wall on, elephant foot 0.15, tree supports (build plate only, 40°), z-hop 0.4 |
+| **Sorter PETG 0.20 Structure** | walls, base, towers, brackets | 0.20 layers, 4 walls, 5 top / 4 bottom, gyroid 15 %, seam aligned and placed at the back, outer wall 60 mm/s, inner 120, precise wall on, elephant foot 0.15, tree supports (build plate only, 40°), **max bridge length 45 mm**, z-hop 0.4 |
 | **Sorter PETG 0.12 Precision** | pulleys, rollers, fins, gate, slider | 0.12 layers, 100 % infill, outer wall 40 mm/s, seam at the back |
 | **Sorter PLA 0.20 Covers** | matte black/green covers | 0.20 layers, 3 walls, 15 % gyroid, seam at the back, PLA fan 100 % + side fan |
 | **Prototype (fit checks only)** | quick dimension checks | 2 walls, 5 % infill, fast: never for real parts |
@@ -55,6 +55,14 @@ Benchy, then the fit-test pieces.
 **Bridges and overhangs (the sag):** bridge flow 0.90, bridge speed 25 mm/s, overhang and bridge fan 100 %, "slow down
 for overhangs" on. The design changes in round 2 remove the worst bridges (motor standoffs, pod cover). The Benchy
 below shows whether these numbers are enough.
+
+**Max bridge length 45 mm (Support tab).** Orca's default is 10 mm: it puts support under every flat span longer
+than that. No flat span on the parts is over 42 mm; anything longer has a 45 degree peaked top instead.
+
+**Feeder base: supports OFF.** It is a closed box: everything that hangs is inside, where tree supports from the bed
+can't reach, so they only climbed the outside to short ceilings PETG bridges anyway (24-28 h, 117 g of support).
+v4 has no floating islands (the card-clear sensor housing grows out of the end wall on a 45 degree wedge), so turn
+"Enable support" off for this part.
 
 **Keep supports out of bearing seats.** Upright parts have teardrop bearing seats that need no support, but tree
 supports still grow into them and leave the seat too small for the bearing (fit test 2). Paint a support blocker

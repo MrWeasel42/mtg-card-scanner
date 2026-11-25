@@ -11,7 +11,7 @@ CONV6 = (11.0, 18.0, 105.0)                       # 24 V -> 6 V servo step-down,
 JUNC = (40.0, 40.0, 70.0)                         # bay junction: Pi I2C meets the 6 V pair -> the bin bus
 BAY_BACK = (130.0, 50.0, (CHAN_Z0 + CHAN_Z1) / 2)  # where the bay opens into the back channel (base, x 115..146)
 PASS = (148.0, 0.0, 50.0)                         # pass-through from the bay into the space under the scanner
-BAY_SLOT = (129.0, -63.0, 106.0)                  # slot in the bay cover (USB-C + the Pi's jumper loom)
+BAY_SLOT = (96.0, -63.0, 98.0)                    # slot in the bay cover (USB-C + the Pi's jumper loom), under the window's peak
 BACK_CH = lambda x: (x, 61.0, (CHAN_Z0 + CHAN_Z1) / 2)   # back wire channel (every module, outside face)
 PSU_T = (PSU_X0 - 4.0, sum(PSU_Y) / 2, 70.0)    # PSU terminal block (faces the bay)
 INLET = (SCAN_X0 + 70.0, 20.0, RAIL_Z + 73.0)     # IEC inlet's leads (out of the back of its body)
@@ -107,7 +107,7 @@ def runs():
     for i, (hx, hy) in enumerate(HALL):
         add(f"Tower-ID hall sensor {i + 1} (A3144)", "pocket in the hopper floor (leads down the 3 mm hole)",
             f"SKR {('Z', 'E0')[i]}-STOP signal + GND; 5 V from the probe header's 5 V pin",
-            "straight down into the bay", [(hx, hy, PATH - 3), (hx, hy, PATH - 20), (30, -10, 80), SKR], 300,
+            "straight down into the bay", [(hx, hy, PATH - 3), (hx, hy, 140), (30, -10, 80), SKR], 300,
             "female-female jumpers, 30 cm (the A3144 legs plug straight in; heat-shrink each leg)")
     add("Hood LED strips (2 x COB channels)", "SKR HE0 (24 V switched)", "COB strips on the front + back ledges, joined inside the hood",
         "tray -> back window -> back channel -> up the back of the scan module -> hood's LED hole",
