@@ -10,7 +10,7 @@ module from bin module 2, bolt modules 3-8 in, bolt the end module back on, swap
 | File | Qty | Material | Size | Status | Notes |
 |---|---|---|---|---|---|
 | `fit_coupon.stl` | 1 | PETG | 112 x 88 x 16 mm (4.4 x 3.5 x 0.6 in) | printed | PRINT FIRST (done). Hole sizes are tuned to it. |
-| `feeder_base.stl` | 1 | PETG | 150 x 144 x 225 mm (5.9 x 5.7 x 8.9 in) |  | v4. Upright, 15% gyroid, 4 walls, 5 top layers, ~20 h. Supports OFF (no floating islands; every span bridges). |
+| `feeder_base.stl` | 1 | PETG | 150 x 144 x 225 mm (5.9 x 5.7 x 8.9 in) |  | v4. Upright, 15% gyroid, 4 walls, 5 top layers, ~28 h. Tree supports ON (build plate only, 40°), blocked inside the bearing seats; the supported print came out cleaner. |
 | `raw_tower.stl` | 1 | PETG | 125 x 100 x 187 mm (4.9 x 3.9 x 7.4 in) |  | Upright, 3 walls. Magnet in position 1 (front), south pole down. |
 | `gate_plate.stl` | 1 | PETG | 12 x 28 x 36 mm (0.5 x 1.1 x 1.4 in) | printed v3: REPRINT (v4 hangs on its screw) | v4 (reprint: the v3 gate can't be adjusted). On its outer (+X) face, no supports. 1 M3 insert in the top; 1.5 mm silicone pad under the foot. Fits all three towers. |
 | `feed_roller.stl` | 1 | PETG | 20 x 40 x 20 mm (0.8 x 1.6 x 0.8 in) | printed (plate 1) | On its end, 100% infill. Three 16 ID x 3.5 O-rings. |

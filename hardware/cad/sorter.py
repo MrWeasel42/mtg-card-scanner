@@ -1596,7 +1596,7 @@ def shell_parts(length=660.0):
 #   C = the sleeved towers
 PRINTED = {
     "fit_coupon":      (fit_coupon, "PETG", "PRINT FIRST (done). Hole sizes are tuned to it."),
-    "feeder_base":     (feeder_base, "PETG", "v4. Upright, 15% gyroid, 4 walls, 5 top layers, ~20 h. Supports OFF (no floating islands; every span bridges)."),
+    "feeder_base":     (feeder_base, "PETG", "v4. Upright, 15% gyroid, 4 walls, 5 top layers, ~28 h. Tree supports ON (build plate only, 40°), blocked inside the bearing seats; the supported print came out cleaner."),
     "raw_tower":       (raw_tower, "PETG", "Upright, 3 walls. Magnet in position 1 (front), south pole down."),
     "single_tower":    (lambda: tower("single"), "PETG", "Single-sleeved cards (inside 92.5 x 67.5). Magnet in position 2 (back)."),
     "double_tower":    (lambda: tower("double"), "PETG", "Double-sleeved cards (inside 93.5 x 68.5). Magnets in both positions."),

@@ -47,7 +47,7 @@ Benchy, then the fit-test pieces.
 
 | Profile | Use | Key settings |
 |---|---|---|
-| **Sorter PETG 0.20 Structure** | walls, base, towers, brackets | 0.20 layers, 4 walls, 5 top / 4 bottom, gyroid 15 %, seam aligned and placed at the back, outer wall 60 mm/s, inner 120, precise wall on, elephant foot 0.15, tree supports (build plate only, 40°), **max bridge length 45 mm**, z-hop 0.4 |
+| **Sorter PETG 0.20 Structure** | walls, base, towers, brackets | 0.20 layers, 4 walls, 5 top / 4 bottom, gyroid 15 %, seam aligned and placed at the back, outer wall 60 mm/s, inner 120, precise wall on, elephant foot 0.15, tree supports (build plate only, 40°), max bridge length left at Orca's default 10 mm, z-hop 0.4 |
 | **Sorter PETG 0.12 Precision** | pulleys, rollers, fins, gate, slider | 0.12 layers, 100 % infill, outer wall 40 mm/s, seam at the back |
 | **Sorter PLA 0.20 Covers** | matte black/green covers | 0.20 layers, 3 walls, 15 % gyroid, seam at the back, PLA fan 100 % + side fan |
 | **Prototype (fit checks only)** | quick dimension checks | 2 walls, 5 % infill, fast: never for real parts |
@@ -56,13 +56,12 @@ Benchy, then the fit-test pieces.
 for overhangs" on. The design changes in round 2 remove the worst bridges (motor standoffs, pod cover). The Benchy
 below shows whether these numbers are enough.
 
-**Max bridge length 45 mm (Support tab).** Orca's default is 10 mm: it puts support under every flat span longer
-than that. No flat span on the parts is over 42 mm; anything longer has a 45 degree peaked top instead.
+**Max bridge length: leave it at Orca's default 10 mm.** I once raised it to 45 mm so a no-support feeder base would slice
+clean, but that was based on web research only. Bridges on this printer in PETG came out stringy even over a 10 mm
+pocket, so long spans get supports.
 
-**Feeder base: supports OFF.** It is a closed box: everything that hangs is inside, where tree supports from the bed
-can't reach, so they only climbed the outside to short ceilings PETG bridges anyway (24-28 h, 117 g of support).
-v4 has no floating islands (the card-clear sensor housing grows out of the end wall on a 45 degree wedge), so turn
-"Enable support" off for this part.
+**Feeder base: supports ON.** The supported print of the same part came out much cleaner than the unsupported one, so
+use tree supports (build plate only, 40°). Keep them out of the bearing seats (below). About 28 h and 119 g of support.
 
 **Keep supports out of bearing seats.** Upright parts have teardrop bearing seats that need no support, but tree
 supports still grow into them and leave the seat too small for the bearing (fit test 2). Paint a support blocker
