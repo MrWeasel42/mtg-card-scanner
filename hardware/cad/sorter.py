@@ -1013,7 +1013,7 @@ def servo_placed(ang=0.0):
     horn = _stadium_yz((ys, zs), ht, 3.0, xt - 4.0, xt - 2.0)
     return body.union(tabs).union(hub).union(horn)
 
-def bin_module_side(side):
+def bin_module_side(side, sacrificial=False):
     """Side frame for one 122 mm bin module. Back side (+1): hinge knuckles, the servo bracket inside, the beam
     emitter, and 4 inserts for the back panel over the window (on one module the panel carries the bin hub).
     Front side (-1): door rest ledge, beam receiver, bin-level sensor pocket."""
@@ -1052,6 +1052,11 @@ def bin_module_side(side):
     f = f.cut(box(PITCH / 2 - 10.2, PITCH / 2 + 10.2, yp0, yp1, PATH - 27.2, PATH - 16.8))
     f = f.cut(cyl_y(PITCH / 2, PATH - 22, 2.0, -WALL_OUT - 1, WALL_OUT + 1))
     f = f.cut(box(PITCH / 2 + 4.0, PITCH / 2 + 9.0, *sorted((s * (WALL_IN - 1), s * (WALL_OUT - 6))), PATH - 27.2, PATH - 23.5))
+    if sacrificial:
+        # print-only: the pocket opens onto the bed, so its 1 mm roof is a 20 x 10 mm bridge over 7 mm of air (it came out as
+        # strings). A 0.9 mm rib stands on the bed up to the roof and halves the span; 0.3 mm clear of the pocket ends so it
+        # only touches the roof. Snap it out with pliers before the sensor goes in.
+        f = f.union(box(PITCH / 2 - 9.9, PITCH / 2 + 9.9, *sorted((s * WALL_OUT, s * (WALL_OUT - 7.0))), PATH - 22.45, PATH - 21.55))
     return f
 
 def tie_bar():
@@ -1617,7 +1622,7 @@ PRINTED = {
     "camera_plate":    (camera_plate, "PETG", "Tabs up. Camera connector faces LEFT (hopper side)."),
     "polarizer_cap":   (polarizer_cap, "PETG", "Open end up, no supports. Slip fit on the 30.00 mm lens; film disc goes in the seat at the bottom."),
     "bin_side_back":   (lambda: bin_module_side(1), "PETG", "UPRIGHT (foot down), 225 mm tall. Tree supports under the hinge knuckles only. Tall on a narrow foot: 8 mm brim + glue stick, long edge front-to-back on the bed (the Neptune's bed moves front-to-back), outer walls at 80 mm/s or less for the top half."),
-    "bin_side_front":  (lambda: bin_module_side(-1), "PETG", "On its outer face (flat, 122 x 105). No supports."),
+    "bin_side_front":  (lambda: bin_module_side(-1, sacrificial=True), "PETG", "On its outer face (flat, 122 x 105). No supports. A thin sacrificial rib inside the sensor pocket props its roof: snap it out with pliers."),
     "door":            (door, "PETG", "Top face DOWN on the smooth side, tree supports under the barrels and lever."),
     "servo_link":      (servo_link, "PETG", "Flat, 100% infill."),
     "tie_bar":         (tie_bar, "PETG", "Floor plate face DOWN on the smooth side."),

@@ -10,7 +10,7 @@ module from bin module 2, bolt modules 3-8 in, bolt the end module back on, swap
 | File | Qty | Material | Size | Status | Notes |
 |---|---|---|---|---|---|
 | `fit_coupon.stl` | 1 | PETG | 112 x 88 x 16 mm (4.4 x 3.5 x 0.6 in) | printed | PRINT FIRST (done). Hole sizes are tuned to it. |
-| `feeder_base.stl` | 1 | PETG | 150 x 144 x 225 mm (5.9 x 5.7 x 8.9 in) |  | v4. Upright, 15% gyroid, 4 walls, 5 top layers, ~20 h (517 g). **Supports OFF**: no floating islands, every span bridges (Orca's "floating cantilever" note is the teardrop bearing seats: ignore it; supports there would ruin the seats). Mouse ears, glue stick on the corners, tent mostly closed (big PETG parts lift at the corners hours in). Fresh, dry roll. |
+| `feeder_base.stl` | 1 | PETG | 150 x 144 x 225 mm (5.9 x 5.7 x 8.9 in) |  | v4. Upright, 15% gyroid, 4 walls, 5 top layers, ~20 h. Supports OFF (no floating islands; every span bridges). |
 | `raw_tower.stl` | 1 | PETG | 125 x 100 x 187 mm (4.9 x 3.9 x 7.4 in) |  | Upright, 3 walls. Magnet in position 1 (front), south pole down. |
 | `gate_plate.stl` | 1 | PETG | 12 x 28 x 36 mm (0.5 x 1.1 x 1.4 in) | printed v3: REPRINT (v4 hangs on its screw) | v4 (reprint: the v3 gate can't be adjusted). On its outer (+X) face, no supports. 1 M3 insert in the top; 1.5 mm silicone pad under the foot. Fits all three towers. |
 | `feed_roller.stl` | 1 | PETG | 20 x 40 x 20 mm (0.8 x 1.6 x 0.8 in) | printed (plate 1) | On its end, 100% infill. Three 16 ID x 3.5 O-rings. |
@@ -34,7 +34,7 @@ module from bin module 2, bolt modules 3-8 in, bolt the end module back on, swap
 | `camera_plate.stl` | 1 | PETG | 62 x 69 x 14 mm (2.4 x 2.7 x 0.6 in) |  | Tabs up. Camera connector faces LEFT (hopper side). |
 | `polarizer_cap.stl` | 1 | PETG | 39 x 34 x 10 mm (1.5 x 1.3 x 0.4 in) |  | Open end up, no supports. Slip fit on the 30.00 mm lens; film disc goes in the seat at the bottom. |
 | `bin_side_back.stl` | 2 | PETG | 122 x 58 x 225 mm (4.8 x 2.3 x 8.9 in) |  | UPRIGHT (foot down), 225 mm tall. Tree supports under the hinge knuckles only. Tall on a narrow foot: 8 mm brim + glue stick, long edge front-to-back on the bed (the Neptune's bed moves front-to-back), outer walls at 80 mm/s or less for the top half. |
-| `bin_side_front.stl` | 2 | PETG | 122 x 21 x 115 mm (4.8 x 0.8 x 4.5 in) |  | On its outer face (flat, 122 x 105). No supports. |
+| `bin_side_front.stl` | 2 | PETG | 122 x 21 x 115 mm (4.8 x 0.8 x 4.5 in) |  | On its outer face (flat, 122 x 105). No supports. A thin sacrificial rib inside the sensor pocket props its roof: snap it out with pliers. |
 | `door.stl` | 2 | PETG | 111 x 70 x 18 mm (4.4 x 2.8 x 0.7 in) |  | Top face DOWN on the smooth side, tree supports under the barrels and lever. |
 | `servo_link.stl` | 3 | PETG | 28 x 6 x 2 mm (1.1 x 0.2 x 0.1 in) | printed (plate 1) | Flat, 100% infill. |
 | `tie_bar.stl` | 3 | PETG | 13 x 94 x 22 mm (0.5 x 3.7 x 0.9 in) |  | Floor plate face DOWN on the smooth side. |
@@ -46,7 +46,7 @@ module from bin module 2, bolt modules 3-8 in, bolt the end module back on, swap
 | `end_cap.stl` | 1 | PETG | 4 x 108 x 100 mm (0.2 x 4.3 x 3.9 in) |  |  |
 | `end_ramp.stl` | 1 | PETG | 108 x 51 x 58 mm (4.3 x 2.0 x 2.3 in) |  | Ramp face DOWN on the smooth side, tree supports under the flange. |
 | `electronics_tray.stl` | 1 | PETG | 122 x 108 x 11 mm (4.8 x 4.3 x 0.4 in) |  | Flat, bosses up. |
-| `bay_cover.stl` | 1 | PLA matte black | 150 x 3 x 89 mm (5.9 x 0.1 x 3.5 in) |  | Flat, outside face down. v2: cable slot moved left (X 88-104) to sit under the base window's peak. |
+| `bay_cover.stl` | 1 | PLA matte black | 150 x 3 x 89 mm (5.9 x 0.1 x 3.5 in) |  | Flat, outside face down. |
 | `psu_cradle.stl` | 2 | PETG | 18 x 94 x 122 mm (0.7 x 3.7 x 4.8 in) |  | On its side (X face down). Two M3 nuts drop into the slots. |
 | `inlet_plate.stl` | 1 | PETG | 116 x 4 x 68 mm (4.6 x 0.2 x 2.7 in) |  | Flat. |
 | `screen_cradle.stl` | 1 | PETG | 214 x 21 x 127 mm (8.4 x 0.8 x 5.0 in) | printed (plate 1) | Face down. 4 M3 inserts in the ears. |
@@ -61,7 +61,7 @@ module from bin module 2, bolt modules 3-8 in, bolt the end module back on, swap
 | `joint_plate.stl` | 12 | PETG | 28 x 3 x 14 mm (1.1 x 0.1 x 0.6 in) |  | Flat. |
 | `fin.stl` | 24 | PETG | 5 x 17 x 8 mm (0.2 x 0.7 x 0.3 in) |  | Half of them mirrored. On its side, 0.12 mm layers. 3 x 3 mm silicone square in the face pocket. |
 | `bin_side_back.stl` | 6 | PETG | 122 x 58 x 225 mm (4.8 x 2.3 x 8.9 in) |  | UPRIGHT (foot down), 225 mm tall. Tree supports under the hinge knuckles only. Tall on a narrow foot: 8 mm brim + glue stick, long edge front-to-back on the bed (the Neptune's bed moves front-to-back), outer walls at 80 mm/s or less for the top half. |
-| `bin_side_front.stl` | 6 | PETG | 122 x 21 x 115 mm (4.8 x 0.8 x 4.5 in) |  | On its outer face (flat, 122 x 105). No supports. |
+| `bin_side_front.stl` | 6 | PETG | 122 x 21 x 115 mm (4.8 x 0.8 x 4.5 in) |  | On its outer face (flat, 122 x 105). No supports. A thin sacrificial rib inside the sensor pocket props its roof: snap it out with pliers. |
 | `door.stl` | 6 | PETG | 111 x 70 x 18 mm (4.4 x 2.8 x 0.7 in) |  | Top face DOWN on the smooth side, tree supports under the barrels and lever. |
 | `servo_link.stl` | 6 | PETG | 28 x 6 x 2 mm (1.1 x 0.2 x 0.1 in) |  | Flat, 100% infill. |
 | `tie_bar.stl` | 6 | PETG | 13 x 94 x 22 mm (0.5 x 3.7 x 0.9 in) |  | Floor plate face DOWN on the smooth side. |
