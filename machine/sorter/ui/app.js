@@ -271,7 +271,7 @@ function startView() {
   const srcs = [["last", "Last used"]].concat(o.pc ? [["pc", "My PC setup"]] : [])
     .concat(o.saved.map((x, i) => ["saved:" + i, "★ " + x.name]))
     .concat((o.pcSaved || []).map((x, i) => ["pcsaved:" + i, "★ " + x.name + " (PC)"]))
-    .concat([["Price", "By price"], ["Alphabet", "Alphabetical"], ["Color", "By color"], ["Rarity", "By rarity"], ["Set", "By set"]]);
+    .concat([["Price", "By price"], ["Alphabet", "Alphabetical"], ["Color", "By color"], ["Rarity", "By rarity"], ["Set", "By set"], ["Type", "By card type"]]);
   const bins = ST.labels.map((l, i) => {
     const b = i + 1, end = b === ST.setup.binsInUse;
     return `<div class="bin ${end ? "end" : ""}" ${end ? "" : `data-editbin="${b}"`}><div class="n">BIN ${b}${end ? " · END" : " · tap to edit"}</div><div class="l">${esc(l)}</div></div>`;

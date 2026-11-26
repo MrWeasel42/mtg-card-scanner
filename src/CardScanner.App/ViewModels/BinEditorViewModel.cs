@@ -137,7 +137,7 @@ public partial class BinSlot : ObservableObject
 public partial class BinEditorViewModel : ObservableObject
 {
     public static readonly int[] BinCountList = [2, 3, 4, 5, 6, 7, 8, 9];
-    public static readonly string[] PresetList = ["Price brackets", "Color", "Alphabetical", "Rarity", "Set (keeps your set lists)"];
+    public static readonly string[] PresetList = ["Price brackets", "Color", "Alphabetical", "Rarity", "Set (keeps your set lists)", "Card type"];
 
     public ObservableCollection<BinSlot> Slots { get; } = [];
     [ObservableProperty] private int _binsInUse = 3;
@@ -260,7 +260,7 @@ public partial class BinEditorViewModel : ObservableObject
     {
         var setup = ToSetup();
         int i = Array.IndexOf(PresetList, Preset);
-        setup.ApplyPreset(i switch { 1 => SortBy.Color, 2 => SortBy.Alphabet, 3 => SortBy.Rarity, 4 => SortBy.Set, _ => SortBy.Price });
+        setup.ApplyPreset(i switch { 1 => SortBy.Color, 2 => SortBy.Alphabet, 3 => SortBy.Rarity, 4 => SortBy.Set, 5 => SortBy.Type, _ => SortBy.Price });
         Load(setup);
         Changed?.Invoke();
     }

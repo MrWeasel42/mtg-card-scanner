@@ -17,7 +17,7 @@ import re
 import unicodedata
 
 MAX_BINS = 9
-SORT_BY = ["Price", "Alphabet", "Color", "Rarity", "Set"]
+SORT_BY = ["Price", "Alphabet", "Color", "Rarity", "Set", "Type"]
 KINDS = ["Price", "Color", "Letters", "Rarity", "Set", "Type", "Anything"]
 COLOR_CODES = ["W", "U", "B", "R", "G", "M", "C", "L"]
 COLOR_NAMES = ["White", "Blue", "Black", "Red", "Green", "Multicolor", "Colorless", "Lands"]
@@ -128,6 +128,10 @@ def preset_rules(s: dict, letter_counts: dict | None = None) -> list:
     elif by == "Rarity":
         for r in RARITY_CODES:
             rules.append(_rule({"kind": "Rarity", "rarities": [r]}))
+    elif by == "Type":
+        # one bin per card type, first match wins (an Artifact Creature goes to Creature)
+        for t in TYPE_NAMES:
+            rules.append(_rule({"kind": "Type", "types": [t]}))
     elif by == "Set":
         for g in s.get("setGroups", []):
             codes = []

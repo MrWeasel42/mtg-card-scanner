@@ -5,7 +5,7 @@ namespace CardScanner.Core.Sorting;
 
 /// <summary>Quick presets that fill the bins in one go (each bin can then be edited on its own).</summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum SortBy { Price, Alphabet, Color, Rarity, Set }
+public enum SortBy { Price, Alphabet, Color, Rarity, Set, Type }
 
 /// <summary>What one bin's rule looks at.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -271,6 +271,10 @@ public static class BinSorter
                 break;
             case SortBy.Rarity:
                 foreach (var r in BinRule.RarityCodes) list.Add(new BinRule { Kind = RuleKind.Rarity, Rarities = [r] });
+                break;
+            case SortBy.Type:
+                // one bin per type, first match wins (an Artifact Creature goes to Creature)
+                foreach (var t in BinRule.TypeNames) list.Add(new BinRule { Kind = RuleKind.Type, Types = [t] });
                 break;
             case SortBy.Set:
                 foreach (var g in s.SetGroups)

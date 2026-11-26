@@ -709,4 +709,16 @@ public class BinSorterTests
         Assert.Equal(2, BinSorter.Choose(st, Card(set: "TRK")).Bin);
         Assert.Equal(3, BinSorter.Choose(st, Card(set: "lea")).Bin);
     }
+
+    [Fact]
+    public void CardType_Preset_Fills_A_Bin_Per_Type()
+    {
+        var t = new BinSetup { BinsInUse = 9, By = SortBy.Type };
+        t.ApplyPreset(SortBy.Type);
+        Assert.Equal(8, t.EffectiveRules().Count(r => r?.Kind == RuleKind.Type));
+        Assert.Equal(1, BinSorter.Choose(t, Card(type: "Legendary Creature — Elf")).Bin);
+        Assert.Equal(1, BinSorter.Choose(t, Card(type: "Artifact Creature — Golem")).Bin);
+        Assert.Equal(4, BinSorter.Choose(t, Card(type: "Artifact")).Bin);
+        Assert.Equal(7, BinSorter.Choose(t, Card(type: "Basic Land — Forest")).Bin);
+    }
 }
